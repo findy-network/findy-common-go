@@ -6,11 +6,12 @@ import (
 
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/golang/glog"
-	. "github.com/lainio/err2"
+	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
+// ServerCfg is configuration to setup a gRPC server.
 type ServerCfg struct {
 	Port     int
 	TLS      bool
@@ -21,13 +22,13 @@ type ServerCfg struct {
 
 // Server creates a gRPC server with TLS and JWT token authorization.
 func Server(cfg ServerCfg) (s *grpc.Server, err error) {
-	defer Return(&err)
+	defer err2.Return(&err)
 
 	opts := make([]grpc.ServerOption, 0, 4)
 	if cfg.TLS {
 		creds, err := credentials.NewServerTLSFromFile(
 			cfg.CertFile, cfg.KeyFile)
-		Check(err)
+		err2.Check(err)
 
 		opts = append(opts,
 			grpc.Creds(creds),
@@ -41,14 +42,14 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 // Serve builds up the gRPC server and starts to serve. This function blocks.
 // In most cases you should start it as goroutine. TODO: graceful stop!
 func Serve(cfg ServerCfg) {
-	defer Catch(func(err error) {
+	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
-	Check(err)
+	err2.Check(err)
 	s, err := Server(cfg)
-	Check(err)
-	Check(cfg.Register(s))
-	Check(s.Serve(lis))
+	err2.Check(err)
+	err2.Check(cfg.Register(s))
+	err2.Check(s.Serve(lis))
 }

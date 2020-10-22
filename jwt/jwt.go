@@ -2,11 +2,11 @@ package jwt
 
 import (
 	"context"
-	"log"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/golang/glog"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -27,6 +27,8 @@ var (
 	errInvalidToken    = status.Errorf(codes.Unauthenticated, "invalid token")
 )
 
+// UserCtxKey is type for key to access user value from context. It's currently
+// exported for possible outside use.
 type UserCtxKey string
 
 type customClaims struct {
@@ -34,6 +36,7 @@ type customClaims struct {
 	jwt.StandardClaims
 }
 
+// User is a helper function to get user from the current ctx as a string.
 func User(ctx context.Context) string {
 	return ctx.Value(UserCtxKey("UserKey")).(string)
 }
@@ -96,7 +99,7 @@ func EnsureValidToken(ctx context.Context, req interface{},
 
 	newCtx, err := CheckTokenValidity(ctx)
 	if err != nil {
-		log.Println("NOT authorization")
+		glog.Error("NO authorization")
 		return nil, err
 	}
 	// Continue execution of handler after ensuring a valid token.
@@ -117,6 +120,8 @@ func EnsureValidTokenStream(srv interface{}, ss grpc.ServerStream, info *grpc.St
 	return handler(srv, ss)
 }
 
+// CheckTokenValidity check if context includes valid JWT and if so, wraps a new
+// one with valid user ID.
 func CheckTokenValidity(ctx context.Context) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
@@ -125,7 +130,7 @@ func CheckTokenValidity(ctx context.Context) (context.Context, error) {
 
 	newCtx, isValid := valid(ctx, md["authorization"])
 	if !isValid {
-		log.Println("NOT authorization")
+		glog.Error("NO authorization")
 		return newCtx, errInvalidToken
 	}
 	return newCtx, nil

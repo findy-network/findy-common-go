@@ -2,12 +2,13 @@ package rpc
 
 import (
 	"github.com/findy-network/findy-grpc/jwt"
-	. "github.com/lainio/err2"
+	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
 )
 
+// ClientCfg is configuration struct for making a gRPC client connection.
 type ClientCfg struct {
 	CertFile string
 	JWT      string
@@ -15,12 +16,14 @@ type ClientCfg struct {
 	TLS      bool
 }
 
+// ClientConn creates a client connection according the configuration to gRPC
+// server.
 func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
-	defer Return(&err)
+	defer err2.Return(&err)
 
 	// for now we use only server side TLS, if we go mTLS use NewTLS()
 	creds, err := credentials.NewClientTLSFromFile(cfg.CertFile, "")
-	Check(err)
+	err2.Check(err)
 
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
 	if cfg.TLS {
