@@ -1,8 +1,8 @@
 package rpc
 
 import (
+	"github.com/findy-network/findy-grpc/jwt"
 	. "github.com/lainio/err2"
-	"github.com/optechlab/findy-grpc/jwt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
