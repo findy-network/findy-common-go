@@ -51,5 +51,6 @@ func Serve(cfg ServerCfg) {
 	s, err := Server(cfg)
 	err2.Check(err)
 	err2.Check(cfg.Register(s))
+	glog.V(1).Infoln("starting to serve on:", cfg.Port)
 	err2.Check(s.Serve(lis))
 }
