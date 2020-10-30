@@ -88,7 +88,7 @@ func valid(ctx context.Context, authorization []string) (context.Context, bool) 
 		return ctx, false
 	}
 	token := strings.TrimPrefix(authorization[0], "Bearer ")
-	glog.V(3).Infoln("token:", token)
+	glog.V(13).Infoln("token:", token)
 
 	// Perform the JWT token validation here
 	return check(ctx, token)
