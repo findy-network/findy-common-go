@@ -1,6 +1,10 @@
 package rpc
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
+
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
@@ -9,40 +13,67 @@ import (
 	"google.golang.org/grpc/credentials/oauth"
 )
 
-// ClientCfg is configuration struct for making a gRPC client connection.
-type ClientCfg struct {
+// CertFiles is helper struct to keep both needed certification files together.
+type CertFiles struct {
 	CertFile string
-	JWT      string
-	Addr     string
-	TLS      bool
+	KeyFile  string
 }
 
-// ClientConn creates a client connection according the configuration to gRPC
-// server.
+// PKI is helper struct to keep need certification files for both S/C.
+type PKI struct {
+	Server CertFiles
+	Client CertFiles
+}
+
+// ClientCfg is gRPC client initialization and configuration struct.
+type ClientCfg struct {
+	PKI
+	JWT  string
+	Addr string
+	TLS  bool
+}
+
+// ClientConn opens client connection with given configuration.
 func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
 	// for now we use only server side TLS, if we go mTLS use NewTLS()
-	creds, err := credentials.NewClientTLSFromFile(cfg.CertFile, "localhost")
+	creds, err := loadClientTLSFromFile(cfg.PKI)
 	err2.Check(err)
 
-	opts := []grpc.DialOption{
-		grpc.WithBlock(),
-		grpc.WithInsecure(),
-	}
+	glog.V(5).Infoln("new tls client ready")
 
+	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
 	if cfg.TLS {
 		// we wrap our JWT token to Oauth token
 		perRPC := oauth.NewOauthAccess(jwt.OauthToken(cfg.JWT))
+		glog.V(10).Infoln("grpc oauth wrap for JWT done")
 
-		glog.V(5).Infoln("cert:", cfg.CertFile)
 		opts = []grpc.DialOption{
 			grpc.WithPerRPCCredentials(perRPC),
 			grpc.WithTransportCredentials(creds),
-	//		grpc.WithBlock(),
-			grpc.WithReturnConnectionError(),
+			//grpc.WithBlock(), // dont use!! you don't get immediate error messages
 		}
 	}
-	glog.V(5).Infof("dialing{%s}", cfg.Addr)
+	glog.V(5).Infoln("going to dial:", cfg.Addr)
 	return grpc.Dial(cfg.Addr, opts...)
+}
+
+func loadClientTLSFromFile(pw PKI) (creds credentials.TransportCredentials, err error) {
+	defer err2.Return(&err)
+
+	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Server.CertFile))
+	rootCAs := x509.NewCertPool()
+	rootCAs.AppendCertsFromPEM(caCert)
+
+	clientCert, err := tls.LoadX509KeyPair(pw.Client.CertFile, pw.Client.KeyFile)
+	tlsConf := &tls.Config{
+		Certificates:       []tls.Certificate{clientCert},
+		RootCAs:            rootCAs,
+		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS13,
+		ServerName:         "localhost",
+	}
+
+	return credentials.NewTLS(tlsConf), nil
 }

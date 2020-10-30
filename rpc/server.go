@@ -1,7 +1,10 @@
 package rpc
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
 
 	"github.com/findy-network/findy-grpc/jwt"
@@ -11,12 +14,11 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
-// ServerCfg is configuration to setup a gRPC server.
+// ServerCfg is gRPC server configuration struct for service init
 type ServerCfg struct {
+	PKI
 	Port     int
 	TLS      bool
-	CertFile string
-	KeyFile  string
 	Register func(s *grpc.Server) error
 }
 
@@ -26,8 +28,7 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 
 	opts := make([]grpc.ServerOption, 0, 4)
 	if cfg.TLS {
-		creds, err := credentials.NewServerTLSFromFile(
-			cfg.CertFile, cfg.KeyFile)
+		creds, err := loadTLSCredentials(cfg.PKI)
 		err2.Check(err)
 
 		opts = append(opts,
@@ -46,11 +47,35 @@ func Serve(cfg ServerCfg) {
 		glog.Error(err)
 	})
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
+	addr := fmt.Sprintf(":%d", cfg.Port)
+	glog.V(5).Infoln("listen to:", addr)
+	lis, err := net.Listen("tcp", addr)
 	err2.Check(err)
 	s, err := Server(cfg)
 	err2.Check(err)
 	err2.Check(cfg.Register(s))
-	glog.V(1).Infoln("starting to serve on:", cfg.Port)
+	glog.V(5).Infoln("start to serve..")
 	err2.Check(s.Serve(lis))
+}
+
+func loadTLSCredentials(pw PKI) (creds credentials.TransportCredentials, err error) {
+	defer err2.Return(&err)
+
+	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Client.CertFile))
+	rootCAs := x509.NewCertPool()
+	rootCAs.AppendCertsFromPEM(caCert)
+
+	// Load server's certificate and private key
+	serverCert, err := tls.LoadX509KeyPair(pw.Server.CertFile, pw.Server.KeyFile)
+	err2.Check(err)
+
+	// Create the credentials and return it
+	config := &tls.Config{
+		Certificates: []tls.Certificate{serverCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    rootCAs,
+	}
+
+	glog.V(0).Infoln("cert files loaded")
+	return credentials.NewTLS(config), nil
 }
