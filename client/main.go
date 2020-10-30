@@ -8,7 +8,7 @@ import (
 	"path"
 	"time"
 
-	agency "github.com/findy-network/findy-agent-api/grpc/new"
+	"github.com/findy-network/findy-agent-api/grpc/agency"
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/findy-network/findy-grpc/rpc"
 	"github.com/golang/glog"
@@ -16,7 +16,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-var useTls = true
+var (
+	useTLS = flag.Bool("tls", true, "use TLS communication")
+	user   = flag.String("user", "findy-root", "test user name")
+)
 
 func main() {
 	defer err2.Catch(func(err error) {
@@ -24,7 +27,10 @@ func main() {
 	})
 	flag.Parse()
 
-	conn, err := NewClient("findy-root", "localhost:50051")
+	// whe want this for glog, this is just a tester, not a real world service
+	err2.Check(flag.Set("logtostderr", "true"))
+
+	conn, err := newClient(*user, "localhost:50051")
 	err2.Check(err)
 	defer conn.Close()
 
@@ -32,7 +38,7 @@ func main() {
 
 	c := agency.NewDevOpsClient(conn)
 	r, err := c.Enter(ctx, &agency.Cmd{
-		Type:    agency.Cmd_PING,
+		Type: agency.Cmd_PING,
 	})
 	err2.Check(err)
 	fmt.Println("result:", r.GetPing())
@@ -40,23 +46,28 @@ func main() {
 
 }
 
-var Conn  *grpc.ClientConn
-
-func NewClient(user, addr string) (conn *grpc.ClientConn, err error) {
+func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
 	goPath := os.Getenv("GOPATH")
-	tlsPath := path.Join(goPath, "src/github.com/findy-network/findy-grpc/tls")
-	certFile := path.Join(tlsPath, "ca.crt")
+	tlsPath := path.Join(goPath, "src/github.com/findy-network/findy-grpc/cert")
+	pw := rpc.PKI{
+		Server: rpc.CertFiles{
+			CertFile: path.Join(tlsPath, "server/server.crt"),
+		},
+		Client: rpc.CertFiles{
+			CertFile: path.Join(tlsPath, "client/client.crt"),
+			KeyFile:  path.Join(tlsPath, "client/client.key"),
+		},
+	}
 
 	glog.V(5).Infoln("client with user:", user)
 	conn, err = rpc.ClientConn(rpc.ClientCfg{
-		CertFile: certFile,
-		JWT:      jwt.BuildJWT(user),
-		Addr:     addr,
-		TLS:      useTls,
+		PKI:  pw,
+		JWT:  jwt.BuildJWT(user),
+		Addr: addr,
+		TLS:  *useTLS,
 	})
 	err2.Check(err)
-	Conn = conn
 	return
 }

@@ -2,48 +2,55 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"path"
 
-	agency "github.com/findy-network/findy-agent-api/grpc/new"
+	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/findy-network/findy-grpc/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 )
 
-var useTls = true
+var tls = flag.Bool("tls", true, "use TLS communication")
 
 func main() {
 	flag.Parse()
 
-	Serve()
-}
+	// whe want this for glog, this is just a tester, not a real world service
+	err2.Check(flag.Set("logtostderr", "true"))
 
-
-func Serve() {
 	goPath := os.Getenv("GOPATH")
-	tlsPath := path.Join(goPath, "src/github.com/findy-network/findy-grpc/tls")
-	certFile := path.Join(tlsPath, "server.crt")
-	keyFile := path.Join(tlsPath, "server.pem")
+	tlsPath := path.Join(goPath, "src/github.com/findy-network/findy-grpc/cert")
+	certFile := path.Join(tlsPath, "server/server.crt")
+	keyFile := path.Join(tlsPath, "server/server.key")
+	clientCertFile := path.Join(tlsPath, "client/client.crt")
 
-	glog.V(1).Infoln("starting gRPC server with tls path:", tlsPath)
-
+	glog.V(1).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",
+		certFile, keyFile, clientCertFile)
 	rpc.Serve(rpc.ServerCfg{
-		Port:     50051,
-		TLS:      useTls,
-		CertFile: certFile,
-		KeyFile:  keyFile,
+		Port: 50051,
+		TLS:  *tls,
+		PKI: rpc.PKI{
+			Server: rpc.CertFiles{
+				CertFile: certFile,
+				KeyFile:  keyFile,
+			},
+			Client: rpc.CertFiles{
+				CertFile: clientCertFile,
+			},
+		},
 		Register: func(s *grpc.Server) error {
-			agency.RegisterDevOpsServer(s, &devOpsServer{Root:"findy-root"})
-			glog.Infoln("GRPC registration IIIIIII OK")
+			agency.RegisterDevOpsServer(s, &devOpsServer{Root: "findy-root"})
+			glog.V(10).Infoln("GRPC registration all done")
 			return nil
 		},
 	})
 }
-
 
 type devOpsServer struct {
 	agency.UnimplementedDevOpsServer
@@ -53,11 +60,11 @@ type devOpsServer struct {
 func (d devOpsServer) Enter(ctx context.Context, cmd *agency.Cmd) (cr *agency.CmdReturn, err error) {
 	defer err2.Return(&err)
 
-//	user := jwt.User(ctx)
+	user := jwt.User(ctx)
 
-	//if user != d.Root {
-	//	return &agency.CmdReturn{Type: cmd.Type}, errors.New("access right")
-	//}
+	if user != d.Root {
+		return &agency.CmdReturn{Type: cmd.Type}, errors.New("access right")
+	}
 
 	glog.V(3).Infoln("dev ops cmd", cmd.Type)
 	cmdReturn := &agency.CmdReturn{Type: cmd.Type}
