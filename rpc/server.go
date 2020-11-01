@@ -12,6 +12,7 @@ import (
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 // ServerCfg is gRPC server configuration struct for service init
@@ -19,6 +20,7 @@ type ServerCfg struct {
 	PKI
 	Port     int
 	TLS      bool
+	TestLis  *bufconn.Listener
 	Register func(s *grpc.Server) error
 }
 
@@ -40,17 +42,24 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 	return grpc.NewServer(opts...), nil
 }
 
-// Serve builds up the gRPC server and starts to serve. This function blocks.
-// In most cases you should start it as goroutine. TODO: graceful stop!
+// Serve builds up the gRPC test server and starts to serve. This function
+// blocks. In most cases you should start it as goroutine. TODO: graceful stop!
 func Serve(cfg ServerCfg) {
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
-	glog.V(5).Infoln("listen to:", addr)
-	lis, err := net.Listen("tcp", addr)
-	err2.Check(err)
+	var lis net.Listener
+	if cfg.TestLis != nil {
+		lis = cfg.TestLis
+		glog.V(0).Infoln("listen to TEST BUFFER:", addr)
+	} else {
+		var err error
+		lis, err = net.Listen("tcp", addr)
+		err2.Check(err)
+		glog.V(5).Infoln("listen to:", addr)
+	}
 	s, err := Server(cfg)
 	err2.Check(err)
 	err2.Check(cfg.Register(s))

@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
@@ -31,6 +32,7 @@ type ClientCfg struct {
 	JWT  string
 	Addr string
 	TLS  bool
+	Opts []grpc.DialOption
 }
 
 // ClientConn opens client connection with given configuration.
@@ -55,8 +57,11 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 			//grpc.WithBlock(), // dont use!! you don't get immediate error messages
 		}
 	}
+	if cfg.Opts != nil {
+		opts = append(opts, cfg.Opts...)
+	}
 	glog.V(5).Infoln("going to dial:", cfg.Addr)
-	return grpc.Dial(cfg.Addr, opts...)
+	return grpc.DialContext(context.Background(), cfg.Addr, opts...)
 }
 
 func loadClientTLSFromFile(pw PKI) (creds credentials.TransportCredentials, err error) {
