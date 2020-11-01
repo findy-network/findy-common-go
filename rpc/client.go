@@ -14,18 +14,6 @@ import (
 	"google.golang.org/grpc/credentials/oauth"
 )
 
-// CertFiles is helper struct to keep both needed certification files together.
-type CertFiles struct {
-	CertFile string
-	KeyFile  string
-}
-
-// PKI is helper struct to keep need certification files for both S/C.
-type PKI struct {
-	Server CertFiles
-	Client CertFiles
-}
-
 // ClientCfg is gRPC client initialization and configuration struct.
 type ClientCfg struct {
 	PKI

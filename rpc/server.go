@@ -42,29 +42,39 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 	return grpc.NewServer(opts...), nil
 }
 
-// Serve builds up the gRPC test server and starts to serve. This function
-// blocks. In most cases you should start it as goroutine. TODO: graceful stop!
+// Serve builds up the gRPC server and starts to serve. Note that the function
+// blocks. In most cases you should start it as goroutine. To be able to
+// gracefully stop the gRPC server you should call PrepareServe which builds
+// everything ready but leaves calling the grpcServer.Serve for you.
 func Serve(cfg ServerCfg) {
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
 
+	s, lis, err := PrepareServe(cfg)
+	err2.Check(err)
+
+	glog.V(5).Infoln("start to serve..")
+	err2.Check(s.Serve(lis))
+}
+
+func PrepareServe(cfg ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
+	defer err2.Return(&err)
+
 	addr := fmt.Sprintf(":%d", cfg.Port)
-	var lis net.Listener
 	if cfg.TestLis != nil {
 		lis = cfg.TestLis
-		glog.V(0).Infoln("listen to TEST BUFFER:", addr)
 	} else {
 		var err error
 		lis, err = net.Listen("tcp", addr)
 		err2.Check(err)
 		glog.V(5).Infoln("listen to:", addr)
 	}
-	s, err := Server(cfg)
+	s, err = Server(cfg)
 	err2.Check(err)
 	err2.Check(cfg.Register(s))
-	glog.V(5).Infoln("start to serve..")
-	err2.Check(s.Serve(lis))
+
+	return s, lis, nil
 }
 
 func loadTLSCredentials(pw PKI) (creds credentials.TransportCredentials, err error) {
@@ -85,6 +95,6 @@ func loadTLSCredentials(pw PKI) (creds credentials.TransportCredentials, err err
 		ClientCAs:    rootCAs,
 	}
 
-	glog.V(0).Infoln("cert files loaded")
+	glog.V(1).Infoln("cert files loaded")
 	return credentials.NewTLS(config), nil
 }

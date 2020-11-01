@@ -5,8 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
-	"path"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
 	"github.com/findy-network/findy-grpc/jwt"
@@ -24,26 +22,13 @@ func main() {
 	// whe want this for glog, this is just a tester, not a real world service
 	err2.Check(flag.Set("logtostderr", "true"))
 
-	goPath := os.Getenv("GOPATH")
-	tlsPath := path.Join(goPath, "src/github.com/findy-network/findy-grpc/cert")
-	certFile := path.Join(tlsPath, "server/server.crt")
-	keyFile := path.Join(tlsPath, "server/server.key")
-	clientCertFile := path.Join(tlsPath, "client/client.crt")
-
+	pki := rpc.LoadPKI()
 	glog.V(1).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",
-		certFile, keyFile, clientCertFile)
+		pki.Server.CertFile, pki.Server.KeyFile, pki.Client.CertFile)
 	rpc.Serve(rpc.ServerCfg{
 		Port: 50051,
 		TLS:  *tls,
-		PKI: rpc.PKI{
-			Server: rpc.CertFiles{
-				CertFile: certFile,
-				KeyFile:  keyFile,
-			},
-			Client: rpc.CertFiles{
-				CertFile: clientCertFile,
-			},
-		},
+		PKI:  *pki,
 		Register: func(s *grpc.Server) error {
 			agency.RegisterDevOpsServer(s, &devOpsServer{Root: "findy-root"})
 			glog.V(10).Infoln("GRPC registration all done")
