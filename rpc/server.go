@@ -9,6 +9,9 @@ import (
 
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/golang/glog"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -35,8 +38,16 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 
 		opts = append(opts,
 			grpc.Creds(creds),
-			grpc.UnaryInterceptor(jwt.EnsureValidToken),
-			grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
+			//grpc.UnaryInterceptor(jwt.EnsureValidToken),
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+				grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
+				grpc_recovery.UnaryServerInterceptor(),
+			)),
+			//grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+				grpc_auth.StreamServerInterceptor(jwt.CheckTokenValidity),
+				grpc_recovery.StreamServerInterceptor(),
+			)),
 		)
 	}
 	return grpc.NewServer(opts...), nil
