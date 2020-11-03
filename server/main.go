@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/findy-network/findy-agent-api/grpc/ops"
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/findy-network/findy-grpc/rpc"
 	"github.com/golang/glog"
@@ -30,7 +30,7 @@ func main() {
 		TLS:  *tls,
 		PKI:  *pki,
 		Register: func(s *grpc.Server) error {
-			agency.RegisterDevOpsServer(s, &devOpsServer{Root: "findy-root"})
+			ops.RegisterDevOpsServer(s, &devOpsServer{Root: "findy-root"})
 			glog.V(10).Infoln("GRPC registration all done")
 			return nil
 		},
@@ -38,33 +38,33 @@ func main() {
 }
 
 type devOpsServer struct {
-	agency.UnimplementedDevOpsServer
+	ops.UnimplementedDevOpsServer
 	Root string
 }
 
-func (d devOpsServer) Enter(ctx context.Context, cmd *agency.Cmd) (cr *agency.CmdReturn, err error) {
+func (d devOpsServer) Enter(ctx context.Context, cmd *ops.Cmd) (cr *ops.CmdReturn, err error) {
 	defer err2.Return(&err)
 
 	user := jwt.User(ctx)
 
 	if user != d.Root {
-		return &agency.CmdReturn{Type: cmd.Type}, errors.New("access right")
+		return &ops.CmdReturn{Type: cmd.Type}, errors.New("access right")
 	}
 
 	glog.V(3).Infoln("dev ops cmd", cmd.Type)
-	cmdReturn := &agency.CmdReturn{Type: cmd.Type}
+	cmdReturn := &ops.CmdReturn{Type: cmd.Type}
 
 	switch cmd.Type {
-	case agency.Cmd_PING:
+	case ops.Cmd_PING:
 		response := fmt.Sprintf("%s, ping ok", "TEST")
-		cmdReturn.Response = &agency.CmdReturn_Ping{Ping: response}
-	case agency.Cmd_LOGGING:
+		cmdReturn.Response = &ops.CmdReturn_Ping{Ping: response}
+	case ops.Cmd_LOGGING:
 		//agencyCmd.ParseLoggingArgs(cmd.GetLogging())
 		//response = fmt.Sprintf("logging = %s", cmd.GetLogging())
-	case agency.Cmd_COUNT:
+	case ops.Cmd_COUNT:
 		response := fmt.Sprintf("%d/%d cloud agents",
 			100, 1000)
-		cmdReturn.Response = &agency.CmdReturn_Ping{Ping: response}
+		cmdReturn.Response = &ops.CmdReturn_Ping{Ping: response}
 	}
 	return cmdReturn, nil
 }
