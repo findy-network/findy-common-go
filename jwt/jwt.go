@@ -68,11 +68,13 @@ func check(ctx context.Context, ts string) (context.Context, bool) {
 		})
 
 	if err != nil {
+		glog.Error(err)
 		return ctx, false
 	}
 	if claims, ok := token.Claims.(*customClaims); ok && token.Valid {
 		ctx = context.WithValue(ctx, UserCtxKey("UserKey"), claims.Username)
 	} else {
+		glog.Error("no claims in token")
 		return ctx, false
 	}
 
@@ -82,9 +84,11 @@ func check(ctx context.Context, ts string) (context.Context, bool) {
 // valid validates the authorization.
 func valid(ctx context.Context, authorization []string) (context.Context, bool) {
 	if len(authorization) < 1 {
+		glog.Error("no authorization meta data")
 		return ctx, false
 	}
 	token := strings.TrimPrefix(authorization[0], "Bearer ")
+	glog.V(13).Infoln("token:", token)
 
 	// Perform the JWT token validation here
 	return check(ctx, token)
@@ -130,7 +134,7 @@ func CheckTokenValidity(ctx context.Context) (context.Context, error) {
 
 	newCtx, isValid := valid(ctx, md["authorization"])
 	if !isValid {
-		glog.Error("NO authorization")
+		glog.Error("NO authorization in the token")
 		return newCtx, errInvalidToken
 	}
 	return newCtx, nil
