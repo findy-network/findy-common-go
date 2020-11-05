@@ -9,9 +9,13 @@ import (
 
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/golang/glog"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 // ServerCfg is gRPC server configuration struct for service init
@@ -19,6 +23,7 @@ type ServerCfg struct {
 	PKI
 	Port     int
 	TLS      bool
+	TestLis  *bufconn.Listener
 	Register func(s *grpc.Server) error
 }
 
@@ -33,29 +38,54 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 
 		opts = append(opts,
 			grpc.Creds(creds),
-			grpc.UnaryInterceptor(jwt.EnsureValidToken),
-			grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
+			//grpc.UnaryInterceptor(jwt.EnsureValidToken),
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+				grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
+				grpc_recovery.UnaryServerInterceptor(),
+			)),
+			//grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+				grpc_auth.StreamServerInterceptor(jwt.CheckTokenValidity),
+				grpc_recovery.StreamServerInterceptor(),
+			)),
 		)
 	}
 	return grpc.NewServer(opts...), nil
 }
 
-// Serve builds up the gRPC server and starts to serve. This function blocks.
-// In most cases you should start it as goroutine. TODO: graceful stop!
+// Serve builds up the gRPC server and starts to serve. Note that the function
+// blocks. In most cases you should start it as goroutine. To be able to
+// gracefully stop the gRPC server you should call PrepareServe which builds
+// everything ready but leaves calling the grpcServer.Serve for you.
 func Serve(cfg ServerCfg) {
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
 
-	addr := fmt.Sprintf(":%d", cfg.Port)
-	glog.V(5).Infoln("listen to:", addr)
-	lis, err := net.Listen("tcp", addr)
+	s, lis, err := PrepareServe(cfg)
 	err2.Check(err)
-	s, err := Server(cfg)
-	err2.Check(err)
-	err2.Check(cfg.Register(s))
+
 	glog.V(5).Infoln("start to serve..")
 	err2.Check(s.Serve(lis))
+}
+
+func PrepareServe(cfg ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
+	defer err2.Return(&err)
+
+	addr := fmt.Sprintf(":%d", cfg.Port)
+	if cfg.TestLis != nil {
+		lis = cfg.TestLis
+	} else {
+		var err error
+		lis, err = net.Listen("tcp", addr)
+		err2.Check(err)
+		glog.V(5).Infoln("listen to:", addr)
+	}
+	s, err = Server(cfg)
+	err2.Check(err)
+	err2.Check(cfg.Register(s))
+
+	return s, lis, nil
 }
 
 func loadTLSCredentials(pw PKI) (creds credentials.TransportCredentials, err error) {
@@ -76,6 +106,6 @@ func loadTLSCredentials(pw PKI) (creds credentials.TransportCredentials, err err
 		ClientCAs:    rootCAs,
 	}
 
-	glog.V(0).Infoln("cert files loaded")
+	glog.V(1).Infoln("cert files loaded")
 	return credentials.NewTLS(config), nil
 }

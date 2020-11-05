@@ -1,3 +1,9 @@
+API_BRANCH=$(shell ./branch.sh ../findy-agent-api/)
+
+modules:
+	@echo Syncing modules for work brances ...
+	go get github.com/findy-network/findy-agent-api@$(API_BRANCH)
+
 deps:
 	go get -t ./...
 

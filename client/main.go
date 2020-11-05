@@ -8,7 +8,7 @@ import (
 	"path"
 	"time"
 
-	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/findy-network/findy-agent-api/grpc/ops"
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/findy-network/findy-grpc/rpc"
 	"github.com/golang/glog"
@@ -36,9 +36,9 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-	c := agency.NewDevOpsClient(conn)
-	r, err := c.Enter(ctx, &agency.Cmd{
-		Type: agency.Cmd_PING,
+	c := ops.NewDevOpsClient(conn)
+	r, err := c.Enter(ctx, &ops.Cmd{
+		Type: ops.Cmd_PING,
 	})
 	err2.Check(err)
 	fmt.Println("result:", r.GetPing())
