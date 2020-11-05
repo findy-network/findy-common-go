@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/findy-network/findy-agent-api v0.0.0-20201103195359-b8802482560f
+	github.com/findy-network/findy-agent-api v0.0.0-20201105081409-f271a5b4c9b6
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/lainio/err2 v0.5.0
