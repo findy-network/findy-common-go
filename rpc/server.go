@@ -20,9 +20,8 @@ import (
 
 // ServerCfg is gRPC server configuration struct for service init
 type ServerCfg struct {
-	PKI
+	*PKI
 	Port     int
-	TLS      bool
 	TestLis  *bufconn.Listener
 	Register func(s *grpc.Server) error
 }
@@ -32,7 +31,7 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 	defer err2.Return(&err)
 
 	opts := make([]grpc.ServerOption, 0, 4)
-	if cfg.TLS {
+	if cfg.PKI != nil {
 		creds, err := loadTLSCredentials(cfg.PKI)
 		err2.Check(err)
 
@@ -88,7 +87,7 @@ func PrepareServe(cfg ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
 	return s, lis, nil
 }
 
-func loadTLSCredentials(pw PKI) (creds credentials.TransportCredentials, err error) {
+func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
 	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Client.CertFile))

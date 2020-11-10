@@ -79,10 +79,9 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 
 	glog.V(5).Infoln("client with user:", user)
 	conn, err = rpc.ClientConn(rpc.ClientCfg{
-		PKI:  *pki,
+		PKI:  pki,
 		JWT:  jwt.BuildJWT(user),
 		Addr: addr,
-		TLS:  true,
 		Opts: []grpc.DialOption{grpc.WithContextDialer(bufDialer)},
 	})
 	err2.Check(err)
@@ -100,8 +99,7 @@ func runServer() {
 		})
 		s, lis, err := rpc.PrepareServe(rpc.ServerCfg{
 			Port:    50051,
-			TLS:     true,
-			PKI:     *pki,
+			PKI:     pki,
 			TestLis: lis,
 			Register: func(s *grpc.Server) error {
 				ops.RegisterDevOpsServer(s, &devOpsServer{Root: "findy-root"})

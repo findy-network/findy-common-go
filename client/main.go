@@ -15,8 +15,7 @@ import (
 )
 
 var (
-	useTLS = flag.Bool("tls", true, "use TLS communication")
-	user   = flag.String("user", "findy-root", "test user name")
+	user = flag.String("user", "findy-root", "test user name")
 )
 
 func main() {
@@ -50,10 +49,9 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	pki := rpc.LoadPKI("../cert")
 	glog.V(5).Infoln("client with user:", user)
 	conn, err = rpc.ClientConn(rpc.ClientCfg{
-		PKI:  *pki,
+		PKI:  pki,
 		JWT:  jwt.BuildJWT(user),
 		Addr: addr,
-		TLS:  *useTLS,
 	})
 	err2.Check(err)
 	return
