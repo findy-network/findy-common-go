@@ -17,9 +17,11 @@ type PKI struct {
 	Client CertFiles
 }
 
-func LoadPKI() *PKI {
-	goPath := os.Getenv("GOPATH")
-	tlsPath := path.Join(goPath, "src/github.com/findy-network/findy-grpc/cert")
+func LoadPKI(tlsPath string) *PKI {
+	if tlsPath == "" {
+		p := os.Getenv("GOPATH")
+		tlsPath = path.Join(p, "src/github.com/findy-network/findy-grpc/cert")
+	}
 	return &PKI{
 		Server: CertFiles{
 			CertFile: path.Join(tlsPath, "server/server.crt"),

@@ -75,7 +75,7 @@ func TestEnter(t *testing.T) {
 func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
-	pki := rpc.LoadPKI()
+	pki := rpc.LoadPKI("../cert")
 
 	glog.V(5).Infoln("client with user:", user)
 	conn, err = rpc.ClientConn(rpc.ClientCfg{
@@ -90,7 +90,7 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 }
 
 func runServer() {
-	pki := rpc.LoadPKI()
+	pki := rpc.LoadPKI("../cert")
 	glog.V(1).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",
 		pki.Server.CertFile, pki.Server.KeyFile, pki.Client.CertFile)
 
