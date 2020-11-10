@@ -27,7 +27,7 @@ type ServerCfg struct {
 }
 
 // Server creates a gRPC server with TLS and JWT token authorization.
-func Server(cfg ServerCfg) (s *grpc.Server, err error) {
+func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	defer err2.Return(&err)
 
 	opts := make([]grpc.ServerOption, 0, 4)
@@ -56,7 +56,7 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 // blocks. In most cases you should start it as goroutine. To be able to
 // gracefully stop the gRPC server you should call PrepareServe which builds
 // everything ready but leaves calling the grpcServer.Serve for you.
-func Serve(cfg ServerCfg) {
+func Serve(cfg *ServerCfg) {
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
@@ -68,7 +68,7 @@ func Serve(cfg ServerCfg) {
 	err2.Check(s.Serve(lis))
 }
 
-func PrepareServe(cfg ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
+func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
 	defer err2.Return(&err)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)

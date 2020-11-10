@@ -97,7 +97,7 @@ func runServer() {
 		defer err2.Catch(func(err error) {
 			log.Fatal(err)
 		})
-		s, lis, err := rpc.PrepareServe(rpc.ServerCfg{
+		s, lis, err := rpc.PrepareServe(&rpc.ServerCfg{
 			Port:    50051,
 			PKI:     pki,
 			TestLis: lis,
