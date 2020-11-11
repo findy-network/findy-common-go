@@ -23,7 +23,7 @@ check_fmt:
 	@gofmt -l $(GOFILES)
 
 lint:
-	$(GOPATH)/bin/golint ./...
+	@golangci-lint run
 
 lint_e:
 	@$(GOPATH)/bin/golint ./... | grep -v export | cat

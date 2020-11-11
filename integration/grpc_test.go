@@ -64,7 +64,7 @@ func TestEnter(t *testing.T) {
 	assert.Equal(t, pingReturn, r.GetPing())
 
 	doPanic = true
-	r, err = c.Enter(ctx, &ops.Cmd{
+	_, err = c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})
 	assert.Error(t, err)
