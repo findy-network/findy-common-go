@@ -20,19 +20,18 @@ import (
 
 // ServerCfg is gRPC server configuration struct for service init
 type ServerCfg struct {
-	PKI
+	*PKI
 	Port     int
-	TLS      bool
 	TestLis  *bufconn.Listener
 	Register func(s *grpc.Server) error
 }
 
 // Server creates a gRPC server with TLS and JWT token authorization.
-func Server(cfg ServerCfg) (s *grpc.Server, err error) {
+func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	defer err2.Return(&err)
 
 	opts := make([]grpc.ServerOption, 0, 4)
-	if cfg.TLS {
+	if cfg.PKI != nil {
 		creds, err := loadTLSCredentials(cfg.PKI)
 		err2.Check(err)
 
@@ -57,7 +56,7 @@ func Server(cfg ServerCfg) (s *grpc.Server, err error) {
 // blocks. In most cases you should start it as goroutine. To be able to
 // gracefully stop the gRPC server you should call PrepareServe which builds
 // everything ready but leaves calling the grpcServer.Serve for you.
-func Serve(cfg ServerCfg) {
+func Serve(cfg *ServerCfg) {
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
@@ -69,7 +68,7 @@ func Serve(cfg ServerCfg) {
 	err2.Check(s.Serve(lis))
 }
 
-func PrepareServe(cfg ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
+func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
 	defer err2.Return(&err)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
@@ -88,7 +87,7 @@ func PrepareServe(cfg ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
 	return s, lis, nil
 }
 
-func loadTLSCredentials(pw PKI) (creds credentials.TransportCredentials, err error) {
+func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
 	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Client.CertFile))

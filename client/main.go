@@ -4,8 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
-	"path"
 	"time"
 
 	"github.com/findy-network/findy-agent-api/grpc/ops"
@@ -17,8 +15,7 @@ import (
 )
 
 var (
-	useTLS = flag.Bool("tls", true, "use TLS communication")
-	user   = flag.String("user", "findy-root", "test user name")
+	user = flag.String("user", "findy-root", "test user name")
 )
 
 func main() {
@@ -49,24 +46,12 @@ func main() {
 func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
-	goPath := os.Getenv("GOPATH")
-	tlsPath := path.Join(goPath, "src/github.com/findy-network/findy-grpc/cert")
-	pw := rpc.PKI{
-		Server: rpc.CertFiles{
-			CertFile: path.Join(tlsPath, "server/server.crt"),
-		},
-		Client: rpc.CertFiles{
-			CertFile: path.Join(tlsPath, "client/client.crt"),
-			KeyFile:  path.Join(tlsPath, "client/client.key"),
-		},
-	}
-
+	pki := rpc.LoadPKI("../cert")
 	glog.V(5).Infoln("client with user:", user)
 	conn, err = rpc.ClientConn(rpc.ClientCfg{
-		PKI:  pw,
+		PKI:  pki,
 		JWT:  jwt.BuildJWT(user),
 		Addr: addr,
-		TLS:  *useTLS,
 	})
 	err2.Check(err)
 	return

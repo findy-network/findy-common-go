@@ -16,10 +16,9 @@ import (
 
 // ClientCfg is gRPC client initialization and configuration struct.
 type ClientCfg struct {
-	PKI
+	*PKI
 	JWT  string
 	Addr string
-	TLS  bool
 	Opts []grpc.DialOption
 }
 
@@ -34,7 +33,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	glog.V(5).Infoln("new tls client ready")
 
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
-	if cfg.TLS {
+	if cfg.PKI != nil {
 		// we wrap our JWT token to Oauth token
 		perRPC := oauth.NewOauthAccess(jwt.OauthToken(cfg.JWT))
 		glog.V(10).Infoln("grpc oauth wrap for JWT done")
@@ -52,7 +51,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	return grpc.DialContext(context.Background(), cfg.Addr, opts...)
 }
 
-func loadClientTLSFromFile(pw PKI) (creds credentials.TransportCredentials, err error) {
+func loadClientTLSFromFile(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
 	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Server.CertFile))
