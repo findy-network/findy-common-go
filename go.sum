@@ -22,6 +22,8 @@ github.com/findy-network/findy-agent-api v0.0.0-20201105081409-f271a5b4c9b6 h1:3
 github.com/findy-network/findy-agent-api v0.0.0-20201105081409-f271a5b4c9b6/go.mod h1:9rsIf/AtsdQgVUiGA77sbXInk2FnaPSCS2P+TmBUeIc=
 github.com/findy-network/findy-agent-api v0.0.0-20201109160522-df5a4d4cb181 h1:AsuQq4RgX7ifMefBhujmK81povGSX5dq7DVqRBjBFm8=
 github.com/findy-network/findy-agent-api v0.0.0-20201109160522-df5a4d4cb181/go.mod h1:9rsIf/AtsdQgVUiGA77sbXInk2FnaPSCS2P+TmBUeIc=
+github.com/findy-network/findy-agent-api v0.0.0-20201114124900-60e2aa27124d h1:RlMILuHQ6R2v+vUVtrVuF9OY6emoDBMmD+oytfge3Ws=
+github.com/findy-network/findy-agent-api v0.0.0-20201114124900-60e2aa27124d/go.mod h1:9rsIf/AtsdQgVUiGA77sbXInk2FnaPSCS2P+TmBUeIc=
 github.com/go-gl/glfw/v3.3/glfw v0.0.0-20200222043503-6f7a984d4dc4/go.mod h1:tQ2UAYgL5IevRw8kRxooKSPJfGvJ9fJQFa0TUsXzTg8=
 github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-logfmt/logfmt v0.4.0/go.mod h1:3RMwSq7FuexP4Kalkev3ejPJsZTpXXBr9+V4qmtdjCk=
