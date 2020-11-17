@@ -1,6 +1,8 @@
 # findy-grpc
 
-General helpers for JWT and gRPC handling that sill is heavily under construction.
+Includes WebAuthn samle server now in the root. That will work as a reference implementation how to allocate findy-agent cloud agents from fido2 compatible web wallets.
+
+Package also includes general helpers for JWT and gRPC handling that sill is heavily under construction.
 
 #### Usage
 
