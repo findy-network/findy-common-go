@@ -1,10 +1,15 @@
 # findy-grpc
 
-Includes WebAuthn samle server now in the root. That will work as a reference implementation how to allocate findy-agent cloud agents from fido2 compatible web wallets.
+Includes WebAuthn sample server. That will work as a reference implementation how to allocate `findy-agent` cloud agents from fido2 compatible web wallets.
 
-Package also includes general helpers for JWT and gRPC handling that sill is heavily under construction.
+Main purpose of the package is to provide helpers for JWT and gRPC handling that sill is under construction.
 
 #### Usage
+
+A current version of the WebAuthn server can be started from package root:
+```shell script
+$ go run .
+```
 
 These helper packages are made to help use gRPC and JWT together. It also helps with TLS keys.
 
