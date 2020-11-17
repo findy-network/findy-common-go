@@ -6,7 +6,8 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/duo-labs/webauthn v0.0.0-20200714211715-1daaee874e43
 	github.com/duo-labs/webauthn.io v0.0.0-20200929144140-c031a3e0f95d
-	github.com/findy-network/findy-agent-api v0.0.0-20201114124900-60e2aa27124d
+	github.com/findy-network/findy-agent-api v0.0.0-20201117092904-2c15be0d866b
+	github.com/findy-network/findy-wrapper-go v0.0.0-20200827084841-e60f74b36fd2
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
