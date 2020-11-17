@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	user = flag.String("user", "findy-root", "test user name")
+	user       = flag.String("user", "findy-root", "test user name")
 	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
-	port = flag.Int("port", 50051, "agency host gRPC port")
+	port       = flag.Int("port", 50051, "agency host gRPC port")
 )
 
 func main() {
