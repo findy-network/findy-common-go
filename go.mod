@@ -10,6 +10,7 @@ require (
 	github.com/findy-network/findy-agent-api v0.0.0-20201117092904-2c15be0d866b
 	github.com/findy-network/findy-wrapper-go v0.0.0-20201026120712-dc9ac6619595
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+	github.com/google/uuid v1.1.2
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/lainio/err2 v0.5.0

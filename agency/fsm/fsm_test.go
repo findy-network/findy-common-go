@@ -12,7 +12,6 @@ var (
 		Initial: "IDLE",
 		States: map[string]State{
 			"IDLE": {
-				ID: "IDLE",
 				Transitions: []Transition{{
 					Trigger: Event{TypeID: "basic_message"},
 					Sends: []Event{{
@@ -23,7 +22,6 @@ var (
 				}},
 			},
 			"WAITING_STATUS": {
-				ID: "WAITING_STATUS",
 				Transitions: []Transition{{
 					Trigger: Event{
 						TypeID: "basic_message",

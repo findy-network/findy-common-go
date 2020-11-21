@@ -15,37 +15,6 @@ import (
 	"github.com/lainio/err2"
 )
 
-var Machine = fsm.Machine{
-	Initial: "IDLE",
-	States: map[string]fsm.State{
-		"IDLE": {
-			ID: "IDLE",
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{TypeID: "basic_message"},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "INPUT",
-				}},
-				Target: "WAITING_STATUS",
-			}},
-		},
-		"WAITING_STATUS": {
-			ID: "WAITING_STATUS",
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
-				},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
-				}},
-				Target: "IDLE",
-			}},
-		},
-	},
-}
-
 type Bot struct {
 	client.Conn
 	fsm fsm.Machine
@@ -73,10 +42,14 @@ func (b Bot) Run(intCh chan os.Signal) {
 	ch, err := b.Conn.Listen(ctx, &agency.ClientID{Id: utils.UUID()})
 	err2.Check(err)
 
-	b.fsm = Machine
+	// this block is for development without fsm file
+	b.fsm = EmailIssuerMachine // EchoMachine
 	err2.Check(b.fsm.Initialize())
+
+	// this block is for testing file loading
+	//err2.Check(b.LoadFSM("echobot.json"))
 	chat.Machine = &b.fsm
-	err2.Check(b.LoadFSM("echobot.json"))
+
 	go chat.Multiplexer(b.Conn)
 
 loop:

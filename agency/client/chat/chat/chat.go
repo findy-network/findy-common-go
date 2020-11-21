@@ -11,23 +11,34 @@ import (
 	"github.com/lainio/err2"
 )
 
+// todo: check what of these types need to be exported.
+
 type ConnStatus *agency.AgentStatus
 
 type StatusChan chan ConnStatus
 
 type Conversation struct {
+	id string
 	client.Conn
 	lastProtocol *agency.ProtocolID
 	StatusChan
 	fsm.Machine
 }
 
-// should be move these to Bot? soon, baby soon, ..
+// These are class level variables for this chat bot which means that every
+// conversation of this bot will share these variables
 var (
+	// Status is input channel for multiplexing this chat bot i.e. CA sends
+	// every message t this channel from here they are transported to according
+	// conversations
 	Status = make(StatusChan)
 
+	// conversations is a map of all instances indexed by connection id aka
+	// pairwise id
 	conversations = make(map[string]*Conversation)
 
+	// Machine is the initial finite-state machine from where every
+	// conversations will be started
 	Machine *fsm.Machine
 )
 
@@ -39,6 +50,7 @@ func Multiplexer(conn client.Conn) {
 		if !ok {
 			glog.V(1).Infoln("Starting new conversation")
 			c = &Conversation{
+				id:         t.Notification.ConnectionId,
 				Conn:       conn,
 				StatusChan: make(StatusChan),
 				Machine:    *Machine,
@@ -66,13 +78,16 @@ func (c *Conversation) RunConversation() {
 			glog.V(1).Infoln("role:", status.GetState().ProtocolId.Role)
 
 			glog.V(1).Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
-			if transition.Trigger.Rule != "OUR_STATUS" {
-				event := c.buildMessage(status, transition)
-				c.sendBasicMessage(t, event[0].BasicMessage)
+			if transition.Trigger.Rule != fsm.TriggerTypeOurMessage {
+				outputs := transition.BuildSendEvents(status)
+				c.send(outputs)
 			} else {
 				glog.V(1).Infoln("our message, just getting status")
 			}
 			c.Machine.Step(transition)
+		} else {
+			glog.V(1).Infoln("machine don't have transition for:",
+				t.Notification.ProtocolType)
 		}
 	}
 }
@@ -81,11 +96,7 @@ func (c *Conversation) getStatus(status ConnStatus) *agency.ProtocolStatus {
 	ctx := context.Background()
 	didComm := agency.NewDIDCommClient(c.Conn)
 	statusResult, err := didComm.Status(ctx, &agency.ProtocolID{
-		TypeId: status.Notification.ProtocolType,
-
-		// todo: we should test if this is really needed, if it isn't then this getter is totally general
-		//Role: agency.Protocol_ADDRESSEE,
-
+		TypeId:           status.Notification.ProtocolType,
 		Id:               status.Notification.ProtocolId,
 		NotificationTime: status.Notification.Timestamp,
 	})
@@ -93,26 +104,10 @@ func (c *Conversation) getStatus(status ConnStatus) *agency.ProtocolStatus {
 	return statusResult
 }
 
-func (c *Conversation) buildMessage(statusResult *agency.ProtocolStatus, transition *fsm.Transition) []fsm.Event {
-	event := fsm.Event{
-		BasicMessage: &fsm.BasicMessage{Content: statusResult.GetBasicMessage().Content},
-		ProtocolType: statusResult.GetState().ProtocolId.TypeId,
-	}
-
-	sends := make([]fsm.Event, len(transition.Sends))
-	for i, send := range transition.Sends {
-		sends[i] = send
-		if send.Rule == "INPUT" {
-			sends[i].BasicMessage = event.BasicMessage
-		}
-	}
-	return sends
-}
-
-func (c *Conversation) sendBasicMessage(status ConnStatus, message *fsm.BasicMessage) {
+func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage) {
 	r, err := async.NewPairwise(
 		c.Conn,
-		status.Notification.ConnectionId,
+		c.id,
 	).BasicMessage(context.Background(),
 		message.Content)
 	err2.Check(err)
@@ -122,4 +117,15 @@ func (c *Conversation) sendBasicMessage(status ConnStatus, message *fsm.BasicMes
 
 func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
 	c.lastProtocol = pid
+}
+
+func (c *Conversation) send(outputs []fsm.Event) {
+	for _, output := range outputs {
+		switch output.ProtocolType {
+		case agency.Protocol_CONNECT:
+			glog.Warningf("we should not be here!!")
+		case agency.Protocol_BASIC_MESSAGE:
+			c.sendBasicMessage(output.BasicMessage)
+		}
+	}
 }
