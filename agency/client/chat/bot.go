@@ -51,7 +51,7 @@ type Bot struct {
 	fsm fsm.Machine
 }
 
-func (b *Bot) LoadMachine(fName string) (err error) {
+func (b *Bot) LoadFSM(fName string) (err error) {
 	defer err2.Return(&err)
 	data := err2.Bytes.Try(ioutil.ReadFile(fName))
 	err2.Check(json.Unmarshal(data, &b.fsm))
@@ -59,7 +59,7 @@ func (b *Bot) LoadMachine(fName string) (err error) {
 	return nil
 }
 
-func (b *Bot) SaveMachine(fName string) (err error) {
+func (b *Bot) SaveFSM(fName string) (err error) {
 	defer err2.Return(&err)
 	data := err2.Bytes.Try(json.MarshalIndent(b.fsm, "", "\t"))
 	err2.Check(ioutil.WriteFile(fName, data, 0644))
@@ -76,6 +76,7 @@ func (b Bot) Run(intCh chan os.Signal) {
 	b.fsm = Machine
 	err2.Check(b.fsm.Initialize())
 	chat.Machine = &b.fsm
+	err2.Check(b.LoadFSM("echobot.json"))
 	go chat.Multiplexer(b.Conn)
 
 loop:
