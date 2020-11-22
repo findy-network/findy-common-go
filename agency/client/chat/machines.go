@@ -71,10 +71,17 @@ Please enter it back to me, the chat bot, and I'll send your email credential.`,
 {{.EMAIL}}
 Please follow your wallet app's instructions`,
 					},
-					//{
-					//	TypeID:   "issue_cred",
-					//	Data: `json template for attributes and other data`,
-					//},
+					{
+						TypeID: "issue_cred",
+						Rule:   "FORMAT_MEM",
+						Data:   `[{"name":"email","value":"{{.EMAIL}}"}]`,
+						EventData: &fsm.EventData{
+							Issuing: &fsm.Issuing{
+								CredDefID: "T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1",
+								AttrsJSON: `[{"name":"email","value":"{{.EMAIL}}"}]`,
+							},
+						},
+					},
 				},
 				Target: "WAITING_ISSUING_STATUS",
 			}},

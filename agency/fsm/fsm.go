@@ -23,6 +23,16 @@ const (
 	TriggerTypeValidateInputEqual = "INPUT_VALIDATE_EQUAL"
 )
 
+const (
+	MessageEmail        = "email"
+	MessageBasicMessage = "basic_message"
+	MessageIssueCred    = "issue_cred"
+	MessageTrustPing    = "trust_ping"
+	MessagePresentProof = "present_proof"
+	MessageConnection   = "connection"
+	MessageNone         = ""
+)
+
 type Machine struct {
 	Initial string           `json:"initial"`
 	States  map[string]State `json:"states"`
@@ -77,6 +87,12 @@ type Event struct {
 
 type EventData struct {
 	BasicMessage *BasicMessage `json:"basic_message"`
+	Issuing      *Issuing      `json:"issuing"`
+}
+
+type Issuing struct {
+	CredDefID string
+	AttrsJSON string
 }
 
 type BasicMessage struct {
@@ -145,14 +161,15 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
 	for i, send := range events {
 		sends[i] = send
 		switch send.TypeID {
-		case "email":
+		case MessageIssueCred:
+		case MessageEmail:
 			switch send.Rule {
 			case TriggerTypePIN:
 				t.GenPIN(&send)
 				s := t.FmtFromMem(&send)
 				glog.Infoln("email:", s)
 			}
-		case "basic_message":
+		case MessageBasicMessage:
 			switch send.Rule {
 			case TriggerTypeUseInput:
 				sends[i].EventData = input.EventData
@@ -232,10 +249,10 @@ func (t *Transition) GenPIN(_ *Event) {
 }
 
 var protocolType = map[string]agency.Protocol_Type{
-	"":              0, // todo: we need the constant here!
-	"connection":    agency.Protocol_CONNECT,
-	"issue_cred":    agency.Protocol_ISSUE,
-	"present_proof": agency.Protocol_PROOF,
-	"trust_ping":    agency.Protocol_TRUST_PING,
-	"basic_message": agency.Protocol_BASIC_MESSAGE,
+	MessageNone:         0, // todo: we need the constant here!
+	MessageConnection:   agency.Protocol_CONNECT,
+	MessageIssueCred:    agency.Protocol_ISSUE,
+	MessagePresentProof: agency.Protocol_PROOF,
+	MessageTrustPing:    agency.Protocol_TRUST_PING,
+	MessageBasicMessage: agency.Protocol_BASIC_MESSAGE,
 }
