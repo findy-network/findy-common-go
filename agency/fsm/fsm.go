@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	TriggerTypeOurMessage    = "OUR_STATUS" // todo: not used any more
+	TriggerTypeOurMessage    = "OUR_STATUS" // todo: not used any more, maybe is in Trigger
 	TriggerTypeUseInput      = "INPUT"
 	TriggerTypeUseInputSave  = "INPUT_SAVE"
 	TriggerTypeFormat        = "FORMAT"
@@ -115,6 +115,11 @@ func (m *Machine) Initialize() (err error) {
 			for k := range m.States[id].Transitions[j].Sends {
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
 					protocolType[m.States[id].Transitions[j].Sends[k].TypeID]
+				if m.States[id].Transitions[j].Sends[k].TypeID == MessageIssueCred &&
+					m.States[id].Transitions[j].Sends[k].EventData.Issuing == nil {
+					return fmt.Errorf("bad format in (%s) missing Issuing data",
+						m.States[id].Transitions[j].Sends[k].Data)
+				}
 			}
 		}
 		if id == m.Initial {
@@ -162,6 +167,13 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
 		sends[i] = send
 		switch send.TypeID {
 		case MessageIssueCred:
+			switch send.Rule {
+			case TriggerTypeFormatFromMem:
+				sends[i].EventData = &EventData{Issuing: &Issuing{
+					CredDefID: send.EventData.Issuing.CredDefID,
+					AttrsJSON: t.FmtFromMem(&send),
+				}}
+			}
 		case MessageEmail:
 			switch send.Rule {
 			case TriggerTypePIN:

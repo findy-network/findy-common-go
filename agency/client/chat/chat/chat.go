@@ -124,6 +124,19 @@ func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
 	}
 }
 
+func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
+	r, err := async.NewPairwise(
+		c.Conn,
+		c.id,
+	).Issue(context.Background(),
+		message.CredDefID, message.AttrsJSON)
+	err2.Check(err)
+	glog.V(1).Infoln("protocol id:", r.Id)
+	if noAck {
+		c.SetLastProtocolID(r)
+	}
+}
+
 func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
 	if c.lastProtocolID == nil {
 		c.lastProtocolID = make(map[string]struct{})
@@ -138,6 +151,8 @@ func (c *Conversation) send(outputs []fsm.Event) {
 			glog.Warningf("we should not be here!!")
 		case agency.Protocol_BASIC_MESSAGE:
 			c.sendBasicMessage(output.BasicMessage, output.NoStatus)
+		case agency.Protocol_ISSUE:
+			c.sendIssuing(output.Issuing, output.NoStatus)
 		}
 	}
 }

@@ -89,8 +89,8 @@ Please follow your wallet app's instructions`,
 		"WAITING_ISSUING_STATUS": {
 			Transitions: []fsm.Transition{{
 				Trigger: fsm.Event{
-					TypeID:     "XXX", // todo: questions? for accepting something?
-					FailTarget: "XXX",
+					TypeID: "issue_cred", // there was no questions when it was us who started the issuing
+					Rule:   "OUR_STATUS",
 				},
 				Sends: []fsm.Event{
 					{
