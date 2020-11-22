@@ -14,19 +14,7 @@ var EmailIssuerMachine = fsm.Machine{
 					TypeID: "basic_message",
 					Data: `Hello! I'm a email issuer.
 Please enter your email address.`,
-				}},
-				Target: "WAITING_MY_STATUS",
-			}},
-		},
-		"WAITING_MY_STATUS": {
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
-				},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
+					NoStatus: true,
 				}},
 				Target: "WAITING_EMAIL_ADDRESS",
 			}},
@@ -42,19 +30,7 @@ Please enter your email address.`,
 					Rule:   "FORMAT",
 					Data: `Thank you! I sent your pin code to %s.
 Please enter it here and I'll send your email credential.`,
-				}},
-				Target: "WAITING_MY_EMAIL_PIN_STATUS",
-			}},
-		},
-		"WAITING_MY_EMAIL_PIN_STATUS": {
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
-				},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
+					NoStatus: true,
 				}},
 				Target: "WAITING_EMAIL_PIN",
 			}},
@@ -63,11 +39,12 @@ Please enter it here and I'll send your email credential.`,
 			Transitions: []fsm.Transition{{
 				Trigger: fsm.Event{
 					TypeID: "basic_message",
-					Rule:   "INPUT",
+					Rule:   "INPUT_VALIDATE", // validation criterion is will be in??
 				},
 				Sends: []fsm.Event{{
 					TypeID: "basic_message",
-					Rule: `Hello! I'm a email issuer.
+					Rule:   "FORMAT",
+					Data: `.
 Please enter your email address.`,
 				}},
 				Target: "WAITING_STATUS",
@@ -90,30 +67,20 @@ var EchoMachine = fsm.Machine{
 			}},
 		},
 		"IDLE": {
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
-					TypeID: "basic_message",
-					Rule:   "INPUT",
+			Transitions: []fsm.Transition{
+				{
+					Trigger: fsm.Event{
+						TypeID: "basic_message",
+						Rule:   "INPUT",
+					},
+					Sends: []fsm.Event{{
+						TypeID:   "basic_message",
+						Rule:     "INPUT",
+						NoStatus: true,
+					}},
+					Target: "IDLE",
 				},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "INPUT", // todo: not here, or both?
-				}},
-				Target: "WAITING_STATUS",
-			}},
-		},
-		"WAITING_STATUS": {
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
-				},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "OUR_STATUS",
-				}},
-				Target: "IDLE",
-			}},
+			},
 		},
 	},
 }

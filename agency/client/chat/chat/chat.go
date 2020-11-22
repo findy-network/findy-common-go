@@ -20,7 +20,7 @@ type StatusChan chan ConnStatus
 type Conversation struct {
 	id string
 	client.Conn
-	lastProtocol *agency.ProtocolID
+	lastProtocolID map[string]struct{} //*agency.ProtocolID
 	StatusChan
 	fsm.Machine
 }
@@ -68,6 +68,11 @@ func (c *Conversation) RunConversation() {
 
 		glog.V(3).Infoln("conversation:", t.Notification.ConnectionId)
 
+		if c.IsOursAndRm(t.Notification.ProtocolId) {
+			glog.V(1).Infoln("discarding event")
+			continue
+		}
+
 		if transition := c.Machine.Triggers(t.Notification.ProtocolType); transition != nil {
 			status := c.getStatus(t)
 
@@ -104,7 +109,7 @@ func (c *Conversation) getStatus(status ConnStatus) *agency.ProtocolStatus {
 	return statusResult
 }
 
-func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage) {
+func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
 	r, err := async.NewPairwise(
 		c.Conn,
 		c.id,
@@ -112,11 +117,16 @@ func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage) {
 		message.Content)
 	err2.Check(err)
 	glog.V(1).Infoln("protocol id:", r.Id)
-	c.SetLastProtocolID(r)
+	if noAck {
+		c.SetLastProtocolID(r)
+	}
 }
 
 func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
-	c.lastProtocol = pid
+	if c.lastProtocolID == nil {
+		c.lastProtocolID = make(map[string]struct{})
+	}
+	c.lastProtocolID[pid.Id] = struct{}{}
 }
 
 func (c *Conversation) send(outputs []fsm.Event) {
@@ -125,7 +135,15 @@ func (c *Conversation) send(outputs []fsm.Event) {
 		case agency.Protocol_CONNECT:
 			glog.Warningf("we should not be here!!")
 		case agency.Protocol_BASIC_MESSAGE:
-			c.sendBasicMessage(output.BasicMessage)
+			c.sendBasicMessage(output.BasicMessage, output.NoStatus)
 		}
 	}
+}
+
+func (c *Conversation) IsOursAndRm(id string) bool {
+	if _, ok := c.lastProtocolID[id]; ok {
+		c.lastProtocolID[id] = struct{}{}
+		return true
+	}
+	return false
 }

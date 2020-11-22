@@ -48,9 +48,10 @@ type Transition struct {
 }
 
 type Event struct {
-	TypeID string `json:"type_id"`
-	Rule   string `json:"rule"`
-	Data   string `json:"data,omitempty"`
+	TypeID   string `json:"type_id"`
+	Rule     string `json:"rule"`
+	Data     string `json:"data,omitempty"`
+	NoStatus bool   `json:"no_status,omitempty"`
 
 	*EventData `json:"event_data,omitempty"`
 
