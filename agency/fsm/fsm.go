@@ -61,16 +61,18 @@ type Transition struct {
 }
 
 type Event struct {
-	TypeID     string `json:"type_id"`
-	Rule       string `json:"rule"`
-	Data       string `json:"data,omitempty"`
-	FailTarget string `json:"fail_target,omitempty"`
-	NoStatus   bool   `json:"no_status,omitempty"`
+	TypeID   string `json:"type_id"`
+	Rule     string `json:"rule"`
+	Data     string `json:"data,omitempty"`
+	NoStatus bool   `json:"no_status,omitempty"`
 
 	*EventData `json:"event_data,omitempty"`
 
 	ProtocolType           agency.Protocol_Type `json:"-"`
 	*agency.ProtocolStatus `json:"-"`
+
+	FailTarget string `json:"fail_target,omitempty"`
+	FailEvent  *Event `json:"fail_event,omitempty"`
 }
 
 type EventData struct {
@@ -90,6 +92,10 @@ func (m *Machine) Initialize() (err error) {
 		for j := range m.States[id].Transitions {
 			m.States[id].Transitions[j].Trigger.ProtocolType =
 				protocolType[m.States[id].Transitions[j].Trigger.TypeID]
+			if m.States[id].Transitions[j].Trigger.FailEvent != nil {
+				m.States[id].Transitions[j].Trigger.FailEvent.ProtocolType =
+					protocolType[m.States[id].Transitions[j].Trigger.FailEvent.TypeID]
+			}
 			for k := range m.States[id].Transitions[j].Sends {
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
 					protocolType[m.States[id].Transitions[j].Sends[k].TypeID]
@@ -130,12 +136,13 @@ func (m *Machine) Step(t *Transition) {
 
 func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
 	input, tgtChanged := t.buildInputEvent(status)
+	events := t.Sends
 	if tgtChanged {
-		return nil
+		events = []Event{input}
 	}
 
-	sends := make([]Event, len(t.Sends))
-	for i, send := range t.Sends {
+	sends := make([]Event, len(events))
+	for i, send := range events {
 		sends[i] = send
 		switch send.TypeID {
 		case "email":
@@ -183,11 +190,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e Event, tg
 				glog.V(1).Infof("want: %s got: %s",
 					t.Machine.Memory[t.Trigger.Data], content)
 				t.Target = t.Trigger.FailTarget
-				return Event{
-					TypeID:         "none",
-					ProtocolType:   0, // todo: gRPC api dont have proper constant yet!!!
-					ProtocolStatus: status,
-				}, true
+				return *t.Trigger.FailEvent, true
 			}
 			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{

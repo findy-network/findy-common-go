@@ -12,7 +12,8 @@ var EmailIssuerMachine = fsm.Machine{
 				},
 				Sends: []fsm.Event{{
 					TypeID: "basic_message",
-					Data: `Hello! I'm a email issuer.
+					Data: `
+Hello! I'm a email issuer.
 Please enter your email address.`,
 					NoStatus: true,
 				}},
@@ -53,6 +54,13 @@ Please enter it back to me, the chat bot, and I'll send your email credential.`,
 					Rule:       "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
 					Data:       "PIN",                  // this is the name of the memory we are using
 					FailTarget: "WAITING_EMAIL_PIN",
+					FailEvent: &fsm.Event{
+						TypeID: "basic_message",
+						Rule:   "FORMAT_MEM",
+						Data: `Incorrect PIN code. Please check your emails for:
+{{.EMAIL}}`,
+						NoStatus: true,
+					},
 				},
 				Sends: []fsm.Event{
 					{
