@@ -1,17 +1,26 @@
 package fsm
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"text/template"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/golang/glog"
+	"github.com/lainio/err2"
 )
 
 const (
-	TriggerTypeOurMessage = "OUR_STATUS"
-	TriggerTypeUseInput   = "INPUT"
-	TriggerTypeFormat     = "FORMAT"
-	TriggerTypeData       = ""
+	TriggerTypeOurMessage    = "OUR_STATUS" // todo: not used any more
+	TriggerTypeUseInput      = "INPUT"
+	TriggerTypeUseInputSave  = "INPUT_SAVE"
+	TriggerTypeFormat        = "FORMAT"
+	TriggerTypeFormatFromMem = "FORMAT_MEM"
+	TriggerTypePIN           = "PIN"
+	TriggerTypeData          = ""
+
+	TriggerTypeValidateInputEqual = "INPUT_VALIDATE_EQUAL"
 )
 
 type Machine struct {
@@ -20,6 +29,8 @@ type Machine struct {
 
 	Current     string `json:"-"`
 	Initialized bool   `json:"-"`
+
+	Memory map[string]string `json:"-"`
 }
 
 type State struct {
@@ -45,13 +56,16 @@ type Transition struct {
 
 	Target string `json:"target"`
 	// Script, or something to execute
+
+	Machine *Machine `json:"-"` // we need the memory, todo: we must check values and pointers with this
 }
 
 type Event struct {
-	TypeID   string `json:"type_id"`
-	Rule     string `json:"rule"`
-	Data     string `json:"data,omitempty"`
-	NoStatus bool   `json:"no_status,omitempty"`
+	TypeID     string `json:"type_id"`
+	Rule       string `json:"rule"`
+	Data       string `json:"data,omitempty"`
+	FailTarget string `json:"fail_target,omitempty"`
+	NoStatus   bool   `json:"no_status,omitempty"`
 
 	*EventData `json:"event_data,omitempty"`
 
@@ -89,6 +103,7 @@ func (m *Machine) Initialize() (err error) {
 			initSet = true
 		}
 	}
+	m.Memory = make(map[string]string)
 	m.Initialized = true
 	return nil
 }
@@ -102,6 +117,7 @@ func (m *Machine) CurrentState() State {
 func (m *Machine) Triggers(ptype agency.Protocol_Type) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
 		if transition.Trigger.ProtocolType == ptype {
+			transition.Machine = m
 			return &transition
 		}
 	}
@@ -113,41 +129,80 @@ func (m *Machine) Step(t *Transition) {
 }
 
 func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
-	input := t.buildInputEvent(status)
+	input, tgtChanged := t.buildInputEvent(status)
+	if tgtChanged {
+		return nil
+	}
 
 	sends := make([]Event, len(t.Sends))
 	for i, send := range t.Sends {
 		sends[i] = send
-		switch send.Rule {
-		case TriggerTypeUseInput:
-			sends[i].EventData = input.EventData
-		case TriggerTypeData:
-			sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-				Content: send.Data,
-			}}
-		case TriggerTypeFormat:
-			sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-				Content: fmt.Sprintf(send.Data, input.Data),
-			}}
+		switch send.TypeID {
+		case "email":
+			switch send.Rule {
+			case TriggerTypePIN:
+				t.GenPIN(&send)
+				s := t.FmtFromMem(&send)
+				glog.Infoln("email:", s)
+			}
+		case "basic_message":
+			switch send.Rule {
+			case TriggerTypeUseInput:
+				sends[i].EventData = input.EventData
+			case TriggerTypeData:
+				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+					Content: send.Data,
+				}}
+			case TriggerTypeFormat:
+				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+					Content: fmt.Sprintf(send.Data, input.Data),
+				}}
+			case TriggerTypeFormatFromMem:
+				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+					Content: t.FmtFromMem(&send),
+				}}
+			}
 		}
 	}
 	return sends
 }
 
-func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) Event {
-	e := Event{
+func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e Event, tgtSwitch bool) {
+	e = Event{
 		ProtocolType:   status.GetState().ProtocolId.TypeId,
 		ProtocolStatus: status,
 	}
 	switch status.GetState().ProtocolId.TypeId {
 	case agency.Protocol_CONNECT:
-		return e
+		return e, false
 	case agency.Protocol_BASIC_MESSAGE:
+		content := status.GetBasicMessage().Content
 		switch t.Trigger.Rule {
-		case TriggerTypeUseInput:
-			e.Data = status.GetBasicMessage().Content
+		case TriggerTypeValidateInputEqual:
+			if t.Machine.Memory[t.Trigger.Data] != content {
+				glog.V(1).Infof("want: %s got: %s",
+					t.Machine.Memory[t.Trigger.Data], content)
+				t.Target = t.Trigger.FailTarget
+				return Event{
+					TypeID:         "none",
+					ProtocolType:   0, // todo: gRPC api dont have proper constant yet!!!
+					ProtocolStatus: status,
+				}, true
+			}
+			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
-				Content: status.GetBasicMessage().Content,
+				Content: content,
+			}}
+		case TriggerTypeUseInputSave:
+			t.Machine.Memory[t.Trigger.Data] = content
+			e.Data = content
+			e.EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: content,
+			}}
+		case TriggerTypeUseInput:
+			e.Data = content
+			e.EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: content,
 			}}
 		case TriggerTypeData:
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
@@ -155,10 +210,26 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) Event {
 			}}
 		}
 	}
-	return e
+	return e, false
+}
+
+func (t *Transition) FmtFromMem(send *Event) string {
+	defer err2.Catch(func(err error) {
+		glog.Error(err)
+	})
+	templ := template.Must(template.New("templ").Parse(send.Data))
+	var buf bytes.Buffer
+	err2.Check(templ.Execute(&buf, t.Machine.Memory))
+	return buf.String()
+}
+
+func (t *Transition) GenPIN(_ *Event) {
+	t.Machine.Memory["PIN"] = "12234"
+	glog.Infoln("pin code:", t.Machine.Memory["PIN"])
 }
 
 var protocolType = map[string]agency.Protocol_Type{
+	"":              0, // todo: we need the constant here!
 	"connection":    agency.Protocol_CONNECT,
 	"issue_cred":    agency.Protocol_ISSUE,
 	"present_proof": agency.Protocol_PROOF,

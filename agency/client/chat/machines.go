@@ -23,31 +23,70 @@ Please enter your email address.`,
 			Transitions: []fsm.Transition{{
 				Trigger: fsm.Event{
 					TypeID: "basic_message",
-					Rule:   "INPUT",
+					Rule:   "INPUT_SAVE",
+					Data:   "EMAIL",
 				},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "FORMAT",
-					Data: `Thank you! I sent your pin code to %s.
+				Sends: []fsm.Event{
+					{
+						TypeID: "basic_message",
+						Rule:   "FORMAT_MEM",
+						Data: `Thank you! I sent your pin code to {{.EMAIL}}.
 Please enter it here and I'll send your email credential.`,
-					NoStatus: true,
-				}},
+						NoStatus: true,
+					},
+					{
+						TypeID: "email",
+						Rule:   "PIN",
+						Data: `Thank you! This is your pin code:
+{{.PIN}}
+Please enter it back to me, the chat bot, and I'll send your email credential.`,
+						NoStatus: true,
+					},
+				},
 				Target: "WAITING_EMAIL_PIN",
 			}},
 		},
 		"WAITING_EMAIL_PIN": {
 			Transitions: []fsm.Transition{{
 				Trigger: fsm.Event{
-					TypeID: "basic_message",
-					Rule:   "INPUT_VALIDATE", // validation criterion is will be in??
+					TypeID:     "basic_message",
+					Rule:       "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
+					Data:       "PIN",                  // this is the name of the memory we are using
+					FailTarget: "WAITING_EMAIL_PIN",
 				},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "FORMAT",
-					Data: `.
-Please enter your email address.`,
-				}},
-				Target: "WAITING_STATUS",
+				Sends: []fsm.Event{
+					{
+						TypeID:   "basic_message",
+						NoStatus: true,
+						Rule:     "FORMAT_MEM",
+						Data: `Thank you! Issuing an email credential for address:
+{{.EMAIL}}
+Please follow your wallet app's instructions`,
+					},
+					//{
+					//	TypeID:   "issue_cred",
+					//	Data: `json template for attributes and other data`,
+					//},
+				},
+				Target: "WAITING_ISSUING_STATUS",
+			}},
+		},
+		"WAITING_ISSUING_STATUS": {
+			Transitions: []fsm.Transition{{
+				Trigger: fsm.Event{
+					TypeID:     "XXX", // todo: questions? for accepting something?
+					FailTarget: "XXX",
+				},
+				Sends: []fsm.Event{
+					{
+						TypeID:   "basic_message",
+						NoStatus: true,
+						Rule:     "FORMAT_MEM",
+						Data: `Thank you {{.EMAIL}}!
+We are ready now. Bye bye!`,
+					},
+				},
+				Target: "IDLE",
 			}},
 		},
 	},

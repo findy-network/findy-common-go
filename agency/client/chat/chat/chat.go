@@ -83,9 +83,11 @@ func (c *Conversation) RunConversation() {
 			glog.V(1).Infoln("role:", status.GetState().ProtocolId.Role)
 
 			glog.V(1).Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
-			if transition.Trigger.Rule != fsm.TriggerTypeOurMessage {
+			if transition.Trigger.Rule != fsm.TriggerTypeOurMessage { // todo: not used any more
 				outputs := transition.BuildSendEvents(status)
-				c.send(outputs)
+				if outputs != nil {
+					c.send(outputs)
+				}
 			} else {
 				glog.V(1).Infoln("our message, just getting status")
 			}
