@@ -91,9 +91,9 @@ type Event struct {
 }
 
 type EventData struct {
-	BasicMessage *BasicMessage `json:"basic_message"`
-	Issuing      *Issuing      `json:"issuing"`
-	Email        *Email        `json:"Email"`
+	BasicMessage *BasicMessage `json:"basic_message,omitempty"`
+	Issuing      *Issuing      `json:"issuing,omitempty"`
+	Email        *Email        `json:"email,omitempty"`
 }
 
 type Email struct {
