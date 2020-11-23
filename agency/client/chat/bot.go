@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
 	"github.com/findy-network/findy-grpc/agency/client"
 	"github.com/findy-network/findy-grpc/agency/client/chat/chat"
 	"github.com/findy-network/findy-grpc/agency/fsm"
 	"github.com/findy-network/findy-grpc/utils"
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 )
@@ -23,14 +25,23 @@ type Bot struct {
 func (b *Bot) LoadFSM(fName string) (err error) {
 	defer err2.Return(&err)
 	data := err2.Bytes.Try(ioutil.ReadFile(fName))
-	err2.Check(json.Unmarshal(data, &b.fsm))
+	if filepath.Ext(fName) == ".json" {
+		err2.Check(json.Unmarshal(data, &b.fsm))
+	} else {
+		err2.Check(yaml.Unmarshal(data, &b.fsm))
+	}
 	err2.Check(b.fsm.Initialize())
 	return nil
 }
 
 func (b *Bot) SaveFSM(fName string) (err error) {
 	defer err2.Return(&err)
-	data := err2.Bytes.Try(json.MarshalIndent(b.fsm, "", "\t"))
+	var data []byte
+	if filepath.Ext(fName) == ".json" {
+		data = err2.Bytes.Try(json.MarshalIndent(b.fsm, "", "\t"))
+	} else {
+		data = err2.Bytes.Try(yaml.Marshal(b.fsm))
+	}
 	err2.Check(ioutil.WriteFile(fName, data, 0644))
 	return nil
 }
@@ -47,7 +58,8 @@ func (b Bot) Run(intCh chan os.Signal) {
 	err2.Check(b.fsm.Initialize())
 
 	// this block is for testing file loading
-	//err2.Check(b.LoadFSM("echobot.json"))
+	err2.Check(b.SaveFSM("emailbot.json"))
+	err2.Check(b.SaveFSM("emailbot.yaml"))
 	chat.Machine = &b.fsm
 
 	go chat.Multiplexer(b.Conn)
