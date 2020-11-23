@@ -137,6 +137,11 @@ func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
 	}
 }
 
+func (c *Conversation) sendEmail(message *fsm.Email, noAck bool) {
+	// todo: implement send email here
+	glog.V(1).Infoln("sending email to", message.To, message.Body)
+}
+
 func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
 	if c.lastProtocolID == nil {
 		c.lastProtocolID = make(map[string]struct{})
@@ -153,6 +158,8 @@ func (c *Conversation) send(outputs []fsm.Event) {
 			c.sendBasicMessage(output.BasicMessage, output.NoStatus)
 		case agency.Protocol_ISSUE:
 			c.sendIssuing(output.Issuing, output.NoStatus)
+		case fsm.EmailProtocol:
+			c.sendEmail(output.Email, output.NoStatus)
 		}
 	}
 }

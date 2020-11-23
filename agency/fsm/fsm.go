@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"text/template"
@@ -17,7 +18,7 @@ const (
 	TriggerTypeUseInputSave  = "INPUT_SAVE"
 	TriggerTypeFormat        = "FORMAT"
 	TriggerTypeFormatFromMem = "FORMAT_MEM"
-	TriggerTypePIN           = "PIN"
+	TriggerTypePIN           = "GEN_PIN"
 	TriggerTypeData          = ""
 
 	TriggerTypeValidateInputEqual = "INPUT_VALIDATE_EQUAL"
@@ -31,6 +32,10 @@ const (
 	MessagePresentProof = "present_proof"
 	MessageConnection   = "connection"
 	MessageNone         = ""
+)
+
+const (
+	EmailProtocol = 100
 )
 
 type Machine struct {
@@ -88,6 +93,14 @@ type Event struct {
 type EventData struct {
 	BasicMessage *BasicMessage `json:"basic_message"`
 	Issuing      *Issuing      `json:"issuing"`
+	Email        *Email        `json:"Email"`
+}
+
+type Email struct {
+	To      string `json:"to,omitempty"`
+	From    string `json:"from,omitempty"`
+	Subject string `json:"subject,omitempty"`
+	Body    string `json:"body,omitempty"`
 }
 
 type Issuing struct {
@@ -107,14 +120,14 @@ func (m *Machine) Initialize() (err error) {
 	for id := range m.States {
 		for j := range m.States[id].Transitions {
 			m.States[id].Transitions[j].Trigger.ProtocolType =
-				protocolType[m.States[id].Transitions[j].Trigger.TypeID]
+				ProtocolType[m.States[id].Transitions[j].Trigger.TypeID]
 			if m.States[id].Transitions[j].Trigger.FailEvent != nil {
 				m.States[id].Transitions[j].Trigger.FailEvent.ProtocolType =
-					protocolType[m.States[id].Transitions[j].Trigger.FailEvent.TypeID]
+					ProtocolType[m.States[id].Transitions[j].Trigger.FailEvent.TypeID]
 			}
 			for k := range m.States[id].Transitions[j].Sends {
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
-					protocolType[m.States[id].Transitions[j].Sends[k].TypeID]
+					ProtocolType[m.States[id].Transitions[j].Sends[k].TypeID]
 				if m.States[id].Transitions[j].Sends[k].TypeID == MessageIssueCred &&
 					m.States[id].Transitions[j].Sends[k].EventData.Issuing == nil {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
@@ -178,8 +191,14 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
 			switch send.Rule {
 			case TriggerTypePIN:
 				t.GenPIN(&send)
-				s := t.FmtFromMem(&send)
-				glog.Infoln("email:", s)
+				emailJSON := t.FmtFromMem(&send)
+				var email Email
+				err := json.Unmarshal([]byte(emailJSON), &email)
+				if err != nil {
+					glog.Errorf("json error %v", err)
+				}
+				glog.Infoln("email:", emailJSON)
+				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
 			switch send.Rule {
@@ -260,11 +279,13 @@ func (t *Transition) GenPIN(_ *Event) {
 	glog.Infoln("pin code:", t.Machine.Memory["PIN"])
 }
 
-var protocolType = map[string]agency.Protocol_Type{
+// we should have constant for email as well?
+var ProtocolType = map[string]agency.Protocol_Type{
 	MessageNone:         0, // todo: we need the constant here!
 	MessageConnection:   agency.Protocol_CONNECT,
 	MessageIssueCred:    agency.Protocol_ISSUE,
 	MessagePresentProof: agency.Protocol_PROOF,
 	MessageTrustPing:    agency.Protocol_TRUST_PING,
 	MessageBasicMessage: agency.Protocol_BASIC_MESSAGE,
+	MessageEmail:        EmailProtocol,
 }

@@ -37,10 +37,11 @@ Please enter it here and I'll send your email credential.`,
 					},
 					{
 						TypeID: "email",
-						Rule:   "PIN",
-						Data: `Thank you! This is your pin code:
-{{.PIN}}
-Please enter it back to me, the chat bot, and I'll send your email credential.`,
+						Rule:   "GEN_PIN",
+						Data: `{"from":"chatbot@our.address.net",
+"subject":"Your PIN for email issuer chat bot",
+"to":"{{.EMAIL}}",
+"body":"Thank you! This is your pin code:\n{{.PIN}}\nPlease enter it back to me, the chat bot, and I'll send your email credential."}`,
 						NoStatus: true,
 					},
 				},
