@@ -42,7 +42,7 @@ Say "reset" if you want to start over.`,
 						Data: `{"from":"chatbot@our.address.net",
 "subject":"Your PIN for email issuer chat bot",
 "to":"{{.EMAIL}}",
-"body":"Thank you! This is your pin code:\n{{.PIN}}\nPlease enter it back to me, the chat bot, and I'll send your email credential."}`,
+"body":"Thank you! This is your pin code:\n{{.PIN}}\nPlease enter it back to me, the chat bot, and I'll give your credential."}`,
 						NoStatus: true,
 					},
 				},
@@ -85,17 +85,9 @@ Say "reset" if you want to start over.`,
 				},
 				{
 					Trigger: fsm.Event{
-						TypeID:     "basic_message",
-						Rule:       "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
-						Data:       "PIN",                  // this is the name of the memory we are using
-						FailTarget: "WAITING_EMAIL_PIN",
-						FailEvent: &fsm.Event{
-							TypeID: "basic_message",
-							Rule:   "FORMAT_MEM",
-							Data: `Incorrect PIN code. Please check your emails for:
-{{.EMAIL}}`,
-							NoStatus: true,
-						},
+						TypeID: "basic_message",
+						Rule:   "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
+						Data:   "PIN",                  // this is the name of the memory we are using
 					},
 					Sends: []fsm.Event{
 						{

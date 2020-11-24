@@ -81,9 +81,6 @@ type Event struct {
 	ProtocolType           agency.Protocol_Type `json:"-"`
 	*agency.ProtocolStatus `json:"-"`
 
-	FailTarget string `json:"fail_target,omitempty"`
-	FailEvent  *Event `json:"fail_event,omitempty"`
-
 	*Transition `json:"-"`
 }
 
@@ -140,10 +137,6 @@ func (m *Machine) Initialize() (err error) {
 			m.States[id].Transitions[j].Trigger.Transition = &m.States[id].Transitions[j]
 			m.States[id].Transitions[j].Trigger.ProtocolType =
 				ProtocolType[m.States[id].Transitions[j].Trigger.TypeID]
-			if m.States[id].Transitions[j].Trigger.FailEvent != nil {
-				m.States[id].Transitions[j].Trigger.FailEvent.ProtocolType =
-					ProtocolType[m.States[id].Transitions[j].Trigger.FailEvent.TypeID]
-			}
 			for k := range m.States[id].Transitions[j].Sends {
 				m.States[id].Transitions[j].Sends[k].Transition = &m.States[id].Transitions[j]
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
@@ -261,29 +254,13 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e Event, tg
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
 		switch t.Trigger.Rule {
-		case TriggerTypeValidateInputNotEqual:
-			e.Data = content
-			e.EventData = &EventData{BasicMessage: &BasicMessage{
-				Content: content,
-			}}
-		case TriggerTypeValidateInputEqual:
-			if t.Machine.Memory[t.Trigger.Data] != content {
-				glog.V(1).Infof("want: %s got: %s",
-					t.Machine.Memory[t.Trigger.Data], content)
-				t.Target = t.Trigger.FailTarget
-				return *t.Trigger.FailEvent, true
-			}
+		case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual, TriggerTypeUseInput:
 			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
 			}}
 		case TriggerTypeUseInputSave:
 			t.Machine.Memory[t.Trigger.Data] = content
-			e.Data = content
-			e.EventData = &EventData{BasicMessage: &BasicMessage{
-				Content: content,
-			}}
-		case TriggerTypeUseInput:
 			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
