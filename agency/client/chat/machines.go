@@ -68,6 +68,23 @@ Say "reset" if you want to start over.`,
 				},
 				{
 					Trigger: fsm.Event{
+						TypeID: "basic_message",
+						Rule:   "INPUT_VALIDATE_NOT_EQUAL",
+						Data:   "PIN",
+					},
+					Sends: []fsm.Event{
+						{
+							TypeID: "basic_message",
+							Rule:   "FORMAT_MEM",
+							Data: `Incorrect PIN code. Please check your emails for:
+{{.EMAIL}}`,
+							NoStatus: true,
+						},
+					},
+					Target: "WAITING_EMAIL_PIN",
+				},
+				{
+					Trigger: fsm.Event{
 						TypeID:     "basic_message",
 						Rule:       "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
 						Data:       "PIN",                  // this is the name of the memory we are using

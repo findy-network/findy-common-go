@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	TriggerTypeOurMessage    = "OUR_STATUS" // todo: not used any more, maybe is in Trigger
+	TriggerTypeOurMessage    = "OUR_STATUS"
 	TriggerTypeUseInput      = "INPUT"
 	TriggerTypeUseInputSave  = "INPUT_SAVE"
 	TriggerTypeFormat        = "FORMAT"
@@ -21,8 +21,9 @@ const (
 	TriggerTypePIN           = "GEN_PIN"
 	TriggerTypeData          = ""
 
-	TriggerTypeValidateInputEqual = "INPUT_VALIDATE_EQUAL"
-	TriggerTypeInputEqual         = "INPUT_EQUAL"
+	TriggerTypeValidateInputEqual    = "INPUT_VALIDATE_EQUAL"
+	TriggerTypeValidateInputNotEqual = "INPUT_VALIDATE_NOT_EQUAL"
+	TriggerTypeInputEqual            = "INPUT_EQUAL"
 )
 
 const (
@@ -93,6 +94,8 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
 		switch e.Rule {
+		case TriggerTypeValidateInputNotEqual:
+			return e.Machine.Memory[e.Data] != content
 		case TriggerTypeValidateInputEqual:
 			return e.Machine.Memory[e.Data] == content
 		case TriggerTypeInputEqual:
@@ -258,6 +261,11 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e Event, tg
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
 		switch t.Trigger.Rule {
+		case TriggerTypeValidateInputNotEqual:
+			e.Data = content
+			e.EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: content,
+			}}
 		case TriggerTypeValidateInputEqual:
 			if t.Machine.Memory[t.Trigger.Data] != content {
 				glog.V(1).Infof("want: %s got: %s",
