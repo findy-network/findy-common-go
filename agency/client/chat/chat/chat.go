@@ -66,31 +66,26 @@ func (c *Conversation) RunConversation() {
 	for {
 		t := <-c.StatusChan
 
-		glog.V(3).Infoln("conversation:", t.Notification.ConnectionId)
+		glog.V(10).Infoln("conversation:", t.Notification.ConnectionId)
 
 		if c.IsOursAndRm(t.Notification.ProtocolId) {
-			glog.V(1).Infoln("discarding event")
+			glog.V(10).Infoln("discarding event")
 			continue
 		}
 
-		if transition := c.Machine.Triggers(t.Notification.ProtocolType); transition != nil {
-			status := c.getStatus(t)
+		status := c.getStatus(t)
 
-			if status.GetState().State != agency.ProtocolState_OK {
+		if transition := c.Machine.Triggers(status); transition != nil {
+
+			if status.GetState().State != agency.ProtocolState_OK { // todo: different transitions to FSM, move error handling to it!
 				glog.Warningln("current FSM steps only completed protocol steps", status.GetState().State)
 				continue
 			}
-			glog.V(1).Infoln("role:", status.GetState().ProtocolId.Role)
-
+			glog.V(10).Infoln("role:", status.GetState().ProtocolId.Role)
 			glog.V(1).Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
-			if transition.Trigger.Rule != fsm.TriggerTypeOurMessage { // todo: not used any more
-				outputs := transition.BuildSendEvents(status)
-				if outputs != nil {
-					c.send(outputs)
-				}
-			} else {
-				glog.V(1).Infoln("our message, just getting status")
-			}
+
+			c.send(transition.BuildSendEvents(status))
+
 			c.Machine.Step(transition)
 		} else {
 			glog.V(1).Infoln("machine don't have transition for:",
@@ -118,7 +113,7 @@ func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
 	).BasicMessage(context.Background(),
 		message.Content)
 	err2.Check(err)
-	glog.V(1).Infoln("protocol id:", r.Id)
+	glog.V(10).Infoln("protocol id:", r.Id)
 	if noAck {
 		c.SetLastProtocolID(r)
 	}
@@ -131,7 +126,7 @@ func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
 	).Issue(context.Background(),
 		message.CredDefID, message.AttrsJSON)
 	err2.Check(err)
-	glog.V(1).Infoln("protocol id:", r.Id)
+	glog.V(10).Infoln("protocol id:", r.Id)
 	if noAck {
 		c.SetLastProtocolID(r)
 	}
@@ -139,7 +134,7 @@ func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
 
 func (c *Conversation) sendEmail(message *fsm.Email, noAck bool) {
 	// todo: implement send email here
-	glog.V(1).Infoln("sending email to", message.To, message.Body)
+	glog.V(0).Infoln("sending email to", message.To, message.Body)
 }
 
 func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
@@ -150,6 +145,9 @@ func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
 }
 
 func (c *Conversation) send(outputs []fsm.Event) {
+	if outputs == nil {
+		return
+	}
 	for _, output := range outputs {
 		switch output.ProtocolType {
 		case agency.Protocol_CONNECT:

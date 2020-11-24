@@ -22,6 +22,7 @@ const (
 	TriggerTypeData          = ""
 
 	TriggerTypeValidateInputEqual = "INPUT_VALIDATE_EQUAL"
+	TriggerTypeInputEqual         = "INPUT_EQUAL"
 )
 
 const (
@@ -49,8 +50,6 @@ type Machine struct {
 }
 
 type State struct {
-	ID string `json:"id"` // todo: no need, will removed, id is map key
-
 	Transitions []Transition `json:"transitions"`
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
@@ -59,20 +58,15 @@ type State struct {
 type Transition struct {
 	Trigger Event `json:"trigger"`
 
-	// todo: we will allow only one at the time because we get status back!?
-	//  or we do nothing, we send nothing when we get our own message status
-	//  still, even we don't send nothing, it doesn't mean that we don't do
-	//  transition
-	//  maybe we could send many but wait only one, what it would mean when we
-	//  get many status messages about our own sending? would it be much better
-	//  to have one clear step at the time, and then that many receiver states
-	//  amount of them is not the issue?! Keep it like it is for now
 	Sends []Event `json:"sends,omitempty"`
 
 	Target string `json:"target"`
-	// Script, or something to execute
 
-	Machine *Machine `json:"-"` // we need the memory, todo: we must check values and pointers with this
+	// Script, or something to execute in future?? idea we could have LUA
+	// script which communicates our Memory map, that would be a simple data
+	// model
+
+	Machine *Machine `json:"-"`
 }
 
 type Event struct {
@@ -88,6 +82,26 @@ type Event struct {
 
 	FailTarget string `json:"fail_target,omitempty"`
 	FailEvent  *Event `json:"fail_event,omitempty"`
+
+	*Transition `json:"-"`
+}
+
+func (e Event) Triggers(status *agency.ProtocolStatus) bool {
+	switch status.GetState().ProtocolId.TypeId {
+	case agency.Protocol_ISSUE:
+		return true
+	case agency.Protocol_BASIC_MESSAGE:
+		content := status.GetBasicMessage().Content
+		switch e.Rule {
+		case TriggerTypeValidateInputEqual:
+			return e.Machine.Memory[e.Data] == content
+		case TriggerTypeInputEqual:
+			return content == e.Data
+		case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
+			return true
+		}
+	}
+	return false
 }
 
 type EventData struct {
@@ -115,10 +129,12 @@ type BasicMessage struct {
 // Initialize initializes and optimizes the state machine because the JSON is
 // meant for humans to write and machines to read. Initialize also moves machine
 // to the initial state. It returns error if machine has them.
+// todo: switch to pointers in everything, it's better for state machine, no value errors
 func (m *Machine) Initialize() (err error) {
 	initSet := false
 	for id := range m.States {
 		for j := range m.States[id].Transitions {
+			m.States[id].Transitions[j].Trigger.Transition = &m.States[id].Transitions[j]
 			m.States[id].Transitions[j].Trigger.ProtocolType =
 				ProtocolType[m.States[id].Transitions[j].Trigger.TypeID]
 			if m.States[id].Transitions[j].Trigger.FailEvent != nil {
@@ -126,6 +142,7 @@ func (m *Machine) Initialize() (err error) {
 					ProtocolType[m.States[id].Transitions[j].Trigger.FailEvent.TypeID]
 			}
 			for k := range m.States[id].Transitions[j].Sends {
+				m.States[id].Transitions[j].Sends[k].Transition = &m.States[id].Transitions[j]
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
 					ProtocolType[m.States[id].Transitions[j].Sends[k].TypeID]
 				if m.States[id].Transitions[j].Sends[k].TypeID == MessageIssueCred &&
@@ -154,10 +171,12 @@ func (m *Machine) CurrentState() State {
 
 // Triggers returns a transition if machine has it in its current state. If not
 // it returns nil.
-func (m *Machine) Triggers(ptype agency.Protocol_Type) *Transition {
+func (m *Machine) Triggers(status *agency.ProtocolStatus) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
-		if transition.Trigger.ProtocolType == ptype {
-			transition.Machine = m
+		transition.Machine = m // todo: not needed
+		transition.Trigger.Machine = m
+		if transition.Trigger.ProtocolType == status.State.ProtocolId.TypeId &&
+			transition.Trigger.Triggers(status) {
 			return &transition
 		}
 	}
@@ -165,6 +184,7 @@ func (m *Machine) Triggers(ptype agency.Protocol_Type) *Transition {
 }
 
 func (m *Machine) Step(t *Transition) {
+	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
 }
 
@@ -228,6 +248,11 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e Event, tg
 		ProtocolStatus: status,
 	}
 	switch status.GetState().ProtocolId.TypeId {
+	case agency.Protocol_ISSUE:
+		switch t.Trigger.Rule {
+		case TriggerTypeOurMessage:
+			return e, false
+		}
 	case agency.Protocol_CONNECT:
 		return e, false
 	case agency.Protocol_BASIC_MESSAGE:
@@ -255,7 +280,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e Event, tg
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
 			}}
-		case TriggerTypeData:
+		case TriggerTypeData, TriggerTypeInputEqual:
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: t.Trigger.Data,
 			}}
@@ -275,11 +300,10 @@ func (t *Transition) FmtFromMem(send *Event) string {
 }
 
 func (t *Transition) GenPIN(_ *Event) {
-	t.Machine.Memory["PIN"] = "12234"
+	t.Machine.Memory["PIN"] = "12234" // todo: real generator
 	glog.Infoln("pin code:", t.Machine.Memory["PIN"])
 }
 
-// we should have constant for email as well?
 var ProtocolType = map[string]agency.Protocol_Type{
 	MessageNone:         0, // todo: we need the constant here!
 	MessageConnection:   agency.Protocol_CONNECT,

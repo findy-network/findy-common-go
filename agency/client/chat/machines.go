@@ -32,7 +32,8 @@ Please enter your email address.`,
 						TypeID: "basic_message",
 						Rule:   "FORMAT_MEM",
 						Data: `Thank you! I sent your pin code to {{.EMAIL}}.
-Please enter it here and I'll send your email credential.`,
+Please enter it here and I'll send your email credential.
+Say "reset" if you want to start over.`,
 						NoStatus: true,
 					},
 					{
@@ -49,43 +50,60 @@ Please enter it here and I'll send your email credential.`,
 			}},
 		},
 		"WAITING_EMAIL_PIN": {
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
-					TypeID:     "basic_message",
-					Rule:       "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
-					Data:       "PIN",                  // this is the name of the memory we are using
-					FailTarget: "WAITING_EMAIL_PIN",
-					FailEvent: &fsm.Event{
+			Transitions: []fsm.Transition{
+				{
+					Trigger: fsm.Event{
 						TypeID: "basic_message",
-						Rule:   "FORMAT_MEM",
-						Data: `Incorrect PIN code. Please check your emails for:
-{{.EMAIL}}`,
-						NoStatus: true,
+						Rule:   "INPUT_EQUAL",
+						Data:   "reset",
 					},
+					Sends: []fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     "Please enter your email address.",
+							NoStatus: true,
+						},
+					},
+					Target: "WAITING_EMAIL_ADDRESS",
 				},
-				Sends: []fsm.Event{
-					{
-						TypeID:   "basic_message",
-						NoStatus: true,
-						Rule:     "FORMAT_MEM",
-						Data: `Thank you! Issuing an email credential for address:
+				{
+					Trigger: fsm.Event{
+						TypeID:     "basic_message",
+						Rule:       "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
+						Data:       "PIN",                  // this is the name of the memory we are using
+						FailTarget: "WAITING_EMAIL_PIN",
+						FailEvent: &fsm.Event{
+							TypeID: "basic_message",
+							Rule:   "FORMAT_MEM",
+							Data: `Incorrect PIN code. Please check your emails for:
+{{.EMAIL}}`,
+							NoStatus: true,
+						},
+					},
+					Sends: []fsm.Event{
+						{
+							TypeID:   "basic_message",
+							NoStatus: true,
+							Rule:     "FORMAT_MEM",
+							Data: `Thank you! Issuing an email credential for address:
 {{.EMAIL}}
 Please follow your wallet app's instructions`,
-					},
-					{
-						TypeID: "issue_cred",
-						Rule:   "FORMAT_MEM",
-						Data:   `[{"name":"email","value":"{{.EMAIL}}"}]`,
-						EventData: &fsm.EventData{
-							Issuing: &fsm.Issuing{
-								CredDefID: "T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1",
-								AttrsJSON: `[{"name":"email","value":"{{.EMAIL}}"}]`,
+						},
+						{
+							TypeID: "issue_cred",
+							Rule:   "FORMAT_MEM",
+							Data:   `[{"name":"email","value":"{{.EMAIL}}"}]`,
+							EventData: &fsm.EventData{
+								Issuing: &fsm.Issuing{
+									CredDefID: "T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1",
+									AttrsJSON: `[{"name":"email","value":"{{.EMAIL}}"}]`,
+								},
 							},
 						},
 					},
+					Target: "WAITING_ISSUING_STATUS",
 				},
-				Target: "WAITING_ISSUING_STATUS",
-			}},
+			},
 		},
 		"WAITING_ISSUING_STATUS": {
 			Transitions: []fsm.Transition{{
@@ -109,30 +127,71 @@ We are ready now. Bye bye!`,
 }
 
 var EchoMachine = fsm.Machine{
-	Initial: "IDLE",
+	Initial: "INITIAL",
 	States: map[string]fsm.State{
 		"INITIAL": {
-			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{TypeID: "connection"},
-				Sends: []fsm.Event{{
-					TypeID: "basic_message",
-					Rule:   "Hello! I'm echo bot",
-				}},
-				Target: "IDLE",
-			}},
+			Transitions: []fsm.Transition{
+				{
+					Trigger: fsm.Event{
+						TypeID: "basic_message",
+						Rule:   "INPUT_EQUAL",
+						Data:   "run",
+					},
+					Sends: []fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     "Let's go!",
+							NoStatus: true,
+						},
+					},
+					Target: "IDLE",
+				},
+				{
+					Trigger: fsm.Event{
+						TypeID: "basic_message",
+						Rule:   "INPUT",
+					},
+					Sends: []fsm.Event{
+						{
+							TypeID: "basic_message",
+							//Rule: "",
+							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
+							NoStatus: true,
+						},
+					},
+					Target: "INITIAL",
+				},
+			},
 		},
 		"IDLE": {
 			Transitions: []fsm.Transition{
 				{
 					Trigger: fsm.Event{
 						TypeID: "basic_message",
+						Rule:   "INPUT_EQUAL",
+						Data:   "reset",
+					},
+					Sends: []fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     "Going to beginning.",
+							NoStatus: true,
+						},
+					},
+					Target: "INITIAL",
+				},
+				{
+					Trigger: fsm.Event{
+						TypeID: "basic_message",
 						Rule:   "INPUT",
 					},
-					Sends: []fsm.Event{{
-						TypeID:   "basic_message",
-						Rule:     "INPUT",
-						NoStatus: true,
-					}},
+					Sends: []fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Rule:     "INPUT",
+							NoStatus: true,
+						},
+					},
 					Target: "IDLE",
 				},
 			},

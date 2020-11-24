@@ -54,12 +54,12 @@ func (b Bot) Run(intCh chan os.Signal) {
 	err2.Check(err)
 
 	// this block is for development without fsm file
-	b.fsm = EmailIssuerMachine //EchoMachine //
+	b.fsm = EmailIssuerMachine // EchoMachine //
 	err2.Check(b.fsm.Initialize())
 
 	// this block is for testing file loading
-	err2.Check(b.SaveFSM("emailbot.json"))
-	err2.Check(b.SaveFSM("emailbot.yaml"))
+	//err2.Check(b.SaveFSM("emailbot.json"))
+	//err2.Check(b.SaveFSM("emailbot.yaml"))
 	chat.Machine = &b.fsm
 
 	go chat.Multiplexer(b.Conn)
@@ -72,7 +72,7 @@ loop:
 				glog.V(2).Infoln("closed from server")
 				break loop
 			}
-			glog.V(1).Infoln("listen status:",
+			glog.V(10).Infoln("listen status:",
 				status.Notification.TypeId,
 				status.Notification.ProtocolId)
 			chat.Status <- status
