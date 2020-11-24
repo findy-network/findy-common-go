@@ -10,7 +10,7 @@ var EmailIssuerMachine = fsm.Machine{
 				Trigger: &fsm.Event{
 					TypeID: "basic_message",
 				},
-				Sends: []fsm.Event{{
+				Sends: []*fsm.Event{{
 					TypeID: "basic_message",
 					Data: `
 Hello! I'm a email issuer.
@@ -27,7 +27,7 @@ Please enter your email address.`,
 					Rule:   "INPUT_SAVE",
 					Data:   "EMAIL",
 				},
-				Sends: []fsm.Event{
+				Sends: []*fsm.Event{
 					{
 						TypeID: "basic_message",
 						Rule:   "FORMAT_MEM",
@@ -57,7 +57,7 @@ Say "reset" if you want to start over.`,
 						Rule:   "INPUT_EQUAL",
 						Data:   "reset",
 					},
-					Sends: []fsm.Event{
+					Sends: []*fsm.Event{
 						{
 							TypeID:   "basic_message",
 							Data:     "Please enter your email address.",
@@ -72,7 +72,7 @@ Say "reset" if you want to start over.`,
 						Rule:   "INPUT_VALIDATE_NOT_EQUAL",
 						Data:   "PIN",
 					},
-					Sends: []fsm.Event{
+					Sends: []*fsm.Event{
 						{
 							TypeID: "basic_message",
 							Rule:   "FORMAT_MEM",
@@ -89,7 +89,7 @@ Say "reset" if you want to start over.`,
 						Rule:   "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
 						Data:   "PIN",                  // this is the name of the memory we are using
 					},
-					Sends: []fsm.Event{
+					Sends: []*fsm.Event{
 						{
 							TypeID:   "basic_message",
 							NoStatus: true,
@@ -120,7 +120,7 @@ Please follow your wallet app's instructions`,
 					TypeID: "issue_cred", // there was no questions when it was us who started the issuing
 					Rule:   "OUR_STATUS",
 				},
-				Sends: []fsm.Event{
+				Sends: []*fsm.Event{
 					{
 						TypeID:   "basic_message",
 						NoStatus: true,
@@ -146,7 +146,7 @@ var EchoMachine = fsm.Machine{
 						Rule:   "INPUT_EQUAL",
 						Data:   "run",
 					},
-					Sends: []fsm.Event{
+					Sends: []*fsm.Event{
 						{
 							TypeID:   "basic_message",
 							Data:     "Let's go!",
@@ -160,7 +160,7 @@ var EchoMachine = fsm.Machine{
 						TypeID: "basic_message",
 						Rule:   "INPUT",
 					},
-					Sends: []fsm.Event{
+					Sends: []*fsm.Event{
 						{
 							TypeID: "basic_message",
 							//Rule: "",
@@ -180,7 +180,7 @@ var EchoMachine = fsm.Machine{
 						Rule:   "INPUT_EQUAL",
 						Data:   "reset",
 					},
-					Sends: []fsm.Event{
+					Sends: []*fsm.Event{
 						{
 							TypeID:   "basic_message",
 							Data:     "Going to beginning.",
@@ -194,7 +194,7 @@ var EchoMachine = fsm.Machine{
 						TypeID: "basic_message",
 						Rule:   "INPUT",
 					},
-					Sends: []fsm.Event{
+					Sends: []*fsm.Event{
 						{
 							TypeID:   "basic_message",
 							Rule:     "INPUT",

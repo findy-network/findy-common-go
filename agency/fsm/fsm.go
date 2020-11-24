@@ -59,7 +59,7 @@ type State struct {
 type Transition struct {
 	Trigger *Event `json:"trigger"`
 
-	Sends []Event `json:"sends,omitempty"`
+	Sends []*Event `json:"sends,omitempty"`
 
 	Target string `json:"target"`
 
@@ -78,10 +78,10 @@ type Event struct {
 
 	*EventData `json:"event_data,omitempty"`
 
-	ProtocolType           agency.Protocol_Type `json:"-"`
-	*agency.ProtocolStatus `json:"-"`
+	ProtocolType agency.Protocol_Type `json:"-"`
 
-	*Transition `json:"-"`
+	*agency.ProtocolStatus `json:"-"`
+	*Transition            `json:"-"`
 }
 
 func (e Event) Triggers(status *agency.ProtocolStatus) bool {
@@ -184,14 +184,14 @@ func (m *Machine) Step(t *Transition) {
 	m.Current = t.Target
 }
 
-func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
+func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 	input, tgtChanged := t.buildInputEvent(status)
 	events := t.Sends
 	if tgtChanged {
-		events = []Event{input}
+		events = []*Event{input}
 	}
 
-	sends := make([]Event, len(events))
+	sends := make([]*Event, len(events))
 	for i, send := range events {
 		sends[i] = send
 		switch send.TypeID {
@@ -200,14 +200,14 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
 			case TriggerTypeFormatFromMem:
 				sends[i].EventData = &EventData{Issuing: &Issuing{
 					CredDefID: send.EventData.Issuing.CredDefID,
-					AttrsJSON: t.FmtFromMem(&send),
+					AttrsJSON: t.FmtFromMem(send),
 				}}
 			}
 		case MessageEmail:
 			switch send.Rule {
 			case TriggerTypePIN:
-				t.GenPIN(&send)
-				emailJSON := t.FmtFromMem(&send)
+				t.GenPIN(send)
+				emailJSON := t.FmtFromMem(send)
 				var email Email
 				err := json.Unmarshal([]byte(emailJSON), &email)
 				if err != nil {
@@ -230,7 +230,7 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
 				}}
 			case TriggerTypeFormatFromMem:
 				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-					Content: t.FmtFromMem(&send),
+					Content: t.FmtFromMem(send),
 				}}
 			}
 		}
@@ -238,8 +238,8 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []Event {
 	return sends
 }
 
-func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e Event, tgtSwitch bool) {
-	e = Event{
+func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event, tgtSwitch bool) {
+	e = &Event{
 		ProtocolType:   status.GetState().ProtocolId.TypeId,
 		ProtocolStatus: status,
 	}

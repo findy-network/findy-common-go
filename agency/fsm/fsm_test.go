@@ -14,7 +14,7 @@ var (
 			"IDLE": {
 				Transitions: []Transition{{
 					Trigger: &Event{TypeID: "basic_message"},
-					Sends: []Event{{
+					Sends: []*Event{{
 						TypeID: "basic_message",
 						Rule:   "INPUT",
 					}},
@@ -27,7 +27,7 @@ var (
 						TypeID: "basic_message",
 						Rule:   "OUR_STATUS",
 					},
-					Sends: []Event{{
+					Sends: []*Event{{
 						TypeID: "basic_message",
 						Rule:   "OUR_STATUS",
 					}},

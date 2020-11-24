@@ -144,7 +144,7 @@ func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
 	c.lastProtocolID[pid.Id] = struct{}{}
 }
 
-func (c *Conversation) send(outputs []fsm.Event) {
+func (c *Conversation) send(outputs []*fsm.Event) {
 	if outputs == nil {
 		return
 	}
