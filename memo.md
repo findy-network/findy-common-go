@@ -1,2 +1,4 @@
 - [ ] value based basic message: by giving a certain key word different state transition will be triggered
 - [ ] input message source could be URL's e.g. when we send pin code for email it could be inside a link which would direct right to us. But note, if we are doing chat bot, it doesn't do everything in the world, dosen't it
+- [ ] send at the beginning of the FSM one event that will allow print Hello msg or similar
+
