@@ -7,7 +7,7 @@ var EmailIssuerMachine = fsm.Machine{
 	States: map[string]fsm.State{
 		"IDLE": {
 			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
+				Trigger: &fsm.Event{
 					TypeID: "basic_message",
 				},
 				Sends: []fsm.Event{{
@@ -22,7 +22,7 @@ Please enter your email address.`,
 		},
 		"WAITING_EMAIL_ADDRESS": {
 			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
+				Trigger: &fsm.Event{
 					TypeID: "basic_message",
 					Rule:   "INPUT_SAVE",
 					Data:   "EMAIL",
@@ -52,7 +52,7 @@ Say "reset" if you want to start over.`,
 		"WAITING_EMAIL_PIN": {
 			Transitions: []fsm.Transition{
 				{
-					Trigger: fsm.Event{
+					Trigger: &fsm.Event{
 						TypeID: "basic_message",
 						Rule:   "INPUT_EQUAL",
 						Data:   "reset",
@@ -67,7 +67,7 @@ Say "reset" if you want to start over.`,
 					Target: "WAITING_EMAIL_ADDRESS",
 				},
 				{
-					Trigger: fsm.Event{
+					Trigger: &fsm.Event{
 						TypeID: "basic_message",
 						Rule:   "INPUT_VALIDATE_NOT_EQUAL",
 						Data:   "PIN",
@@ -84,7 +84,7 @@ Say "reset" if you want to start over.`,
 					Target: "WAITING_EMAIL_PIN",
 				},
 				{
-					Trigger: fsm.Event{
+					Trigger: &fsm.Event{
 						TypeID: "basic_message",
 						Rule:   "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
 						Data:   "PIN",                  // this is the name of the memory we are using
@@ -116,7 +116,7 @@ Please follow your wallet app's instructions`,
 		},
 		"WAITING_ISSUING_STATUS": {
 			Transitions: []fsm.Transition{{
-				Trigger: fsm.Event{
+				Trigger: &fsm.Event{
 					TypeID: "issue_cred", // there was no questions when it was us who started the issuing
 					Rule:   "OUR_STATUS",
 				},
@@ -141,7 +141,7 @@ var EchoMachine = fsm.Machine{
 		"INITIAL": {
 			Transitions: []fsm.Transition{
 				{
-					Trigger: fsm.Event{
+					Trigger: &fsm.Event{
 						TypeID: "basic_message",
 						Rule:   "INPUT_EQUAL",
 						Data:   "run",
@@ -156,7 +156,7 @@ var EchoMachine = fsm.Machine{
 					Target: "IDLE",
 				},
 				{
-					Trigger: fsm.Event{
+					Trigger: &fsm.Event{
 						TypeID: "basic_message",
 						Rule:   "INPUT",
 					},
@@ -175,7 +175,7 @@ var EchoMachine = fsm.Machine{
 		"IDLE": {
 			Transitions: []fsm.Transition{
 				{
-					Trigger: fsm.Event{
+					Trigger: &fsm.Event{
 						TypeID: "basic_message",
 						Rule:   "INPUT_EQUAL",
 						Data:   "reset",
@@ -190,7 +190,7 @@ var EchoMachine = fsm.Machine{
 					Target: "INITIAL",
 				},
 				{
-					Trigger: fsm.Event{
+					Trigger: &fsm.Event{
 						TypeID: "basic_message",
 						Rule:   "INPUT",
 					},

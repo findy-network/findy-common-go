@@ -13,7 +13,7 @@ var (
 		States: map[string]State{
 			"IDLE": {
 				Transitions: []Transition{{
-					Trigger: Event{TypeID: "basic_message"},
+					Trigger: &Event{TypeID: "basic_message"},
 					Sends: []Event{{
 						TypeID: "basic_message",
 						Rule:   "INPUT",
@@ -23,7 +23,7 @@ var (
 			},
 			"WAITING_STATUS": {
 				Transitions: []Transition{{
-					Trigger: Event{
+					Trigger: &Event{
 						TypeID: "basic_message",
 						Rule:   "OUR_STATUS",
 					},
@@ -52,15 +52,27 @@ func TestMachine_Initialize(t *testing.T) {
 
 func TestMachine_Triggers(t *testing.T) {
 	assert.NoError(t, machine.Initialize())
-	assert.Nil(t, machine.Triggers(agency.Protocol_PROOF))
-	assert.NotNil(t, machine.Triggers(agency.Protocol_BASIC_MESSAGE))
+	assert.Nil(t, machine.Triggers(
+		protocolStatus(agency.Protocol_PROOF)))
+	assert.NotNil(t, machine.Triggers(
+		protocolStatus(agency.Protocol_BASIC_MESSAGE)))
+}
+
+func protocolStatus(typeID agency.Protocol_Type) *agency.ProtocolStatus {
+	agencyProof := &agency.ProtocolStatus{
+		State: &agency.ProtocolState{ProtocolId: &agency.ProtocolID{TypeId: typeID}},
+		Status: &agency.ProtocolStatus_BasicMessage_{BasicMessage: &agency.ProtocolStatus_BasicMessage{
+			Content: "test string",
+		}},
+	}
+	return agencyProof
 }
 
 func TestMachine_Step(t *testing.T) {
 	assert.NoError(t, machine.Initialize())
-	transition := machine.Triggers(agency.Protocol_PROOF)
+	transition := machine.Triggers(protocolStatus(agency.Protocol_PROOF))
 	assert.Nil(t, transition)
-	transition = machine.Triggers(agency.Protocol_BASIC_MESSAGE)
+	transition = machine.Triggers(protocolStatus(agency.Protocol_BASIC_MESSAGE))
 	assert.NotNil(t, transition)
 	machine.Step(transition)
 	assert.Equal(t, "WAITING_STATUS", machine.Current)

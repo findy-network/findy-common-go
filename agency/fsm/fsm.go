@@ -57,7 +57,7 @@ type State struct {
 }
 
 type Transition struct {
-	Trigger Event `json:"trigger"`
+	Trigger *Event `json:"trigger"`
 
 	Sends []Event `json:"sends,omitempty"`
 
