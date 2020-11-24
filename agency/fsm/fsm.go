@@ -51,7 +51,7 @@ type Machine struct {
 }
 
 type State struct {
-	Transitions []Transition `json:"transitions"`
+	Transitions []*Transition `json:"transitions"`
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -134,11 +134,11 @@ func (m *Machine) Initialize() (err error) {
 	initSet := false
 	for id := range m.States {
 		for j := range m.States[id].Transitions {
-			m.States[id].Transitions[j].Trigger.Transition = &m.States[id].Transitions[j]
+			m.States[id].Transitions[j].Trigger.Transition = m.States[id].Transitions[j]
 			m.States[id].Transitions[j].Trigger.ProtocolType =
 				ProtocolType[m.States[id].Transitions[j].Trigger.TypeID]
 			for k := range m.States[id].Transitions[j].Sends {
-				m.States[id].Transitions[j].Sends[k].Transition = &m.States[id].Transitions[j]
+				m.States[id].Transitions[j].Sends[k].Transition = m.States[id].Transitions[j]
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
 					ProtocolType[m.States[id].Transitions[j].Sends[k].TypeID]
 				if m.States[id].Transitions[j].Sends[k].TypeID == MessageIssueCred &&
@@ -173,7 +173,7 @@ func (m *Machine) Triggers(status *agency.ProtocolStatus) *Transition {
 		transition.Trigger.Machine = m
 		if transition.Trigger.ProtocolType == status.State.ProtocolId.TypeId &&
 			transition.Trigger.Triggers(status) {
-			return &transition
+			return transition
 		}
 	}
 	return nil

@@ -6,7 +6,7 @@ var EmailIssuerMachine = fsm.Machine{
 	Initial: "IDLE",
 	States: map[string]fsm.State{
 		"IDLE": {
-			Transitions: []fsm.Transition{{
+			Transitions: []*fsm.Transition{{
 				Trigger: &fsm.Event{
 					TypeID: "basic_message",
 				},
@@ -21,7 +21,7 @@ Please enter your email address.`,
 			}},
 		},
 		"WAITING_EMAIL_ADDRESS": {
-			Transitions: []fsm.Transition{{
+			Transitions: []*fsm.Transition{{
 				Trigger: &fsm.Event{
 					TypeID: "basic_message",
 					Rule:   "INPUT_SAVE",
@@ -50,7 +50,7 @@ Say "reset" if you want to start over.`,
 			}},
 		},
 		"WAITING_EMAIL_PIN": {
-			Transitions: []fsm.Transition{
+			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
 						TypeID: "basic_message",
@@ -115,7 +115,7 @@ Please follow your wallet app's instructions`,
 			},
 		},
 		"WAITING_ISSUING_STATUS": {
-			Transitions: []fsm.Transition{{
+			Transitions: []*fsm.Transition{{
 				Trigger: &fsm.Event{
 					TypeID: "issue_cred", // there was no questions when it was us who started the issuing
 					Rule:   "OUR_STATUS",
@@ -139,7 +139,7 @@ var EchoMachine = fsm.Machine{
 	Initial: "INITIAL",
 	States: map[string]fsm.State{
 		"INITIAL": {
-			Transitions: []fsm.Transition{
+			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
 						TypeID: "basic_message",
@@ -173,7 +173,7 @@ var EchoMachine = fsm.Machine{
 			},
 		},
 		"IDLE": {
-			Transitions: []fsm.Transition{
+			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
 						TypeID: "basic_message",
