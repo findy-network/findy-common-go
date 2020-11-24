@@ -4,7 +4,7 @@ import "github.com/findy-network/findy-grpc/agency/fsm"
 
 var EmailIssuerMachine = fsm.Machine{
 	Initial: "IDLE",
-	States: map[string]fsm.State{
+	States: map[string]*fsm.State{
 		"IDLE": {
 			Transitions: []*fsm.Transition{{
 				Trigger: &fsm.Event{
@@ -137,7 +137,7 @@ We are ready now. Bye bye!`,
 
 var EchoMachine = fsm.Machine{
 	Initial: "INITIAL",
-	States: map[string]fsm.State{
+	States: map[string]*fsm.State{
 		"INITIAL": {
 			Transitions: []*fsm.Transition{
 				{

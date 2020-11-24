@@ -10,7 +10,7 @@ import (
 var (
 	machine = Machine{
 		Initial: "IDLE",
-		States: map[string]State{
+		States: map[string]*State{
 			"IDLE": {
 				Transitions: []*Transition{{
 					Trigger: &Event{TypeID: "basic_message"},

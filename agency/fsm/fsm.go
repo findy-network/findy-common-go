@@ -42,7 +42,7 @@ const (
 
 type Machine struct {
 	Initial string           `json:"initial"`
-	States  map[string]State `json:"states"`
+	States  map[string]*State `json:"states"`
 
 	Current     string `json:"-"`
 	Initialized bool   `json:"-"`
@@ -129,7 +129,6 @@ type BasicMessage struct {
 // Initialize initializes and optimizes the state machine because the JSON is
 // meant for humans to write and machines to read. Initialize also moves machine
 // to the initial state. It returns error if machine has them.
-// todo: switch to pointers in everything, it's better for state machine, no value errors
 func (m *Machine) Initialize() (err error) {
 	initSet := false
 	for id := range m.States {
@@ -161,7 +160,7 @@ func (m *Machine) Initialize() (err error) {
 	return nil
 }
 
-func (m *Machine) CurrentState() State {
+func (m *Machine) CurrentState() *State {
 	return m.States[m.Current]
 }
 
@@ -278,9 +277,9 @@ func (t *Transition) FmtFromMem(send *Event) string {
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
-	templ := template.Must(template.New("templ").Parse(send.Data))
+	tmpl := template.Must(template.New("template").Parse(send.Data))
 	var buf bytes.Buffer
-	err2.Check(templ.Execute(&buf, t.Machine.Memory))
+	err2.Check(tmpl.Execute(&buf, t.Machine.Memory))
 	return buf.String()
 }
 
