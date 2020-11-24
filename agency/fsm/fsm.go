@@ -130,9 +130,11 @@ type BasicMessage struct {
 // meant for humans to write and machines to read. Initialize also moves machine
 // to the initial state. It returns error if machine has them.
 func (m *Machine) Initialize() (err error) {
+	m.Memory = make(map[string]string)
 	initSet := false
 	for id := range m.States {
 		for j := range m.States[id].Transitions {
+			m.States[id].Transitions[j].Machine = m
 			m.States[id].Transitions[j].Trigger.Transition = m.States[id].Transitions[j]
 			m.States[id].Transitions[j].Trigger.ProtocolType =
 				ProtocolType[m.States[id].Transitions[j].Trigger.TypeID]
@@ -149,13 +151,12 @@ func (m *Machine) Initialize() (err error) {
 		}
 		if id == m.Initial {
 			if initSet {
-				return errors.New("machine has two initial states")
+				return errors.New("machine has multiple initial states")
 			}
 			m.Current = m.Initial
 			initSet = true
 		}
 	}
-	m.Memory = make(map[string]string)
 	m.Initialized = true
 	return nil
 }
@@ -168,8 +169,6 @@ func (m *Machine) CurrentState() *State {
 // it returns nil.
 func (m *Machine) Triggers(status *agency.ProtocolStatus) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
-		transition.Machine = m // todo: not needed
-		transition.Trigger.Machine = m
 		if transition.Trigger.ProtocolType == status.State.ProtocolId.TypeId &&
 			transition.Trigger.Triggers(status) {
 			return transition

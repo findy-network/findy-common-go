@@ -77,7 +77,8 @@ func (c *Conversation) RunConversation() {
 
 		if transition := c.Machine.Triggers(status); transition != nil {
 
-			if status.GetState().State != agency.ProtocolState_OK { // todo: different transitions to FSM, move error handling to it!
+			// todo: different transitions to FSM, move error handling to it!
+			if status.GetState().State != agency.ProtocolState_OK {
 				glog.Warningln("current FSM steps only completed protocol steps", status.GetState().State)
 				continue
 			}
