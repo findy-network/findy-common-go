@@ -15,7 +15,9 @@ import (
 )
 
 var (
-	user = flag.String("user", "findy-root", "test user name")
+	user       = flag.String("user", "findy-root", "test user name")
+	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
+	port       = flag.Int("port", 50051, "agency host gRPC port")
 )
 
 func main() {
@@ -27,7 +29,7 @@ func main() {
 	// whe want this for glog, this is just a tester, not a real world service
 	err2.Check(flag.Set("logtostderr", "true"))
 
-	conn, err := newClient(*user, "localhost:50051")
+	conn, err := newClient(*user, fmt.Sprintf("%s:%d", *serverAddr, *port))
 	err2.Check(err)
 	defer conn.Close()
 

@@ -75,7 +75,6 @@ func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) 
 	if cfg.TestLis != nil {
 		lis = cfg.TestLis
 	} else {
-		var err error
 		lis, err = net.Listen("tcp", addr)
 		err2.Check(err)
 		glog.V(5).Infoln("listen to:", addr)
