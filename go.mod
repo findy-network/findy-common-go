@@ -13,6 +13,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/lainio/err2 v0.5.0
+	github.com/rs/cors v1.6.0
 	github.com/stretchr/testify v1.6.1
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
