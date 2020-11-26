@@ -37,15 +37,19 @@ func BuildClientConnBase(tlsPath, addr string, port int, opts []grpc.DialOption)
 	return cfg
 }
 
-func TryOpen(user string, conf *rpc.ClientCfg) (c Conn) {
+func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
 	if conf == nil {
 		panic(errors.New("conf cannot be nil"))
 	}
-	glog.V(1).Infof("client with user \"%s\"", user)
-	conf.JWT = jwt.BuildJWT(user)
+	conf.JWT = jwtToken
 	conn, err := rpc.ClientConn(*conf)
 	err2.Check(err)
 	return Conn{ClientConn: conn, cfg: conf}
+}
+
+func TryOpen(user string, conf *rpc.ClientCfg) (c Conn) {
+	glog.V(1).Infof("client with user \"%s\"", user)
+	return TryAuthOpen(jwt.BuildJWT(user), conf)
 }
 
 func OkStatus(s *agency.ProtocolState) bool {
