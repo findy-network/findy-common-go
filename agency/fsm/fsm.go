@@ -95,14 +95,17 @@ type Transition struct {
 type EventType string
 
 type Event struct {
+	Protocol string `json:"protocol"`
 	TypeID   string `json:"type_id"`
+
 	Rule     string `json:"rule"`
 	Data     string `json:"data,omitempty"`
 	NoStatus bool   `json:"no_status,omitempty"`
 
 	*EventData `json:"event_data,omitempty"`
 
-	ProtocolType agency.Protocol_Type `json:"-"`
+	ProtocolType     agency.Protocol_Type     `json:"-"`
+	NotificationType agency.Notification_Type `json:"-"`
 
 	*agency.ProtocolStatus `json:"-"`
 	*Transition            `json:"-"`
@@ -173,12 +176,16 @@ func (m *Machine) Initialize() (err error) {
 			m.States[id].Transitions[j].Machine = m
 			m.States[id].Transitions[j].Trigger.Transition = m.States[id].Transitions[j]
 			m.States[id].Transitions[j].Trigger.ProtocolType =
-				ProtocolType[m.States[id].Transitions[j].Trigger.TypeID]
+				ProtocolType[m.States[id].Transitions[j].Trigger.Protocol]
+			m.States[id].Transitions[j].Trigger.NotificationType =
+				NotificationTypeID[m.States[id].Transitions[j].Trigger.TypeID]
 			for k := range m.States[id].Transitions[j].Sends {
 				m.States[id].Transitions[j].Sends[k].Transition = m.States[id].Transitions[j]
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
-					ProtocolType[m.States[id].Transitions[j].Sends[k].TypeID]
-				if m.States[id].Transitions[j].Sends[k].TypeID == MessageIssueCred &&
+					ProtocolType[m.States[id].Transitions[j].Sends[k].Protocol]
+				m.States[id].Transitions[j].Sends[k].NotificationType =
+					NotificationTypeID[m.States[id].Transitions[j].Sends[k].TypeID]
+				if m.States[id].Transitions[j].Sends[k].Protocol == MessageIssueCred &&
 					m.States[id].Transitions[j].Sends[k].EventData.Issuing == nil {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
 						m.States[id].Transitions[j].Sends[k].Data)
@@ -228,7 +235,7 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 	sends := make([]*Event, len(events))
 	for i, send := range events {
 		sends[i] = send
-		switch send.TypeID {
+		switch send.Protocol {
 		case MessageIssueCred:
 			switch send.Rule {
 			case TriggerTypeFormatFromMem:
@@ -338,4 +345,13 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageTrustPing:    agency.Protocol_TRUST_PING,
 	MessageBasicMessage: agency.Protocol_BASIC_MESSAGE,
 	MessageEmail:        EmailProtocol,
+}
+
+var NotificationTypeID = map[string]agency.Notification_Type{
+	"STATUS_UPDATE":               agency.Notification_STATUS_UPDATE,
+	"ACTION_NEEDED":               agency.Notification_ACTION_NEEDED,
+	"ANSWER_NEEDED_PING":          agency.Notification_ANSWER_NEEDED_PING,
+	"ANSWER_NEEDED_ISSUE_PROPOSE": agency.Notification_ANSWER_NEEDED_ISSUE_PROPOSE,
+	"ANSWER_NEEDED_PROOF_PROPOSE": agency.Notification_ANSWER_NEEDED_PROOF_PROPOSE,
+	"ANSWER_NEEDED_PROOF_VERIFY":  agency.Notification_ANSWER_NEEDED_PROOF_VERIFY,
 }

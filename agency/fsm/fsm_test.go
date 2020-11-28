@@ -13,10 +13,10 @@ var (
 		States: map[string]*State{
 			"IDLE": {
 				Transitions: []*Transition{{
-					Trigger: &Event{TypeID: "basic_message"},
+					Trigger: &Event{Protocol: "basic_message"},
 					Sends: []*Event{{
-						TypeID: "basic_message",
-						Rule:   "INPUT",
+						Protocol: "basic_message",
+						Rule:     "INPUT",
 					}},
 					Target: "WAITING_STATUS",
 				}},
@@ -24,12 +24,12 @@ var (
 			"WAITING_STATUS": {
 				Transitions: []*Transition{{
 					Trigger: &Event{
-						TypeID: "basic_message",
-						Rule:   "OUR_STATUS",
+						Protocol: "basic_message",
+						Rule:     "OUR_STATUS",
 					},
 					Sends: []*Event{{
-						TypeID: "basic_message",
-						Rule:   "OUR_STATUS",
+						Protocol: "basic_message",
+						Rule:     "OUR_STATUS",
 					}},
 					Target: "IDLE",
 				}},
@@ -43,11 +43,14 @@ var (
 			"IDLE": {
 				Transitions: []*Transition{
 					{
-						Trigger: &Event{TypeID: "connection"},
+						Trigger: &Event{
+							Protocol: "connection",
+							TypeID:   "STATUS_UPDATE",
+						},
 						Sends: []*Event{
 							{
-								TypeID: "basic_message",
-								Rule:   "INPUT",
+								Protocol: "basic_message",
+								Rule:     "INPUT",
 							},
 						},
 						Target: "WAITING_STATUS",
@@ -58,13 +61,14 @@ var (
 				Transitions: []*Transition{
 					{
 						Trigger: &Event{
-							TypeID: "basic_message",
-							Rule:   "OUR_STATUS",
+							Protocol: "basic_message",
+							TypeID:   "STATUS_UPDATE",
+							Rule:     "OUR_STATUS",
 						},
 						Sends: []*Event{
 							{
-								TypeID: "basic_message",
-								Rule:   "OUR_STATUS",
+								Protocol: "basic_message",
+								Rule:     "OUR_STATUS",
 							},
 						},
 						Target: "IDLE",

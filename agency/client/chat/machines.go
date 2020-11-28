@@ -8,10 +8,10 @@ var EmailIssuerMachine = fsm.Machine{
 		"IDLE": {
 			Transitions: []*fsm.Transition{{
 				Trigger: &fsm.Event{
-					TypeID: "basic_message",
+					Protocol: "basic_message",
 				},
 				Sends: []*fsm.Event{{
-					TypeID: "basic_message",
+					Protocol: "basic_message",
 					Data: `
 Hello! I'm a email issuer.
 Please enter your email address.`,
@@ -23,22 +23,22 @@ Please enter your email address.`,
 		"WAITING_EMAIL_ADDRESS": {
 			Transitions: []*fsm.Transition{{
 				Trigger: &fsm.Event{
-					TypeID: "basic_message",
-					Rule:   "INPUT_SAVE",
-					Data:   "EMAIL",
+					Protocol: "basic_message",
+					Rule:     "INPUT_SAVE",
+					Data:     "EMAIL",
 				},
 				Sends: []*fsm.Event{
 					{
-						TypeID: "basic_message",
-						Rule:   "FORMAT_MEM",
+						Protocol: "basic_message",
+						Rule:     "FORMAT_MEM",
 						Data: `Thank you! I sent your pin code to {{.EMAIL}}.
 Please enter it here and I'll send your email credential.
 Say "reset" if you want to start over.`,
 						NoStatus: true,
 					},
 					{
-						TypeID: "email",
-						Rule:   "GEN_PIN",
+						Protocol: "email",
+						Rule:     "GEN_PIN",
 						Data: `{"from":"chatbot@our.address.net",
 "subject":"Your PIN for email issuer chat bot",
 "to":"{{.EMAIL}}",
@@ -53,13 +53,13 @@ Say "reset" if you want to start over.`,
 			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
-						Rule:   "INPUT_EQUAL",
-						Data:   "reset",
+						Protocol: "basic_message",
+						Rule:     "INPUT_EQUAL",
+						Data:     "reset",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     "Please enter your email address.",
 							NoStatus: true,
 						},
@@ -68,14 +68,14 @@ Say "reset" if you want to start over.`,
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
-						Rule:   "INPUT_VALIDATE_NOT_EQUAL",
-						Data:   "PIN",
+						Protocol: "basic_message",
+						Rule:     "INPUT_VALIDATE_NOT_EQUAL",
+						Data:     "PIN",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID: "basic_message",
-							Rule:   "FORMAT_MEM",
+							Protocol: "basic_message",
+							Rule:     "FORMAT_MEM",
 							Data: `Incorrect PIN code. Please check your emails for:
 {{.EMAIL}}`,
 							NoStatus: true,
@@ -85,13 +85,13 @@ Say "reset" if you want to start over.`,
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
-						Rule:   "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
-						Data:   "PIN",                  // this is the name of the memory we are using
+						Protocol: "basic_message",
+						Rule:     "INPUT_VALIDATE_EQUAL", // validation criterion is will be in??
+						Data:     "PIN",                  // this is the name of the memory we are using
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							NoStatus: true,
 							Rule:     "FORMAT_MEM",
 							Data: `Thank you! Issuing an email credential for address:
@@ -99,9 +99,9 @@ Say "reset" if you want to start over.`,
 Please follow your wallet app's instructions`,
 						},
 						{
-							TypeID: "issue_cred",
-							Rule:   "FORMAT_MEM",
-							Data:   `[{"name":"email","value":"{{.EMAIL}}"}]`,
+							Protocol: "issue_cred",
+							Rule:     "FORMAT_MEM",
+							Data:     `[{"name":"email","value":"{{.EMAIL}}"}]`,
 							EventData: &fsm.EventData{
 								Issuing: &fsm.Issuing{
 									CredDefID: "T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1",
@@ -117,12 +117,12 @@ Please follow your wallet app's instructions`,
 		"WAITING_ISSUING_STATUS": {
 			Transitions: []*fsm.Transition{{
 				Trigger: &fsm.Event{
-					TypeID: "issue_cred", // there was no questions when it was us who started the issuing
-					Rule:   "OUR_STATUS",
+					Protocol: "issue_cred", // there was no questions when it was us who started the issuing
+					Rule:     "OUR_STATUS",
 				},
 				Sends: []*fsm.Event{
 					{
-						TypeID:   "basic_message",
+						Protocol: "basic_message",
 						NoStatus: true,
 						Rule:     "FORMAT_MEM",
 						Data: `Thank you {{.EMAIL}}!
@@ -142,11 +142,11 @@ var ReqProofMachine = fsm.Machine{
 			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
-						TypeID: "connection",
+						Protocol: "connection",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
 							NoStatus: true,
 						},
@@ -155,17 +155,17 @@ var ReqProofMachine = fsm.Machine{
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
+						Protocol: "basic_message",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
 							NoStatus: true,
 						},
 						{
-							TypeID: "present_proof",
-							Data:   `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
+							Protocol: "present_proof",
+							Data:     `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
 						},
 					},
 					Target: "WAITING_EMAIL_PROOF",
@@ -176,13 +176,13 @@ var ReqProofMachine = fsm.Machine{
 			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
-						Rule:   "INPUT_EQUAL",
-						Data:   "reset",
+						Protocol: "basic_message",
+						Rule:     "INPUT_EQUAL",
+						Data:     "reset",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     "Going to beginning...",
 							NoStatus: true,
 						},
@@ -191,12 +191,12 @@ var ReqProofMachine = fsm.Machine{
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "present_proof_accept",
-						Rule:   "NOT_ACCEPT_VALUES",
+						Protocol: "present_proof_accept",
+						Rule:     "NOT_ACCEPT_VALUES",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
 							NoStatus: true,
 						},
@@ -205,12 +205,12 @@ var ReqProofMachine = fsm.Machine{
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "present_proof_accept",
-						Rule:   "ACCEPT_VALUES",
+						Protocol: "present_proof_accept",
+						Rule:     "ACCEPT_VALUES",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
 							NoStatus: true,
 						},
@@ -229,12 +229,12 @@ var EchoMachine = fsm.Machine{
 			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
-						TypeID: "connection",
+						Protocol: "connection",
 						//Rule:   "INPUT",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID: "basic_message",
+							Protocol: "basic_message",
 							//Rule: "",
 							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
 							NoStatus: true,
@@ -244,13 +244,13 @@ var EchoMachine = fsm.Machine{
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
-						Rule:   "INPUT_EQUAL",
-						Data:   "run",
+						Protocol: "basic_message",
+						Rule:     "INPUT_EQUAL",
+						Data:     "run",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     "Let's go!",
 							NoStatus: true,
 						},
@@ -259,12 +259,12 @@ var EchoMachine = fsm.Machine{
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
+						Protocol: "basic_message",
 						//Rule:   "INPUT",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID: "basic_message",
+							Protocol: "basic_message",
 							//Rule: "",
 							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
 							NoStatus: true,
@@ -278,13 +278,13 @@ var EchoMachine = fsm.Machine{
 			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
-						Rule:   "INPUT_EQUAL",
-						Data:   "reset",
+						Protocol: "basic_message",
+						Rule:     "INPUT_EQUAL",
+						Data:     "reset",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Data:     "Going to beginning.",
 							NoStatus: true,
 						},
@@ -293,12 +293,12 @@ var EchoMachine = fsm.Machine{
 				},
 				{
 					Trigger: &fsm.Event{
-						TypeID: "basic_message",
-						Rule:   "INPUT",
+						Protocol: "basic_message",
+						Rule:     "INPUT",
 					},
 					Sends: []*fsm.Event{
 						{
-							TypeID:   "basic_message",
+							Protocol: "basic_message",
 							Rule:     "INPUT",
 							NoStatus: true,
 						},
