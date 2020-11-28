@@ -24,24 +24,46 @@ const (
 	TriggerTypeValidateInputEqual    = "INPUT_VALIDATE_EQUAL"
 	TriggerTypeValidateInputNotEqual = "INPUT_VALIDATE_NOT_EQUAL"
 	TriggerTypeInputEqual            = "INPUT_EQUAL"
+
+	TriggerTypeQuestionAcceptValues    = "ACCEPT_VALUES"
+	TriggerTypeQuestionNotAcceptValues = "NOT_ACCEPT_VALUES"
 )
 
 const (
-	MessageEmail        = "email"
+	MessageNone         = ""
 	MessageBasicMessage = "basic_message"
 	MessageIssueCred    = "issue_cred"
 	MessageTrustPing    = "trust_ping"
 	MessagePresentProof = "present_proof"
 	MessageConnection   = "connection"
-	MessageNone         = ""
+
+	MessagePresentProofAcceptValuesQuestion = "present_proof_accept"
+
+	MessageEmail = "email"
 )
 
 const (
 	EmailProtocol = 100
 )
 
+//	*ProtocolStatus_Connection_
+//	*ProtocolStatus_Issue_
+//	*ProtocolStatus_Proof
+//	*ProtocolStatus_TrustPing_
+//	*ProtocolStatus_BasicMessage_
+
+// NewBasicMessage creates a new message which can be send to machine
+func NewBasicMessage(content string) *agency.ProtocolStatus {
+	agencyProof := &agency.ProtocolStatus{
+		State: &agency.ProtocolState{ProtocolId: &agency.ProtocolID{
+			TypeId: agency.Protocol_BASIC_MESSAGE}},
+		Status: &agency.ProtocolStatus_BasicMessage_{BasicMessage: &agency.ProtocolStatus_BasicMessage{Content: content}},
+	}
+	return agencyProof
+}
+
 type Machine struct {
-	Initial string           `json:"initial"`
+	Initial string            `json:"initial"`
 	States  map[string]*State `json:"states"`
 
 	Current     string `json:"-"`
@@ -70,6 +92,8 @@ type Transition struct {
 	Machine *Machine `json:"-"`
 }
 
+type EventType string
+
 type Event struct {
 	TypeID   string `json:"type_id"`
 	Rule     string `json:"rule"`
@@ -86,7 +110,7 @@ type Event struct {
 
 func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 	switch status.GetState().ProtocolId.TypeId {
-	case agency.Protocol_ISSUE:
+	case agency.Protocol_ISSUE, agency.Protocol_CONNECT, agency.Protocol_PROOF:
 		return true
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
@@ -108,6 +132,7 @@ type EventData struct {
 	BasicMessage *BasicMessage `json:"basic_message,omitempty"`
 	Issuing      *Issuing      `json:"issuing,omitempty"`
 	Email        *Email        `json:"email,omitempty"`
+	Proof        *Proof        `json:"proof,omitempty"`
 }
 
 type Email struct {
@@ -120,6 +145,17 @@ type Email struct {
 type Issuing struct {
 	CredDefID string
 	AttrsJSON string
+}
+
+type Proof struct {
+	ProofJSON string `json:"proof_json"`
+}
+
+type ProofX struct {
+	ID        string `json:"-"`
+	Name      string `json:"name,omitempty"`
+	CredDefID string `json:"credDefId,omitempty"`
+	Predicate string `json:"predicate,omitempty"`
 }
 
 type BasicMessage struct {
@@ -201,6 +237,13 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 					AttrsJSON: t.FmtFromMem(send),
 				}}
 			}
+		case MessagePresentProof:
+			switch send.Rule {
+			case TriggerTypeData:
+				sends[i].EventData = &EventData{Proof: &Proof{
+					ProofJSON: send.Data,
+				}}
+			}
 		case MessageEmail:
 			switch send.Rule {
 			case TriggerTypePIN:
@@ -242,7 +285,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event, t
 		ProtocolStatus: status,
 	}
 	switch status.GetState().ProtocolId.TypeId {
-	case agency.Protocol_ISSUE:
+	case agency.Protocol_ISSUE, agency.Protocol_PROOF:
 		switch t.Trigger.Rule {
 		case TriggerTypeOurMessage:
 			return e, false
@@ -288,7 +331,7 @@ func (t *Transition) GenPIN(_ *Event) {
 }
 
 var ProtocolType = map[string]agency.Protocol_Type{
-	MessageNone:         0, // todo: we need the constant here!
+	MessageNone:         agency.Protocol_NONE,
 	MessageConnection:   agency.Protocol_CONNECT,
 	MessageIssueCred:    agency.Protocol_ISSUE,
 	MessagePresentProof: agency.Protocol_PROOF,

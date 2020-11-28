@@ -54,7 +54,7 @@ func (b Bot) Run(intCh chan os.Signal) {
 	err2.Check(err)
 
 	// this block is for development without fsm file
-	b.fsm = EmailIssuerMachine //EchoMachine //
+	b.fsm = ReqProofMachine //EmailIssuerMachine //
 	err2.Check(b.fsm.Initialize())
 
 	// this block is for testing file loading
@@ -72,8 +72,9 @@ loop:
 				glog.V(2).Infoln("closed from server")
 				break loop
 			}
-			glog.V(10).Infoln("listen status:",
+			glog.V(1).Infoln("listen status:",
 				status.Notification.TypeId,
+				status.Notification.Role,
 				status.Notification.ProtocolId)
 			chat.Status <- status
 		case <-intCh:

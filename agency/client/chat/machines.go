@@ -135,11 +135,113 @@ We are ready now. Bye bye!`,
 	},
 }
 
+var ReqProofMachine = fsm.Machine{
+	Initial: "INITIAL",
+	States: map[string]*fsm.State{
+		"INITIAL": {
+			Transitions: []*fsm.Transition{
+				{
+					Trigger: &fsm.Event{
+						TypeID: "connection",
+					},
+					Sends: []*fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
+							NoStatus: true,
+						},
+					},
+					Target: "INITIAL",
+				},
+				{
+					Trigger: &fsm.Event{
+						TypeID: "basic_message",
+					},
+					Sends: []*fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
+							NoStatus: true,
+						},
+						{
+							TypeID: "present_proof",
+							Data:   `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
+						},
+					},
+					Target: "WAITING_EMAIL_PROOF",
+				},
+			},
+		},
+		"WAITING_EMAIL_PROOF": {
+			Transitions: []*fsm.Transition{
+				{
+					Trigger: &fsm.Event{
+						TypeID: "basic_message",
+						Rule:   "INPUT_EQUAL",
+						Data:   "reset",
+					},
+					Sends: []*fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     "Going to beginning...",
+							NoStatus: true,
+						},
+					},
+					Target: "INITIAL",
+				},
+				{
+					Trigger: &fsm.Event{
+						TypeID: "present_proof_accept",
+						Rule:   "NOT_ACCEPT_VALUES",
+					},
+					Sends: []*fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
+							NoStatus: true,
+						},
+					},
+					Target: "INITIAL",
+				},
+				{
+					Trigger: &fsm.Event{
+						TypeID: "present_proof_accept",
+						Rule:   "ACCEPT_VALUES",
+					},
+					Sends: []*fsm.Event{
+						{
+							TypeID:   "basic_message",
+							Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
+							NoStatus: true,
+						},
+					},
+					Target: "INITIAL",
+				},
+			},
+		},
+	},
+}
+
 var EchoMachine = fsm.Machine{
 	Initial: "INITIAL",
 	States: map[string]*fsm.State{
 		"INITIAL": {
 			Transitions: []*fsm.Transition{
+				{
+					Trigger: &fsm.Event{
+						TypeID: "connection",
+						//Rule:   "INPUT",
+					},
+					Sends: []*fsm.Event{
+						{
+							TypeID: "basic_message",
+							//Rule: "",
+							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
+							NoStatus: true,
+						},
+					},
+					Target: "INITIAL",
+				},
 				{
 					Trigger: &fsm.Event{
 						TypeID: "basic_message",
@@ -158,7 +260,7 @@ var EchoMachine = fsm.Machine{
 				{
 					Trigger: &fsm.Event{
 						TypeID: "basic_message",
-						Rule:   "INPUT",
+						//Rule:   "INPUT",
 					},
 					Sends: []*fsm.Event{
 						{

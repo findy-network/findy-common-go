@@ -68,6 +68,8 @@ func (c *Conversation) RunConversation() {
 
 		glog.V(10).Infoln("conversation:", t.Notification.ConnectionId)
 
+		// todo: start to write handler for questions!
+
 		if c.IsOursAndRm(t.Notification.ProtocolId) {
 			glog.V(10).Infoln("discarding event")
 			continue
@@ -133,6 +135,19 @@ func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
 	}
 }
 
+func (c *Conversation) sendReqProof(message *fsm.Proof, noAck bool) {
+	r, err := async.NewPairwise(
+		c.Conn,
+		c.id,
+	).ReqProof(context.Background(),
+		message.ProofJSON)
+	err2.Check(err)
+	glog.V(10).Infoln("protocol id:", r.Id)
+	if noAck {
+		c.SetLastProtocolID(r)
+	}
+}
+
 func (c *Conversation) sendEmail(message *fsm.Email, noAck bool) {
 	// todo: implement send email here
 	glog.V(0).Infoln("sending email to", message.To, message.Body)
@@ -157,6 +172,8 @@ func (c *Conversation) send(outputs []*fsm.Event) {
 			c.sendBasicMessage(output.BasicMessage, output.NoStatus)
 		case agency.Protocol_ISSUE:
 			c.sendIssuing(output.Issuing, output.NoStatus)
+		case agency.Protocol_PROOF:
+			c.sendReqProof(output.Proof, output.NoStatus)
 		case fsm.EmailProtocol:
 			c.sendEmail(output.Email, output.NoStatus)
 		}

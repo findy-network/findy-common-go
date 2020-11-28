@@ -36,6 +36,43 @@ var (
 			},
 		},
 	}
+
+	showProofMachine = Machine{
+		Initial: "IDLE",
+		States: map[string]*State{
+			"IDLE": {
+				Transitions: []*Transition{
+					{
+						Trigger: &Event{TypeID: "connection"},
+						Sends: []*Event{
+							{
+								TypeID: "basic_message",
+								Rule:   "INPUT",
+							},
+						},
+						Target: "WAITING_STATUS",
+					},
+				},
+			},
+			"WAITING_STATUS": {
+				Transitions: []*Transition{
+					{
+						Trigger: &Event{
+							TypeID: "basic_message",
+							Rule:   "OUR_STATUS",
+						},
+						Sends: []*Event{
+							{
+								TypeID: "basic_message",
+								Rule:   "OUR_STATUS",
+							},
+						},
+						Target: "IDLE",
+					},
+				},
+			},
+		},
+	}
 )
 
 func TestMachine_Initialize(t *testing.T) {
@@ -76,4 +113,18 @@ func TestMachine_Step(t *testing.T) {
 	assert.NotNil(t, transition)
 	machine.Step(transition)
 	assert.Equal(t, "WAITING_STATUS", machine.Current)
+}
+
+func TestMachine_Step2(t *testing.T) {
+	assert.NoError(t, showProofMachine.Initialize())
+	status := protocolStatus(agency.Protocol_CONNECT)
+	transition := showProofMachine.Triggers(status)
+	assert.NotNil(t, transition)
+	e, newTgt := transition.buildInputEvent(status)
+	assert.False(t, newTgt)
+	assert.NotNil(t, e)
+	o := transition.BuildSendEvents(status)
+	assert.NotNil(t, o)
+	showProofMachine.Step(transition)
+	assert.Equal(t, "WAITING_STATUS", showProofMachine.Current)
 }

@@ -1,4 +1,5 @@
-- [ ] value based basic message: by giving a certain key word different state transition will be triggered
+- [x] value based basic message: by giving a certain key word different state transition will be triggered
 - [ ] input message source could be URL's e.g. when we send pin code for email it could be inside a link which would direct right to us. But note, if we are doing chat bot, it doesn't do everything in the world, dosen't it
-- [ ] send at the beginning of the FSM one event that will allow print Hello msg or similar
-
+- [x] send at the beginning of the FSM one event that will allow print Hello msg or similar
+- [x] could we use mime type for SA endpoints, by this we could use same wallet storage and logic for them as well
+- [ ] **testing is still needed** but all EAs can now work as issuer and verifier because of new gRPC API 
