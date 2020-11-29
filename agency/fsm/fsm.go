@@ -25,8 +25,8 @@ const (
 	TriggerTypeValidateInputNotEqual = "INPUT_VALIDATE_NOT_EQUAL"
 	TriggerTypeInputEqual            = "INPUT_EQUAL"
 
-	TriggerTypeQuestionAcceptValues    = "ACCEPT_VALUES"
-	TriggerTypeQuestionNotAcceptValues = "NOT_ACCEPT_VALUES"
+	TriggerTypeAcceptAndInputValues = "ACCEPT_AND_INPUT_VALUES"
+	TriggerTypeNotAcceptValues      = "NOT_ACCEPT_VALUES"
 )
 
 const (
@@ -37,13 +37,14 @@ const (
 	MessagePresentProof = "present_proof"
 	MessageConnection   = "connection"
 
-	MessagePresentProofAcceptValuesQuestion = "present_proof_accept"
+	MessageAnswer = "answer"
 
 	MessageEmail = "email"
 )
 
 const (
 	EmailProtocol = 100
+	QAProtocol    = 101
 )
 
 //	*ProtocolStatus_Connection_
@@ -95,6 +96,7 @@ type Transition struct {
 type EventType string
 
 type Event struct {
+	// todo: questions could be protocols here, then TypeID would not be needed?
 	Protocol string `json:"protocol"`
 	TypeID   string `json:"type_id"`
 
@@ -131,6 +133,51 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 	return false
 }
 
+func (e Event) Answers(status *agency.AgentStatus) bool {
+	switch status.Notification.TypeId {
+	case agency.Notification_ANSWER_NEEDED_PING:
+	case agency.Notification_ANSWER_NEEDED_ISSUE_PROPOSE:
+	case agency.Notification_ANSWER_NEEDED_PROOF_PROPOSE:
+	case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
+		if e.ProtocolType != agency.Protocol_PROOF {
+			panic("programming error")
+		}
+		var attrValues []ProofAttr
+		err2.Check(json.Unmarshal([]byte(e.Data), &attrValues))
+
+		switch e.Rule {
+		case TriggerTypeNotAcceptValues:
+			if len(attrValues) != len(status.Notification.GetProofVerify().Attrs) {
+				return true
+			}
+			for _, attr := range status.Notification.GetProofVerify().Attrs {
+				for i, value := range attrValues {
+					if value.Name == attr.Name && value.CredDefID == attr.CredDefId {
+						attrValues[i].found = true
+					}
+				}
+			}
+			for _, value := range attrValues {
+				if !value.found {
+					return true
+				}
+			}
+		case TriggerTypeAcceptAndInputValues:
+			count := 0
+			for _, attr := range status.Notification.GetProofVerify().Attrs {
+				for _, value := range attrValues {
+					if value.Name == attr.Name {
+						e.Machine.Memory[value.Name] = attr.Value
+						count++
+					}
+				}
+			}
+			return count == len(status.Notification.GetProofVerify().Attrs)
+		}
+	}
+	return false
+}
+
 type EventData struct {
 	BasicMessage *BasicMessage `json:"basic_message,omitempty"`
 	Issuing      *Issuing      `json:"issuing,omitempty"`
@@ -154,11 +201,13 @@ type Proof struct {
 	ProofJSON string `json:"proof_json"`
 }
 
-type ProofX struct {
+type ProofAttr struct {
 	ID        string `json:"-"`
 	Name      string `json:"name,omitempty"`
 	CredDefID string `json:"credDefId,omitempty"`
 	Predicate string `json:"predicate,omitempty"`
+
+	found bool
 }
 
 type BasicMessage struct {
@@ -225,13 +274,23 @@ func (m *Machine) Step(t *Transition) {
 	m.Current = t.Target
 }
 
-func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
-	input, tgtChanged := t.buildInputEvent(status)
-	events := t.Sends
-	if tgtChanged {
-		events = []*Event{input}
+func (m *Machine) Answers(status *agency.AgentStatus) *Transition {
+	for _, transition := range m.CurrentState().Transitions {
+		if transition.Trigger.ProtocolType == status.Notification.ProtocolType &&
+			transition.Trigger.Answers(status) {
+			return transition
+		}
 	}
+	return nil
+}
 
+func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
+	input := t.buildInputEvent(status)
+	return t.doBuildSendEvents(input)
+}
+
+func (t *Transition) doBuildSendEvents(input *Event) []*Event {
+	events := t.Sends
 	sends := make([]*Event, len(events))
 	for i, send := range events {
 		sends[i] = send
@@ -251,6 +310,8 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 					ProofJSON: send.Data,
 				}}
 			}
+		case MessageAnswer:
+			glog.V(1).Infoln("building answer") // it's so easy
 		case MessageEmail:
 			switch send.Rule {
 			case TriggerTypePIN:
@@ -286,7 +347,7 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 	return sends
 }
 
-func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event, tgtSwitch bool) {
+func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 	e = &Event{
 		ProtocolType:   status.GetState().ProtocolId.TypeId,
 		ProtocolStatus: status,
@@ -295,10 +356,10 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event, t
 	case agency.Protocol_ISSUE, agency.Protocol_PROOF:
 		switch t.Trigger.Rule {
 		case TriggerTypeOurMessage:
-			return e, false
+			return e
 		}
 	case agency.Protocol_CONNECT:
-		return e, false
+		return e
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
 		switch t.Trigger.Rule {
@@ -319,7 +380,14 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event, t
 			}}
 		}
 	}
-	return e, false
+	return e
+}
+
+func (t *Transition) buildInputAnswers(status *agency.AgentStatus) (e *Event) {
+	e = &Event{
+		ProtocolType: status.Notification.ProtocolType,
+	}
+	return e
 }
 
 func (t *Transition) FmtFromMem(send *Event) string {
@@ -337,6 +405,11 @@ func (t *Transition) GenPIN(_ *Event) {
 	glog.Infoln("pin code:", t.Machine.Memory["PIN"])
 }
 
+func (t *Transition) BuildSendAnswers(status *agency.AgentStatus) []*Event {
+	inputs := t.buildInputAnswers(status)
+	return t.doBuildSendEvents(inputs)
+}
+
 var ProtocolType = map[string]agency.Protocol_Type{
 	MessageNone:         agency.Protocol_NONE,
 	MessageConnection:   agency.Protocol_CONNECT,
@@ -345,6 +418,7 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageTrustPing:    agency.Protocol_TRUST_PING,
 	MessageBasicMessage: agency.Protocol_BASIC_MESSAGE,
 	MessageEmail:        EmailProtocol,
+	MessageAnswer:       QAProtocol,
 }
 
 var NotificationTypeID = map[string]agency.Notification_Type{

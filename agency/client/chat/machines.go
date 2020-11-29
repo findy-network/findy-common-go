@@ -158,21 +158,21 @@ var ReqProofMachine = fsm.Machine{
 						Protocol: "basic_message",
 					},
 					Sends: []*fsm.Event{
-						{
-							Protocol: "basic_message",
-							Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
-							NoStatus: true,
-						},
+						//{
+						//	Protocol: "basic_message",
+						//	Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
+						//	NoStatus: true,
+						//},
 						{
 							Protocol: "present_proof",
 							Data:     `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
 						},
 					},
-					Target: "WAITING_EMAIL_PROOF",
+					Target: "WAITING_EMAIL_PROOF_QA",
 				},
 			},
 		},
-		"WAITING_EMAIL_PROOF": {
+		"WAITING_EMAIL_PROOF_QA": {
 			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
@@ -188,16 +188,74 @@ var ReqProofMachine = fsm.Machine{
 						},
 					},
 					Target: "INITIAL",
-				},
+				}, // reset cmd
 				{
 					Trigger: &fsm.Event{
-						Protocol: "present_proof_accept",
+						Protocol: "present_proof",
+						TypeID:   "ANSWER_NEEDED_PROOF_VERIFY", // this should be protocol?
 						Rule:     "NOT_ACCEPT_VALUES",
+						Data:     `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
+					},
+					Sends: []*fsm.Event{
+						//{
+						//	Protocol: "basic_message",
+						//	Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
+						//	NoStatus: true,
+						//},
+						{
+							Protocol: "answer",
+							Data:     "NACK",
+						},
+					},
+					Target: "INITIAL",
+				},
+				{
+					Trigger: &fsm.Event{
+						Protocol: "present_proof",
+						TypeID:   "ANSWER_NEEDED_PROOF_VERIFY",
+						Rule:     "ACCEPT_AND_INPUT_VALUES",
+						Data:     `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
+					},
+					Sends: []*fsm.Event{
+						{
+							Protocol: "answer",
+							Data:     `ACK`,
+						},
+					},
+					Target: "WAITING2_EMAIL_PROOF",
+				},
+			},
+		},
+		"WAITING2_EMAIL_PROOF": { // we don't have any error handling here. TODO: this shows that we need timers when we have error handling!
+			Transitions: []*fsm.Transition{
+				{
+					Trigger: &fsm.Event{
+						Protocol: "present_proof",
 					},
 					Sends: []*fsm.Event{
 						{
 							Protocol: "basic_message",
-							Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
+							Rule:     "FORMAT_MEM",
+							Data:     `Hello {{.email}}! I'm stupid bot who knows you have verified email address!!!\nI can trust you.`,
+							NoStatus: true,
+						},
+					},
+					Target: "WAITING_NEXT_CMD",
+				},
+			},
+		},
+		"WAITING_NEXT_CMD": {
+			Transitions: []*fsm.Transition{
+				{
+					Trigger: &fsm.Event{
+						Protocol: "basic_message",
+						Rule:     "INPUT_EQUAL",
+						Data:     "reset",
+					},
+					Sends: []*fsm.Event{
+						{
+							Protocol: "basic_message",
+							Data:     "Going to beginning.",
 							NoStatus: true,
 						},
 					},
@@ -205,17 +263,17 @@ var ReqProofMachine = fsm.Machine{
 				},
 				{
 					Trigger: &fsm.Event{
-						Protocol: "present_proof_accept",
-						Rule:     "ACCEPT_VALUES",
+						Protocol: "basic_message",
+						Rule:     "INPUT",
 					},
 					Sends: []*fsm.Event{
 						{
 							Protocol: "basic_message",
-							Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
+							Rule:     "INPUT",
 							NoStatus: true,
 						},
 					},
-					Target: "INITIAL",
+					Target: "WAITING_NEXT_CMD",
 				},
 			},
 		},
@@ -230,12 +288,10 @@ var EchoMachine = fsm.Machine{
 				{
 					Trigger: &fsm.Event{
 						Protocol: "connection",
-						//Rule:   "INPUT",
 					},
 					Sends: []*fsm.Event{
 						{
 							Protocol: "basic_message",
-							//Rule: "",
 							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
 							NoStatus: true,
 						},
@@ -260,12 +316,10 @@ var EchoMachine = fsm.Machine{
 				{
 					Trigger: &fsm.Event{
 						Protocol: "basic_message",
-						//Rule:   "INPUT",
 					},
 					Sends: []*fsm.Event{
 						{
 							Protocol: "basic_message",
-							//Rule: "",
 							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
 							NoStatus: true,
 						},

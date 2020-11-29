@@ -68,32 +68,40 @@ func (c *Conversation) RunConversation() {
 
 		glog.V(10).Infoln("conversation:", t.Notification.ConnectionId)
 
-		// todo: start to write handler for questions!
-
-		if c.IsOursAndRm(t.Notification.ProtocolId) {
-			glog.V(10).Infoln("discarding event")
-			continue
-		}
-
-		status := c.getStatus(t)
-
-		if transition := c.Machine.Triggers(status); transition != nil {
-
-			// todo: different transitions to FSM, move error handling to it!
-			if status.GetState().State != agency.ProtocolState_OK {
-				glog.Warningln("current FSM steps only completed protocol steps", status.GetState().State)
+		switch t.Notification.TypeId {
+		case agency.Notification_STATUS_UPDATE:
+			glog.V(1).Infoln("status update")
+			if c.IsOursAndRm(t.Notification.ProtocolId) {
+				glog.V(10).Infoln("discarding event")
 				continue
 			}
-			glog.V(10).Infoln("role:", status.GetState().ProtocolId.Role)
-			glog.V(1).Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
 
-			c.send(transition.BuildSendEvents(status))
+			status := c.getStatus(t)
 
-			c.Machine.Step(transition)
-		} else {
-			glog.V(1).Infoln("machine don't have transition for:",
-				t.Notification.ProtocolType)
+			if transition := c.Machine.Triggers(status); transition != nil {
+
+				// todo: different transitions to FSM, move error handling to it!
+				if status.GetState().State != agency.ProtocolState_OK {
+					glog.Warningln("current FSM steps only completed protocol steps", status.GetState().State)
+					continue
+				}
+				glog.V(10).Infoln("role:", status.GetState().ProtocolId.Role)
+				glog.V(1).Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
+
+				c.send(transition.BuildSendEvents(status), t)
+
+				c.Machine.Step(transition)
+			} else {
+				glog.V(1).Infoln("machine don't have transition for:",
+					t.Notification.ProtocolType)
+			}
+		case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
+			glog.V(1).Infoln("proof QA")
+			if transition := c.Machine.Answers(t); transition != nil {
+				c.send(transition.BuildSendAnswers(t), t)
+			}
 		}
+
 	}
 }
 
@@ -107,6 +115,19 @@ func (c *Conversation) getStatus(status ConnStatus) *agency.ProtocolStatus {
 	})
 	err2.Check(err)
 	return statusResult
+}
+
+func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
+	ctx := context.Background()
+	agentClient := agency.NewAgentClient(c.Conn)
+	cid, err := agentClient.Give(ctx, &agency.Answer{
+		Id:       status.Notification.Id,
+		ClientId: status.ClientId,
+		Ack:      ack,
+		Info:     "testing says hello!",
+	})
+	err2.Check(err)
+	glog.Infof("Sending the answer (%s) send to client:%s\n", status.Notification.Id, cid.Id)
 }
 
 func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
@@ -160,7 +181,7 @@ func (c *Conversation) SetLastProtocolID(pid *agency.ProtocolID) {
 	c.lastProtocolID[pid.Id] = struct{}{}
 }
 
-func (c *Conversation) send(outputs []*fsm.Event) {
+func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 	if outputs == nil {
 		return
 	}
@@ -176,6 +197,12 @@ func (c *Conversation) send(outputs []*fsm.Event) {
 			c.sendReqProof(output.Proof, output.NoStatus)
 		case fsm.EmailProtocol:
 			c.sendEmail(output.Email, output.NoStatus)
+		case fsm.QAProtocol:
+			ack := false
+			if output.Data == "ACK" {
+				ack = true
+			}
+			c.reply(status, ack)
 		}
 	}
 }
