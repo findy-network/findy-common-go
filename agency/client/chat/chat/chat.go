@@ -99,6 +99,7 @@ func (c *Conversation) RunConversation() {
 			glog.V(1).Infoln("proof QA")
 			if transition := c.Machine.Answers(t); transition != nil {
 				c.send(transition.BuildSendAnswers(t), t)
+				c.Machine.Step(transition)
 			}
 		}
 
