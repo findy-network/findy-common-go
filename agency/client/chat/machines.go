@@ -192,7 +192,7 @@ var ReqProofMachine = fsm.Machine{
 				{
 					Trigger: &fsm.Event{
 						Protocol: "present_proof",
-						TypeID:   "ANSWER_NEEDED_PROOF_VERIFY", // this should be protocol?
+						TypeID:   "ANSWER_NEEDED_PROOF_VERIFY", // this should/could be a protocol?
 						Rule:     "NOT_ACCEPT_VALUES",
 						Data:     `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
 					},
@@ -226,17 +226,18 @@ var ReqProofMachine = fsm.Machine{
 				},
 			},
 		},
-		"WAITING2_EMAIL_PROOF": { // we don't have any error handling here. TODO: this shows that we need timers when we have error handling!
+		// we don't have any error handling here. TODO: this shows that we need timers when we have error handling!
+		"WAITING2_EMAIL_PROOF": {
 			Transitions: []*fsm.Transition{
 				{
 					Trigger: &fsm.Event{
-						Protocol: "present_proof",
+						Protocol: "present_proof", // this is the final message that proof has been finalized and ready for pickup
 					},
 					Sends: []*fsm.Event{
 						{
 							Protocol: "basic_message",
 							Rule:     "FORMAT_MEM",
-							Data:     `Hello {{.email}}! I'm stupid bot who knows you have verified email address!!!\nI can trust you.`,
+							Data:     "Hello {{.email}}! I'm stupid bot who knows you have verified email address!!!\nI can trust you.",
 							NoStatus: true,
 						},
 					},
@@ -264,12 +265,14 @@ var ReqProofMachine = fsm.Machine{
 				{
 					Trigger: &fsm.Event{
 						Protocol: "basic_message",
-						Rule:     "INPUT",
+						Rule:     "INPUT_SAVE",
+						Data:     "LINE",
 					},
 					Sends: []*fsm.Event{
 						{
 							Protocol: "basic_message",
-							Rule:     "INPUT",
+							Rule:     "FORMAT_MEM",
+							Data:     "{{.email}} says: {{.LINE}}",
 							NoStatus: true,
 						},
 					},
