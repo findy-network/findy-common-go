@@ -54,7 +54,9 @@ func (b Bot) Run(intCh chan os.Signal) {
 	err2.Check(err)
 
 	// this block is for development without fsm file
-	b.fsm = ReqProofMachine //EmailIssuerMachine //
+	//b.fsm = EchoMachine //ReqProofMachine //EmailIssuerMachine //
+	b.fsm = EmailIssuerMachine //
+	//b.fsm = ReqProofMachine //EmailIssuerMachine //
 	err2.Check(b.fsm.Initialize())
 
 	// this block is for testing file loading

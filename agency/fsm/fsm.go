@@ -63,7 +63,7 @@ func NewBasicMessage(content string) *agency.ProtocolStatus {
 	return agencyProof
 }
 
-type Machine struct {
+type Machine struct { // todo: should these have a name, for humans at least?
 	Initial string            `json:"initial"`
 	States  map[string]*State `json:"states"`
 

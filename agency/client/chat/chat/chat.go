@@ -43,12 +43,13 @@ var (
 )
 
 func Multiplexer(conn client.Conn) {
-	glog.V(3).Infoln("starting multiplexer")
+	glog.V(3).Infoln("starting multiplexer", Machine.Current)
 	for {
 		t := <-Status
 		c, ok := conversations[t.Notification.ConnectionId]
 		if !ok {
-			glog.V(1).Infoln("Starting new conversation")
+			glog.V(1).Infoln("Starting new conversation",
+				Machine.Current)
 			c = &Conversation{
 				id:         t.Notification.ConnectionId,
 				Conn:       conn,
