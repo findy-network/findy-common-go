@@ -1,30 +1,28 @@
-- [ ] add a handler or some sort of UI for waiting-state situation (what is this? does it mean the cli tool, or the API)
-- [ ] correct garbage collection mistake in bolt db handling!!
-- [ ] Give() grpc API function doesn't return any ID info, not error, but result is empty
+- [ ] 0: a test in a playground what happens when output interface is assigned to output interface. how it will be from outside?
+- [ ] 0: Give() grpc API function doesn't return any ID info, not error, but result is empty
+- [ ] 0: inputs to input in fsm answer building
+- [ ] 0: jwt status won't return the information that PSM is waiting action, or is it? Should be. **Check this ASAP**
+- [ ] 0: move bot start cmds to CLI
+- [ ] 0: **proof ready, agent notification role was addressee, which was wrong, protocol status return correct one which was initiator** we start with this now.
+- [ ] 1: correct garbage collection mistake in bolt db handling!!
+- [ ] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
+- [ ] 3: start to make first version of the gRPC API as a release!!
+- [ ] 3: we need the correct initial state, or this should be at least checked
+- [ ] 9: add a handler or some sort of UI for waiting-state situation (what is this? does it mean the cli tool, or the API)
 - [ ] how to solve persistence with chat bots. Especially, should they save their pairwise level conversations. If someone is coming back, can we take that data from there?
 - [ ] Idea: use plantuml format for state machines: if there is not enough experssions in the language we could have 2 files where other is plant uml for visualization, and the other is detailed descriptions for other stuff: named list of events or named list of transitions! plant file just names the transitions and other file describes what to do in the triggers and sends!! quite cool.
 - [ ] input message source could be URL's e.g. when we send pin code for email it could be inside a link which would direct right to us. But note, if we are doing chat bot, it doesn't do everything in the world, dosen't it?
-- [ ] inputs to input in fsm answer building
-- [ ] jwt status won't return the information that PSM is waiting action, or is it? Should be. **Check this ASAP**
 - [ ] new settings for gRPC agency and clients: tls cert and key file locations, address and port file locations, could that be a config file or should we stay with single envs and cmd flags?
 - [ ] old trust ping command says nothing on success
 - [ ] performance optimization potential is in agency by not read all the PSM access from Bolt but from memory
 - [ ] performance optimization potential is in agency by not writing so many state transitions to the DB
 - [ ] performance optimization potential is in agency by transferring PW name from processor to input/output function
-- [ ] **proof ready, agent notification role was addressee, which was wrong, protocol status return correct one which was initiator** we start with this now.
 - [ ] remember to check the command structure, should we have the same structures for both commands and have only some global flag to switch between modes
 - [ ] sa communication, the question, if multiple clients want to answer, no we have 1on1 with questions and answers. Maybe should have RmQuestion api for handling that? I don't remember what this means anymore ... Now I do. User could have iPad and iPhone and wants to answer one of them. Both should have the question thought.
-- [ ] salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
 - [ ] should we be able to listen one pairwise, and everything what's happening for it. Now we can listen our CA, but with gRPC should we be able to listen that too? we can listen one protocol when we are starting it by us with the **Run** function. does this bring more complexity to agency, or not? at least with other languages which don't have same concurrency as Go has it might help?
 - [ ] should we move Aries specific message structs a somewhere generic repo, we don't want to have dependencies to agency, good-one! should we even start to move some stuff out of agency for that same reason?
-- [ ] should we start to build own cli for agent-grpc project? easier debug and start, now I have used findy-service-tool, good question, how we will handle the meanwhile situation. 
-- [ ] start to make first version of the gRPC API as a release!!
-- [ ] test in a playground what happens when output interface is assigned to output interface. how it will be from outside?
-- [ ] **testing is still needed** but all EAs can now work as issuer and verifier because of new gRPC API 
-- [ ] test other Status getters of grpc implementation, now we have basic-message, some is tested, had to check if automated tests are on.
 - [ ] use exactly same Cmds as previously, but internally switch to use wallet+key or CA-DID / jwt token, this is the best version!!! have to make a design for the implementation.
 - [ ] we have wrong error handling in bolt database, it reports error when it is not founding data!!
-- [ ] we need the correct initial state, or this should be at least checked
 - [x] add API for giving permission to continue protocol. in progress...
 - [x] addon for ledger: should load all of them when addon directory is imported
 - [x] check grpc loggings
@@ -44,8 +42,11 @@
 - [x] run some sort of perf test to show the advances of the gRPC, comparison isn't done but Ge benchmark is written to new tests.
 - [x] SA communication via Go channels need timeouts
 - [x] send at the beginning of the FSM one event that will allow print Hello msg or similar
+- [x] should we start to build own cli for agent-grpc project? easier debug and start, now I have used findy-service-tool, good question, how we will handle the meanwhile situation. DONE: move commands to CLI
 - [x] start to think how we will offer gRPC APIs for clients in agency, and same time start to think how we will make unit testing for this system. we can do that similarly we have done it before i.e. we just build the whole wallet system for the tests, that's it! and use memory communication for the gRPC testing. **we don't use cmds for everything because it's not convenient for the client use. we make client API for EA implementation which make their life as easy as possible **
 - [x] start to write chat-bot framework!! almost ready.
+- [x] **testing is still needed** but all EAs can now work as issuer and verifier because of new gRPC API 
+- [x] test other Status getters of grpc implementation, now we have basic-message, some is tested, had to check if automated tests are on.
 - [x] think about a situation where we must find the existing PSM and operate with it, continue, cancel, etc.
 - [x] unit tests for all API functions similarly as for previous Cmds, should be keep Cmds API as well? Or should we rewrite old commands with these new ones. **no we have separated APIs because we want to offer as easy to use as possible. that's why we need separated tests as well**
 - [x] update `findy-grpc` README.md
