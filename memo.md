@@ -1,4 +1,5 @@
-- [ ] 0: a test in a playground what happens when output interface is assigned to output interface. how it will be from outside?
+- [ ] 00: how to make sure that grpc impl SA handler doesn't eat memory? if no one is waiting for the question, it will wait for as long as the timeout says and it's taking one goroutine for that!!!
+- [ ] 0: fix the `im=om` bug in the SA implementers!!
 - [ ] 0: Give() grpc API function doesn't return any ID info, not error, but result is empty
 - [ ] 0: inputs to input in fsm answer building
 - [ ] 0: jwt status won't return the information that PSM is waiting action, or is it? Should be. **Check this ASAP**
@@ -6,6 +7,7 @@
 - [ ] 0: **proof ready, agent notification role was addressee, which was wrong, protocol status return correct one which was initiator** we start with this now.
 - [ ] 1: correct garbage collection mistake in bolt db handling!!
 - [ ] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
+- [ ] 3: split `grpc_test.go` file 
 - [ ] 3: start to make first version of the gRPC API as a release!!
 - [ ] 3: we need the correct initial state, or this should be at least checked
 - [ ] 9: add a handler or some sort of UI for waiting-state situation (what is this? does it mean the cli tool, or the API)
@@ -23,6 +25,7 @@
 - [ ] should we move Aries specific message structs a somewhere generic repo, we don't want to have dependencies to agency, good-one! should we even start to move some stuff out of agency for that same reason?
 - [ ] use exactly same Cmds as previously, but internally switch to use wallet+key or CA-DID / jwt token, this is the best version!!! have to make a design for the implementation.
 - [ ] we have wrong error handling in bolt database, it reports error when it is not founding data!!
+- [x] 0: a test in a playground what happens when output interface is assigned to output interface. how it will be from outside? DONE: only the interface value is transported which should affect that if you try to change something after the pointer switch you set wrong variable!!
 - [x] add API for giving permission to continue protocol. in progress...
 - [x] addon for ledger: should load all of them when addon directory is imported
 - [x] check grpc loggings
