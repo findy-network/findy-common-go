@@ -8,9 +8,11 @@ import (
 	"io"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/findy-network/findy-agent-api/grpc/ops"
 	didexchange "github.com/findy-network/findy-agent/std/didexchange/invitation"
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/findy-network/findy-grpc/rpc"
+	"github.com/findy-network/findy-grpc/utils"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
@@ -173,6 +175,34 @@ func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan
 			}
 			err2.Check(err)
 			statusCh <- status
+		}
+	}()
+	return statusCh, nil
+}
+
+func (conn Conn) PSMHook(ctx context.Context) (ch chan *agency.ProtocolStatus, err error) {
+	defer err2.Return(&err)
+
+	opsClient := ops.NewAgencyClient(conn)
+	statusCh := make(chan *agency.ProtocolStatus)
+
+	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{Id: utils.UUID()})
+	err2.Check(err)
+	glog.V(1).Infoln("successful start of listen PSM hook id:")
+	go func() {
+		defer err2.CatchTrace(func(err error) {
+			glog.V(1).Infoln("WARNING: error when reading response:", err)
+			close(statusCh)
+		})
+		for {
+			status, err := stream.Recv()
+			if err == io.EOF {
+				glog.V(3).Infoln("status stream end")
+				close(statusCh)
+				break
+			}
+			err2.Check(err)
+			statusCh <- status.ProtocolStatus
 		}
 	}()
 	return statusCh, nil
