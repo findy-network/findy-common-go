@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 func ParseLoggingArgs(s string) {
@@ -14,4 +16,8 @@ func ParseLoggingArgs(s string) {
 	os.Args = args
 	flag.Parse()
 	os.Args = orgArgs
+}
+
+func UUID() string {
+	return uuid.New().String()
 }

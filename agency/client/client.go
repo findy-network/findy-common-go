@@ -66,7 +66,7 @@ func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (ch c
 			Attrs:     &agency.Protocol_Issuing_AttributesJson{AttributesJson: attrsJSON},
 		}},
 	}
-	return pw.Conn.doStart(ctx, protocol)
+	return pw.Conn.doRun(ctx, protocol)
 }
 
 func (pw Pairwise) IssueWithAttrs(ctx context.Context, credDefID string, attrs *agency.Protocol_Attrs) (ch chan *agency.ProtocolState, err error) {
@@ -79,7 +79,7 @@ func (pw Pairwise) IssueWithAttrs(ctx context.Context, credDefID string, attrs *
 			Attrs:     &agency.Protocol_Issuing_Attrs_{Attrs_: attrs},
 		}},
 	}
-	return pw.Conn.doStart(ctx, protocol)
+	return pw.Conn.doRun(ctx, protocol)
 }
 
 func (conn Conn) Connection(ctx context.Context, invitationJSON string) (connID string, ch chan *agency.ProtocolState, err error) {
@@ -95,7 +95,7 @@ func (conn Conn) Connection(ctx context.Context, invitationJSON string) (connID 
 		Role:     agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_InvitationJson{InvitationJson: invitationJSON},
 	}
-	ch, err = conn.doStart(ctx, protocol)
+	ch, err = conn.doRun(ctx, protocol)
 	err2.Check(err)
 	connID = invitation.ID
 	return connID, ch, err
@@ -107,7 +107,7 @@ func (pw Pairwise) Ping(ctx context.Context) (ch chan *agency.ProtocolState, err
 		TypeId:       agency.Protocol_TRUST_PING,
 		Role:         agency.Protocol_INITIATOR,
 	}
-	return pw.Conn.doStart(ctx, protocol)
+	return pw.Conn.doRun(ctx, protocol)
 }
 
 func (pw Pairwise) BasicMessage(ctx context.Context, content string) (ch chan *agency.ProtocolState, err error) {
@@ -117,7 +117,7 @@ func (pw Pairwise) BasicMessage(ctx context.Context, content string) (ch chan *a
 		Role:         agency.Protocol_INITIATOR,
 		StartMsg:     &agency.Protocol_BasicMessage{BasicMessage: content},
 	}
-	return pw.Conn.doStart(ctx, protocol)
+	return pw.Conn.doRun(ctx, protocol)
 }
 
 func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (ch chan *agency.ProtocolState, err error) {
@@ -130,7 +130,7 @@ func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (ch chan *ag
 				AttrFmt: &agency.Protocol_ProofRequest_AttributesJson{
 					AttributesJson: proofAttrs}}},
 	}
-	return pw.Conn.doStart(ctx, protocol)
+	return pw.Conn.doRun(ctx, protocol)
 }
 
 func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Protocol_Proof) (ch chan *agency.ProtocolState, err error) {
@@ -143,7 +143,7 @@ func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Pro
 				AttrFmt: &agency.Protocol_ProofRequest_Attrs{
 					Attrs: proofAttrs}}},
 	}
-	return pw.Conn.doStart(ctx, protocol)
+	return pw.Conn.doRun(ctx, protocol)
 }
 
 func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan *agency.AgentStatus, err error) {
@@ -174,7 +174,7 @@ func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan
 	return statusCh, nil
 }
 
-func (conn Conn) doStart(ctx context.Context, protocol *agency.Protocol) (ch chan *agency.ProtocolState, err error) {
+func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan *agency.ProtocolState, err error) {
 	defer err2.Return(&err)
 
 	c := agency.NewDIDCommClient(conn)
@@ -200,4 +200,15 @@ func (conn Conn) doStart(ctx context.Context, protocol *agency.Protocol) (ch cha
 		}
 	}()
 	return statusCh, nil
+}
+
+func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol) (pid *agency.ProtocolID, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewDIDCommClient(conn)
+	pid, err = c.Start(ctx, protocol)
+	err2.Check(err)
+
+	glog.V(3).Infoln("successful start of:", protocol.TypeId)
+	return pid, nil
 }
