@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 	didexchange "github.com/findy-network/findy-agent/std/didexchange/invitation"
 	"github.com/findy-network/findy-grpc/jwt"
 	"github.com/findy-network/findy-grpc/rpc"
-	"github.com/findy-network/findy-wrapper-go/dto"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
@@ -82,22 +82,26 @@ func (pw Pairwise) IssueWithAttrs(ctx context.Context, credDefID string, attrs *
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (conn Conn) Connection(ctx context.Context, invitationJSON string) (connID string, ch chan *agency.ProtocolState, err error) {
+func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (connID string, ch chan *agency.ProtocolState, err error) {
 	defer err2.Return(&err)
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well
 	var invitation didexchange.Invitation
-	dto.FromJSONStr(invitationJSON, &invitation)
+	err2.Check(json.Unmarshal([]byte(invitationJSON), &invitation))
 
 	protocol := &agency.Protocol{
-		TypeId:   agency.Protocol_CONNECT,
-		Role:     agency.Protocol_INITIATOR,
-		StartMsg: &agency.Protocol_InvitationJson{InvitationJson: invitationJSON},
+		TypeId: agency.Protocol_CONNECT,
+		Role:   agency.Protocol_INITIATOR,
+		StartMsg: &agency.Protocol_ConnAttr{ConnAttr: &agency.Protocol_Connection{
+			Label:          pw.Label,
+			InvitationJson: invitationJSON,
+		}},
 	}
-	ch, err = conn.doRun(ctx, protocol)
+	ch, err = pw.Conn.doRun(ctx, protocol)
 	err2.Check(err)
 	connID = invitation.ID
+	pw.ID = connID
 	return connID, ch, err
 }
 

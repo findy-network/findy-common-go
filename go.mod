@@ -7,7 +7,7 @@ require (
 	github.com/duo-labs/webauthn v0.0.0-20200714211715-1daaee874e43
 	github.com/duo-labs/webauthn.io v0.0.0-20200929144140-c031a3e0f95d
 	github.com/findy-network/findy-agent v0.0.0-20201117100851-668b87ffe95f
-	github.com/findy-network/findy-agent-api v0.0.0-20201129153049-07c9197da3eb
+	github.com/findy-network/findy-agent-api v0.0.0-20201201175937-2e734f24f0ef
 	github.com/findy-network/findy-wrapper-go v0.0.0-20201026120712-dc9ac6619595
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
