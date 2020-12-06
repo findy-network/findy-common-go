@@ -1,4 +1,4 @@
-package enclave
+package db
 
 import (
 	"errors"
@@ -8,27 +8,27 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-var db *bolt.DB
+var DB *bolt.DB
 
 // ErrSealBoxAlreadyExists is an error for enclave sealed box already exists.
 var ErrSealBoxAlreadyExists = errors.New("enclave sealed box exists")
 
 func assertDB() {
-	if db == nil {
+	if DB == nil {
 		panic("don't forget init the seal box")
 	}
 }
 
 func Open(filename string, buckets [][]byte) (err error) {
-	if db != nil {
+	if DB != nil {
 		return ErrSealBoxAlreadyExists
 	}
 	defer err2.Return(&err)
 
-	db, err = bolt.Open(filename, 0600, nil)
+	DB, err = bolt.Open(filename, 0600, nil)
 	err2.Check(err)
 
-	err2.Check(db.Update(func(tx *bolt.Tx) (err error) {
+	err2.Check(DB.Update(func(tx *bolt.Tx) (err error) {
 		defer err2.Annotate("create buckets", &err)
 
 		for _, bucket := range buckets {
@@ -69,8 +69,8 @@ func Close() {
 	})
 	assertDB()
 
-	err2.Check(db.Close())
-	db = nil
+	err2.Check(DB.Close())
+	DB = nil
 }
 
 func AddKeyValueToBucket(bucket []byte, keyValue, index *DbData) (err error) {
@@ -78,7 +78,7 @@ func AddKeyValueToBucket(bucket []byte, keyValue, index *DbData) (err error) {
 
 	defer err2.Annotate("add key", &err)
 
-	err2.Check(db.Update(func(tx *bolt.Tx) (err error) {
+	err2.Check(DB.Update(func(tx *bolt.Tx) (err error) {
 		defer err2.Return(&err)
 
 		b := tx.Bucket(bucket)
@@ -93,7 +93,7 @@ func GetKeyValueFromBucket(bucket []byte, index, keyValue *DbData) (found bool, 
 
 	defer err2.Return(&err)
 
-	err2.Check(db.View(func(tx *bolt.Tx) (err error) {
+	err2.Check(DB.View(func(tx *bolt.Tx) (err error) {
 		defer err2.Return(&err)
 
 		b := tx.Bucket(bucket)

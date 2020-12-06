@@ -1,4 +1,4 @@
-package enclave
+package crypto
 
 import (
 	"crypto/aes"
