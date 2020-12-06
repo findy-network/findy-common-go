@@ -61,7 +61,7 @@ func (b Bot) Run(intCh chan os.Signal) {
 
 	// this block is for testing file loading
 	//err2.Check(b.SaveFSM("emailbot.json"))
-	//err2.Check(b.SaveFSM("emailbot.yaml"))
+	err2.Check(b.SaveFSM("emailbot.yaml"))
 	chat.Machine = &b.fsm
 
 	go chat.Multiplexer(b.Conn)
