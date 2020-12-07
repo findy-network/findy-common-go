@@ -11,7 +11,6 @@ import (
 )
 
 type Cipher struct {
-	key    []byte
 	block  cipher.Block
 	aesGCM cipher.AEAD
 }
@@ -29,7 +28,7 @@ func NewCipher(k []byte) *Cipher {
 	newAesGCM, err := cipher.NewGCM(newBlock)
 	err2.Check(err)
 
-	return &Cipher{key: k, block: newBlock, aesGCM: newAesGCM}
+	return &Cipher{block: newBlock, aesGCM: newAesGCM}
 }
 
 func (c *Cipher) _(in []byte) (out []byte, err error) {

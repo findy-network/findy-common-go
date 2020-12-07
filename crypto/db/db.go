@@ -41,20 +41,20 @@ func Open(filename string, buckets [][]byte) (err error) {
 
 type Filter func(value []byte) (k []byte)
 
-type DbData struct {
+type Data struct {
 	Data  []byte
 	Read  Filter
 	Write Filter
 }
 
-func (d *DbData) get() []byte {
+func (d *Data) get() []byte {
 	if d.Read == nil {
 		return append(d.Data[:0:0], d.Data...)
 	}
 	return d.Read(d.Data)
 }
 
-func (d *DbData) set(b []byte) {
+func (d *Data) set(b []byte) {
 	if d.Write == nil {
 		copy(d.Data, b)
 	}
@@ -73,7 +73,7 @@ func Close() {
 	DB = nil
 }
 
-func AddKeyValueToBucket(bucket []byte, keyValue, index *DbData) (err error) {
+func AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
 	assertDB()
 
 	defer err2.Annotate("add key", &err)
@@ -88,7 +88,7 @@ func AddKeyValueToBucket(bucket []byte, keyValue, index *DbData) (err error) {
 	return nil
 }
 
-func GetKeyValueFromBucket(bucket []byte, index, keyValue *DbData) (found bool, err error) {
+func GetKeyValueFromBucket(bucket []byte, index, keyValue *Data) (found bool, err error) {
 	assertDB()
 
 	defer err2.Return(&err)
