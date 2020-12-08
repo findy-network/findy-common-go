@@ -40,11 +40,14 @@ func Open(filename string, buckets [][]byte) (err error) {
 }
 
 type Filter func(value []byte) (k []byte)
+type Use func(value []byte) interface{}
 
 type Data struct {
 	Data  []byte
 	Read  Filter
 	Write Filter
+	Use
+	Result interface{}
 }
 
 func (d *Data) get() []byte {
@@ -56,9 +59,17 @@ func (d *Data) get() []byte {
 
 func (d *Data) set(b []byte) {
 	if d.Write == nil {
-		copy(d.Data, b)
+		if d.Use != nil {
+			d.Result = d.Use(b)
+		} else {
+			copy(d.Data, b)
+		}
+	} else {
+		d.Data = d.Write(b)
+		if d.Use != nil {
+			d.Result = d.Use(d.Data)
+		}
 	}
-	d.Data = d.Write(b)
 }
 
 // Close closes the sealed box of the enclave. It can be open again with
