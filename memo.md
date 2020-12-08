@@ -1,39 +1,37 @@
-- [ ] 0: move bot start cmds to CLI
+- [ ] 0: design decision, what we do with the Failed PSM, should that be decided by caller, or should we retry automatically?
 - [ ] 1: check SA grpc implementation, the whole, deep call stack
-- [ ] 1: correct garbage collection mistake in bolt db handling!! Integrate the Bold refactoring.
 - [ ] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
 - [ ] 2: authenticator for SAs, how to build client for FIDO2
-- [ ] 3: design decision, what we do with the Failed PSM, should that be decided by caller, or should we retry automatically?
 - [ ] 3: split `grpc_test.go` file 
 - [ ] 3: start to make first version of the gRPC API as a release!!
-- [ ] 3: we need the correct initial state, or this should be at least checked
+- [ ] 3: we need the correct initial state in FSM, or this should be at least checked
+- [ ] 4: move bot start cmds to CLI
 - [ ] 9: add a handler or some sort of UI for waiting-state situation (what is this? does it mean the cli tool, or the API)
-- [ ] add rm functionality to Bold solution
-- [ ] build background service to clean up `Archived` PSM and related REP
 - [ ] Check agent notifications and statuses 
 - [ ] figure out how to test system where listeners and other parties are many
-- [ ] Fix the only one issue of the Agency
-- [ ] how to solve persistence with chat bots. Especially, should they save their pairwise level conversations. If someone is coming back, can we take that data from there?
+- [ ] how to solve persistence with chat bots. Especially, should they save their pairwise level conversations. If someone is coming back, can we take that data from there? We must test and see what is needed. Current key value map is live only under app life cycle.
 - [ ] Idea: use plantuml format for state machines: if there is not enough experssions in the language we could have 2 files where other is plant uml for visualization, and the other is detailed descriptions for other stuff: named list of events or named list of transitions! plant file just names the transitions and other file describes what to do in the triggers and sends!! quite cool.
 - [ ] input message source could be URL's e.g. when we send pin code for email it could be inside a link which would direct right to us. But note, if we are doing chat bot, it doesn't do everything in the world, dosen't it?
-- [ ] list all secrets like JWT generation key, all enclave keys, ...
 - [ ] new settings for gRPC agency and clients: tls cert and key file locations, address and port file locations, could that be a config file or should we stay with single envs and cmd flags?
 - [ ] old trust ping command says nothing on success
 - [ ] performance optimization potential is in agency by not read all the PSM access from Bolt but from memory
 - [ ] performance optimization potential is in agency by not writing so many state transitions to the DB
 - [ ] performance optimization potential is in agency by transferring PW name from processor to input/output function
-- [ ] 0: refactor all Bold db stuff to same interface as grpc/enclave is
+- [ ] psm rm: move current PSMhook clean up of `Archived` PSM and related REP to a background service
 - [ ] remember to check the command structure, should we have the same structures for both commands and have only some global flag to switch between modes
 - [ ] restructuring long testfiles like grpc_test.go: idea reuse testMainSuff, generalize them that you can split test files
 - [ ] sa communication, the question, if multiple clients want to answer, no we have 1on1 with questions and answers. Maybe should have RmQuestion api for handling that? I don't remember what this means anymore ... Now I do. User could have iPad and iPhone and wants to answer one of them. Both should have the question thought.
 - [ ] should we be able to listen one pairwise, and everything what's happening for it. Now we can listen our CA, but with gRPC should we be able to listen that too? we can listen one protocol when we are starting it by us with the **Run** function. does this bring more complexity to agency, or not? at least with other languages which don't have same concurrency as Go has it might help?
 - [ ] should we move Aries specific message structs a somewhere generic repo, we don't want to have dependencies to agency, good-one! should we even start to move some stuff out of agency for that same reason?
+- [ ] started: list all secrets like JWT generation key, all enclave keys, ...
 - [ ] use exactly same Cmds as previously, but internally switch to use wallet+key or CA-DID / jwt token, this is the best version!!! have to make a design for the implementation.
 - [ ] we have wrong error handling in bolt database, it reports error when it is not founding data!!
 - [ ] what whould be a good demo?
 - [x] 0: a test in a playground what happens when output interface is assigned to output interface. how it will be from outside? DONE: only the interface value is transported which should affect that if you try to change something after the pointer switch you set wrong variable!!
+- [x] 0: correct garbage collection mistake in bolt db handling!! Integrate the Bold refactoring.
 - [x] 0: Give() grpc API function doesn't return any ID info, not error, but result is empty
 - [x] 0: inputs to input in fsm answer building
+- [x] 0: refactor all Bold db stuff to same interface as grpc/enclave is
 - [x] add API for giving permission to continue protocol. in progress...
 - [x] addon for ledger: should load all of them when addon directory is imported
 - [x] build archiving aka protocol.Release() ready, remove the PSM from data base, maybe we need another state for that Archived -> removed. DONE1, `Archived` added, missing actual cleanup
@@ -45,6 +43,7 @@
 - [x] DONE: this works because `om` was returned from function: fix the `im=om` bug in the SA implementers!! DONE2: will remove the assings and test then, DONE3: was misreading, `om` is return value, we dont have cloning mechanis, so we reuse `im` and comment it. When old indy messages are obsolete, this will go away
 - [x] enclave cryptos, all cryptos we have: first proper implementation to grpc repo
 - [x] ERR and NACK results of ProtocolState should be handled differently. Done
+- [x] Fix the only one issue of the Agency
 - [x] **found solution which is generic** every grpc-function in service must be protected by err2.Catch aka recovery, they are in own goroutines, panics will crash the whole server
 - [x] how to merge question/answer to listen/resume pair, we have same listener but how about continue? we have different .proto files. we must merge the notification types atleast! **we keep these different at least for the moment. this means that need actions and answer required are different and answering to them need to use different apis, even the listening can be done with the same function**
 - [x] **how we will implement the on boarding in grpc** that will lead to everything, how we will implement the everything!!, we did use previous mechanism for onboarding. Made gRPC API which uses one EA wallet for all.
@@ -55,6 +54,7 @@
 - [x] logging update from remotely
 - [x] **nice** test use of config files with CLI, if we have env variable just for cfg file that file could be per directory which would allow us another way to have directory based context for CLI
 - [x] **proof ready, agent notification role was addressee, which was wrong, protocol status return correct one which was initiator** we start with this now.
+- [x] psm rm: add rm functionality to Bold solution. DONE: psm with reps is implemented.
 - [x] remember Step() call in answers
 - [x] remember why it's good to have as simple as possible interface, but still extensible! it's more important even than easy to use.
 - [x] run some sort of perf test to show the advances of the gRPC, comparison isn't done but Ge benchmark is written to new tests.
