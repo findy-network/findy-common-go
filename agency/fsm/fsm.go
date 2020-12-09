@@ -406,8 +406,8 @@ func (t *Transition) GenPIN(_ *Event) {
 }
 
 func (t *Transition) BuildSendAnswers(status *agency.AgentStatus) []*Event {
-	inputs := t.buildInputAnswers(status)
-	return t.doBuildSendEvents(inputs)
+	input := t.buildInputAnswers(status)
+	return t.doBuildSendEvents(input)
 }
 
 var ProtocolType = map[string]agency.Protocol_Type{

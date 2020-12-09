@@ -11,31 +11,44 @@ addon/plugin system for cryptos when first implementation is done.
 package enclave
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"os"
 
+	"github.com/findy-network/findy-grpc/crypto"
+	"github.com/findy-network/findy-grpc/crypto/db"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 )
 
-var userBucket = []byte{01, 01}
+const user = 0
 
-var sealedBoxFilename string
+var (
+	buckets           = [][]byte{{01, 01}}
+	sealedBoxFilename string
+
+	// todo: key must be set from production environment, SHA-256, 32 bytes
+	hexKey    = "15308490f1e4026284594dd08d31291bc8ef2aeac730d0daf6ff87bb92d4336c"
+	theCipher *crypto.Cipher
+)
 
 // InitSealedBox initialize enclave's sealed box. This must be called once
 // during the app life cycle.
 func InitSealedBox(filename string) (err error) {
+	k, _ := hex.DecodeString(hexKey)
+	theCipher = crypto.NewCipher(k)
 	glog.V(1).Infoln("init enclave", filename)
 	sealedBoxFilename = filename
-	return open(filename)
+	return db.Open(filename, buckets)
 }
 
 // WipeSealedBox closes and destroys the enclave permanently. This version only
 // removes the sealed box file. In the future we might add sector wiping
 // functionality.
 func WipeSealedBox() {
-	if db != nil {
-		Close()
+	if db.DB != nil {
+		db.Close()
 	}
 
 	err := os.RemoveAll(sealedBoxFilename)
@@ -48,14 +61,14 @@ func WipeSealedBox() {
 func PutUser(u *User) (err error) {
 	defer err2.Return(&err)
 
-	err2.Check(addKeyValueToBucket(userBucket,
-		&dbData{
-			data: u.Data(),
-			read: encrypt,
+	err2.Check(db.AddKeyValueToBucket(buckets[user],
+		&db.Data{
+			Data: u.Data(),
+			Read: encrypt,
 		},
-		&dbData{
-			data: u.Key(),
-			read: hash,
+		&db.Data{
+			Data: u.Key(),
+			Read: hash,
 		},
 	))
 
@@ -66,39 +79,45 @@ func PutUser(u *User) (err error) {
 func GetUser(name string) (u *User, exist bool, err error) {
 	defer err2.Return(&err)
 
-	value := &dbData{write: decrypt}
-	already, err := getKeyValueFromBucket(userBucket,
-		&dbData{
-			data: []byte(name),
-			read: hash,
-		}, value)
+	value := &db.Data{
+		Write: decrypt,
+	}
+	already, err := db.GetKeyValueFromBucket(buckets[user],
+		&db.Data{
+			Data: []byte(name),
+			Read: hash,
+		},
+		value,
+	)
 	err2.Check(err)
 	if !already {
 		return nil, already, err
 	}
 
-	return NewUserFromData(value.data), already, err
+	return NewUserFromData(value.Data), already, err
 }
 
 // GetUserMust returns user by name if exists in enclave
 func GetExistingUser(name string) (u *User, err error) {
 	defer err2.Return(&err)
 
-	value := &dbData{write: decrypt}
-	already, err := getKeyValueFromBucket(userBucket,
-		&dbData{
-			data: []byte(name),
-			read: hash,
-		}, value)
+	value := &db.Data{
+		Write: decrypt,
+	}
+	already, err := db.GetKeyValueFromBucket(buckets[user],
+		&db.Data{
+			Data: []byte(name),
+			Read: hash,
+		},
+		value,
+	)
 	err2.Check(err)
 	if !already {
 		return nil, fmt.Errorf("user (%s) not exist", name)
 	}
 
-	return NewUserFromData(value.data), err
+	return NewUserFromData(value.Data), err
 }
-
-// Todo: these dummy functions must be implemented before production.
 
 // all of the following has same signature. They also panic on error
 
@@ -106,21 +125,23 @@ func GetExistingUser(name string) (u *User, err error) {
 // store key value index (email, DID) to the DB aka sealed box as plain text.
 // Please use salt when implementing this.
 func hash(key []byte) (k []byte) {
-	return append(key[:0:0], key...)
+	h := md5.Sum(key)
+	return h[:]
 }
 
 // encrypt encrypts the actual wallet key value. This is used when data is
 // stored do the DB aka sealed box.
 func encrypt(value []byte) (k []byte) {
-	return append(value[:0:0], value...)
+	return theCipher.TryEncrypt(value)
 }
 
 // decrypt decrypts the actual wallet key value. This is used when data is
 // retrieved from the DB aka sealed box.
 func decrypt(value []byte) (k []byte) {
-	return append(value[:0:0], value...)
+	return theCipher.TryDecrypt(value)
 }
 
+// noop function if need e.g. tests
 func _(value []byte) (k []byte) {
 	println("noop called!")
 	return value
