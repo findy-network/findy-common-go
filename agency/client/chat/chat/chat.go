@@ -64,6 +64,8 @@ func Multiplexer(conn client.Conn) {
 }
 
 func (c *Conversation) RunConversation() {
+	c.send(c.Machine.Start(), nil)
+
 	for {
 		t := <-c.StatusChan
 
@@ -200,6 +202,9 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 		case fsm.EmailProtocol:
 			c.sendEmail(output.Email, output.NoStatus)
 		case fsm.QAProtocol:
+			if status == nil {
+				panic("FSM syntax error")
+			}
 			ack := false
 			if output.Data == "ACK" {
 				ack = true

@@ -59,7 +59,7 @@ func init() {
 }
 
 // NewBasicMessage creates a new message which can be send to machine
-func NewBasicMessage(content string) *agency.ProtocolStatus {
+func _(content string) *agency.ProtocolStatus {
 	agencyProof := &agency.ProtocolStatus{
 		State: &agency.ProtocolState{ProtocolId: &agency.ProtocolID{
 			TypeId: agency.Protocol_BASIC_MESSAGE}},
@@ -68,8 +68,9 @@ func NewBasicMessage(content string) *agency.ProtocolStatus {
 	return agencyProof
 }
 
-type Machine struct { // todo: should these have a name, for humans at least?
-	Initial string            `json:"initial"`
+type Machine struct {
+	Name    string            `json:"name,omitempty"`
+	Initial *Transition       `json:"initial"`
 	States  map[string]*State `json:"states"`
 
 	Current     string `json:"-"`
@@ -85,7 +86,7 @@ type State struct {
 }
 
 type Transition struct {
-	Trigger *Event `json:"trigger"`
+	Trigger *Event `json:"trigger,omitempty"`
 
 	Sends []*Event `json:"sends,omitempty"`
 
@@ -119,6 +120,9 @@ type Event struct {
 }
 
 func (e Event) Triggers(status *agency.ProtocolStatus) bool {
+	if status == nil {
+		return true
+	}
 	switch status.GetState().ProtocolId.TypeId {
 	case agency.Protocol_ISSUE, agency.Protocol_CONNECT, agency.Protocol_PROOF:
 		return true
@@ -246,13 +250,19 @@ func (m *Machine) Initialize() (err error) {
 				}
 			}
 		}
-		if id == m.Initial {
+		if id == m.Initial.Target {
 			if initSet {
 				return errors.New("machine has multiple initial states")
 			}
-			m.Current = m.Initial
+			m.Current = m.Initial.Target
 			initSet = true
 		}
+	}
+	m.Initial.Machine = m
+	for i := range m.Initial.Sends {
+		m.Initial.Sends[i].Transition = m.Initial
+		m.Initial.Sends[i].ProtocolType =
+			ProtocolType[m.Initial.Sends[i].Protocol]
 	}
 	m.Initialized = true
 	return nil
@@ -285,6 +295,14 @@ func (m *Machine) Answers(status *agency.AgentStatus) *Transition {
 			transition.Trigger.Answers(status) {
 			return transition
 		}
+	}
+	return nil
+}
+
+func (m *Machine) Start() []*Event {
+	t := m.Initial
+	if (t.Trigger == nil || t.Trigger.Triggers(nil)) && t.Sends != nil {
+		return t.BuildSendEvents(nil)
 	}
 	return nil
 }
@@ -331,6 +349,9 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
+			if input == nil && send.Rule != TriggerTypeData {
+				panic("FSM syntax error")
+			}
 			switch send.Rule {
 			case TriggerTypeUseInput:
 				sends[i].EventData = input.EventData
@@ -353,6 +374,9 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 }
 
 func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
+	if status == nil {
+		return nil
+	}
 	e = &Event{
 		ProtocolType:   status.GetState().ProtocolId.TypeId,
 		ProtocolStatus: status,

@@ -9,17 +9,27 @@ import (
 
 var (
 	machine = Machine{
-		Initial: "IDLE",
+		Name: "machine",
+		Initial: &Transition{
+			Sends: []*Event{{
+				Protocol: "basic_message",
+				Data:     "Hello!",
+				NoStatus: true,
+			}},
+			Target: "IDLE",
+		},
 		States: map[string]*State{
 			"IDLE": {
-				Transitions: []*Transition{{
-					Trigger: &Event{Protocol: "basic_message"},
-					Sends: []*Event{{
-						Protocol: "basic_message",
-						Rule:     "INPUT",
-					}},
-					Target: "WAITING_STATUS",
-				}},
+				Transitions: []*Transition{
+					{
+						Trigger: &Event{Protocol: "basic_message"},
+						Sends: []*Event{{
+							Protocol: "basic_message",
+							Rule:     "INPUT",
+						}},
+						Target: "WAITING_STATUS",
+					},
+				},
 			},
 			"WAITING_STATUS": {
 				Transitions: []*Transition{{
@@ -38,7 +48,10 @@ var (
 	}
 
 	showProofMachine = Machine{
-		Initial: "IDLE",
+		Name: "proof machine",
+		Initial: &Transition{
+			Target: "IDLE",
+		},
 		States: map[string]*State{
 			"IDLE": {
 				Transitions: []*Transition{
@@ -130,4 +143,20 @@ func TestMachine_Step2(t *testing.T) {
 	assert.NotNil(t, o)
 	showProofMachine.Step(transition)
 	assert.Equal(t, "WAITING_STATUS", showProofMachine.Current)
+}
+
+func TestMachine_Start(t *testing.T) {
+	assert.NoError(t, machine.Initialize())
+	sends := machine.Start()
+	assert.NotNil(t, sends)
+	assert.Len(t, sends, 1)
+	assert.NotNil(t, sends[0].Transition)
+	assert.NotNil(t, sends[0].Transition.Machine)
+}
+
+func TestMachine_Start_ProofMachine(t *testing.T) {
+	assert.NoError(t, showProofMachine.Initialize())
+	sends := showProofMachine.Start()
+	//assert.NotNil(t, sends)
+	assert.Len(t, sends, 0)
 }

@@ -3,7 +3,15 @@ package chat
 import "github.com/findy-network/findy-grpc/agency/fsm"
 
 var EmailIssuerMachine = fsm.Machine{
-	Initial: "IDLE",
+	Name: "email issuer machine",
+	Initial: &fsm.Transition{
+		Sends: []*fsm.Event{{
+			Protocol: "basic_message",
+			Data:     "Hello!",
+			NoStatus: true,
+		}},
+		Target: "IDLE",
+	},
 	States: map[string]*fsm.State{
 		"IDLE": {
 			Transitions: []*fsm.Transition{{
@@ -136,7 +144,15 @@ We are ready now. Bye bye!`,
 }
 
 var ReqProofMachine = fsm.Machine{
-	Initial: "INITIAL",
+	Name: "machine",
+	Initial: &fsm.Transition{
+		Sends: []*fsm.Event{{
+			Protocol: "basic_message",
+			Data:     "Hello!",
+			NoStatus: true,
+		}},
+		Target: "INITIAL",
+	},
 	States: map[string]*fsm.State{
 		"INITIAL": {
 			Transitions: []*fsm.Transition{
@@ -284,7 +300,15 @@ var ReqProofMachine = fsm.Machine{
 }
 
 var EchoMachine = fsm.Machine{
-	Initial: "INITIAL",
+	Name: "echo machine",
+	Initial: &fsm.Transition{
+		Sends: []*fsm.Event{{
+			Protocol: "basic_message",
+			Data:     "Hello!",
+			NoStatus: true,
+		}},
+		Target: "INITIAL",
+	},
 	States: map[string]*fsm.State{
 		"INITIAL": {
 			Transitions: []*fsm.Transition{
