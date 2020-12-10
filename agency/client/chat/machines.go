@@ -174,11 +174,6 @@ var ReqProofMachine = fsm.Machine{
 						Protocol: "basic_message",
 					},
 					Sends: []*fsm.Event{
-						//{
-						//	Protocol: "basic_message",
-						//	Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
-						//	NoStatus: true,
-						//},
 						{
 							Protocol: "present_proof",
 							Data:     `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
@@ -213,11 +208,6 @@ var ReqProofMachine = fsm.Machine{
 						Data:     `[{"name":"email","credDefId":"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1"}]`,
 					},
 					Sends: []*fsm.Event{
-						//{
-						//	Protocol: "basic_message",
-						//	Data:     `Your proof wasn't valid. We must start over.\nPlease select valid proof of verified email credential`,
-						//	NoStatus: true,
-						//},
 						{
 							Protocol: "answer",
 							Data:     "NACK",
