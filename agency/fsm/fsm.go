@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
 	"text/template"
+	"time"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
 	"github.com/golang/glog"
@@ -47,11 +50,13 @@ const (
 	QAProtocol    = 101
 )
 
-//	*ProtocolStatus_Connection_
-//	*ProtocolStatus_Issue_
-//	*ProtocolStatus_Proof
-//	*ProtocolStatus_TrustPing_
-//	*ProtocolStatus_BasicMessage_
+const digitsInPIN = 6
+
+var seed = time.Now().UnixNano()
+
+func init() {
+	rand.Seed(seed)
+}
 
 // NewBasicMessage creates a new message which can be send to machine
 func NewBasicMessage(content string) *agency.ProtocolStatus {
@@ -400,8 +405,14 @@ func (t *Transition) FmtFromMem(send *Event) string {
 	return buf.String()
 }
 
+func pin(digit int) int {
+	min := int(math.Pow(10, float64(digit-1)))
+	max := int(math.Pow(10, float64(digit)))
+	return min + rand.Intn(max-min)
+}
+
 func (t *Transition) GenPIN(_ *Event) {
-	t.Machine.Memory["PIN"] = "12234" // todo: real generator
+	t.Machine.Memory["PIN"] = fmt.Sprintf("%v", pin(digitsInPIN))
 	glog.Infoln("pin code:", t.Machine.Memory["PIN"])
 }
 
