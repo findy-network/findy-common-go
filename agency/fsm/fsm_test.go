@@ -4,10 +4,29 @@ import (
 	"testing"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/findy-network/findy-grpc/agency/client/chat"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
+	plantUMLMachine = `
+@startuml
+title machine
+[*] -> INITIAL
+state "                      INITIAL                     " as INITIAL
+INITIAL --> INITIAL: connection{ ""}
+INITIAL --> WAITING_EMAIL_PROOF_QA: basic_message{ ""}
+state "               WAITING2_EMAIL_PROOF               " as WAITING2_EMAIL_PROOF
+WAITING2_EMAIL_PROOF --> WAITING_NEXT_CMD: present_proof{ ""}
+state "              WAITING_EMAIL_PROOF_QA              " as WAITING_EMAIL_PROOF_QA
+WAITING_EMAIL_PROOF_QA --> INITIAL: basic_message{== "reset"}
+WAITING_EMAIL_PROOF_QA --> INITIAL: present_proof{DECLINE "[{"name":""}
+WAITING_EMAIL_PROOF_QA --> WAITING2_EMAIL_PROOF: present_proof{ACCEPT "[{"name":""}
+state "                 WAITING_NEXT_CMD                 " as WAITING_NEXT_CMD
+WAITING_NEXT_CMD --> INITIAL: basic_message{== "reset"}
+WAITING_NEXT_CMD --> WAITING_NEXT_CMD: basic_message{:= "LINE"}
+@enduml
+`
 	machine = Machine{
 		Name: "machine",
 		Initial: &Transition{
@@ -159,4 +178,15 @@ func TestMachine_Start_ProofMachine(t *testing.T) {
 	sends := showProofMachine.Start()
 	//assert.NotNil(t, sends)
 	assert.Len(t, sends, 0)
+}
+
+func TestMachine_Print(t *testing.T) {
+	assert.NoError(t, chat.EmailIssuerMachine.Initialize())
+	plantUml := chat.EmailIssuerMachine.String()
+	print(plantUml)
+	assert.NotEmpty(t, plantUml)
+	assert.NoError(t, chat.ReqProofMachine.Initialize())
+	plantUml = chat.ReqProofMachine.String()
+	print(plantUml)
+	assert.NotEmpty(t, plantUml)
 }

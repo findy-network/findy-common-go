@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
 	"text/template"
@@ -187,6 +188,27 @@ func (e Event) Answers(status *agency.AgentStatus) bool {
 	return false
 }
 
+var ruleMap = map[string]string{
+	TriggerTypeOurMessage:    "STATUS",
+	TriggerTypeUseInput:      "<-",
+	TriggerTypeUseInputSave:  ":=",
+	TriggerTypeFormat:        "",
+	TriggerTypeFormatFromMem: "%s",
+	TriggerTypePIN:           "new PIN",
+	TriggerTypeData:          "",
+
+	TriggerTypeValidateInputEqual:    "==",
+	TriggerTypeValidateInputNotEqual: "!=",
+	TriggerTypeInputEqual:            "==",
+
+	TriggerTypeAcceptAndInputValues: "ACCEPT",
+	TriggerTypeNotAcceptValues:      "DECLINE",
+}
+
+func (e Event) String() string {
+	return fmt.Sprintf("%s{%s \"%.10s\"}", e.Protocol, ruleMap[e.Rule], e.Data)
+}
+
 type EventData struct {
 	BasicMessage *BasicMessage `json:"basic_message,omitempty"`
 	Issuing      *Issuing      `json:"issuing,omitempty"`
@@ -305,6 +327,31 @@ func (m *Machine) Start() []*Event {
 		return t.BuildSendEvents(nil)
 	}
 	return nil
+}
+
+const stateWidthInChar = 50
+
+func padStr(s string) string {
+	firstPadWidth := stateWidthInChar / 2
+	l := len(s)
+	s = fmt.Sprintf("%-*s", firstPadWidth+(l/2), s)
+	return fmt.Sprintf("%*s", stateWidthInChar, s)
+}
+
+func (m *Machine) String() string {
+	w := new(bytes.Buffer)
+	io.WriteString(w, "@startuml\n")
+	fmt.Fprintf(w, "title %s\n", m.Name)
+	fmt.Fprintf(w, "[*] -> %s\n", m.Initial.Target)
+	for stateName, state := range m.States {
+		fmt.Fprintf(w, "state \"%s\" as %s\n", padStr(stateName), stateName)
+		for _, transition := range state.Transitions {
+			fmt.Fprintf(w, "%s --> %s: %s\n", stateName,
+				transition.Target, transition.Trigger.String())
+		}
+	}
+	io.WriteString(w, "@enduml\n")
+	return w.String()
 }
 
 func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {

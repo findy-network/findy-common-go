@@ -25,25 +25,36 @@ type Bot struct {
 func (b *Bot) LoadFSM(fName string) (err error) {
 	defer err2.Return(&err)
 	data := err2.Bytes.Try(ioutil.ReadFile(fName))
-	if filepath.Ext(fName) == ".json" {
-		err2.Check(json.Unmarshal(data, &b.fsm))
-	} else {
-		err2.Check(yaml.Unmarshal(data, &b.fsm))
-	}
+	b.fsm = *loadFSMData(fName, data)
 	err2.Check(b.fsm.Initialize())
 	return nil
 }
 
+func loadFSMData(fName string, data []byte) *fsm.Machine {
+	var fsm fsm.Machine
+	if filepath.Ext(fName) == ".json" {
+		err2.Check(json.Unmarshal(data, &fsm))
+	} else {
+		err2.Check(yaml.Unmarshal(data, &fsm))
+	}
+	return &fsm
+}
+
 func (b *Bot) SaveFSM(fName string) (err error) {
 	defer err2.Return(&err)
-	var data []byte
-	if filepath.Ext(fName) == ".json" {
-		data = err2.Bytes.Try(json.MarshalIndent(b.fsm, "", "\t"))
-	} else {
-		data = err2.Bytes.Try(yaml.Marshal(b.fsm))
-	}
+	data := marshalFSM(fName, &b.fsm)
 	err2.Check(ioutil.WriteFile(fName, data, 0644))
 	return nil
+}
+
+func marshalFSM(fName string, fsm *fsm.Machine) []byte {
+	var data []byte
+	if filepath.Ext(fName) == ".json" {
+		data = err2.Bytes.Try(json.MarshalIndent(fsm, "", "\t"))
+	} else {
+		data = err2.Bytes.Try(yaml.Marshal(fsm))
+	}
+	return data
 }
 
 func (b Bot) Run(intCh chan os.Signal) {
