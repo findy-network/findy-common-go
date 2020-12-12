@@ -11,21 +11,25 @@ import (
 var (
 	plantUMLMachine = `
 @startuml
-title machine
-[*] -> INITIAL
-state "                      INITIAL                     " as INITIAL
-INITIAL --> INITIAL: connection{ ""}
-INITIAL --> WAITING_EMAIL_PROOF_QA: basic_message{ ""}
-state "               WAITING2_EMAIL_PROOF               " as WAITING2_EMAIL_PROOF
-WAITING2_EMAIL_PROOF --> WAITING_NEXT_CMD: present_proof{ ""}
-state "              WAITING_EMAIL_PROOF_QA              " as WAITING_EMAIL_PROOF_QA
-WAITING_EMAIL_PROOF_QA --> INITIAL: basic_message{== "reset"}
-WAITING_EMAIL_PROOF_QA --> INITIAL: present_proof{DECLINE "[{"name":""}
-WAITING_EMAIL_PROOF_QA --> WAITING2_EMAIL_PROOF: present_proof{ACCEPT "[{"name":""}
-state "                 WAITING_NEXT_CMD                 " as WAITING_NEXT_CMD
-WAITING_NEXT_CMD --> INITIAL: basic_message{== "reset"}
-WAITING_NEXT_CMD --> WAITING_NEXT_CMD: basic_message{:= "LINE"}
+title email issuer machine
+[*] -> IDLE
+state "                  IDLE                  " as IDLE
+IDLE --> WAITING_EMAIL_ADDRESS: **basic_message{ ""}**\n{basic_message{ " Hello! I'm "}} ==>\n
+
+state "          WAITING_EMAIL_ADDRESS         " as WAITING_EMAIL_ADDRESS
+WAITING_EMAIL_ADDRESS --> WAITING_EMAIL_PIN: **basic_message{:= "EMAIL"}**\n{basic_message{%s "Thank you! I"}} ==>\n{email{new PIN "{"from":"cha"}} ==>\n
+
+state "            WAITING_EMAIL_PIN           " as WAITING_EMAIL_PIN
+WAITING_EMAIL_PIN --> WAITING_EMAIL_ADDRESS: **basic_message{== "reset"}**\n{basic_message{ "Please enter"}} ==>\n
+WAITING_EMAIL_PIN --> WAITING_EMAIL_PIN: **basic_message{!= "PIN"}**\n{basic_message{%s "Incorrect PI"}} ==>\n
+WAITING_EMAIL_PIN --> WAITING_ISSUING_STATUS: **basic_message{== "PIN"}**\n{basic_message{%s "Thank you! I"}} ==>\n{issue_cred{%s "[{"name":"em"}} ==>\n
+
+state "         WAITING_ISSUING_STATUS         " as WAITING_ISSUING_STATUS
+WAITING_ISSUING_STATUS --> IDLE: **issue_cred{STATUS ""}**\n{basic_message{%s "Thank you {{"}} ==>\n
+
 @enduml
+
+
 `
 	machine = Machine{
 		Name: "machine",

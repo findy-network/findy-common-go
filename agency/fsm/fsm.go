@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"strings"
 	"text/template"
 	"time"
 
@@ -205,8 +206,14 @@ var ruleMap = map[string]string{
 	TriggerTypeNotAcceptValues:      "DECLINE",
 }
 
+func removeLF(s string) string {
+	return strings.ReplaceAll(s, "\n", " ")
+}
+
 func (e Event) String() string {
-	return fmt.Sprintf("%s{%s \"%.10s\"}", e.Protocol, ruleMap[e.Rule], e.Data)
+	w := new(bytes.Buffer)
+	fmt.Fprintf(w,"%s{%s \"%.12s\"}", e.Protocol, ruleMap[e.Rule], removeLF(e.Data))
+	return w.String()
 }
 
 type EventData struct {
@@ -329,7 +336,7 @@ func (m *Machine) Start() []*Event {
 	return nil
 }
 
-const stateWidthInChar = 50
+const stateWidthInChar = 40
 
 func padStr(s string) string {
 	firstPadWidth := stateWidthInChar / 2
@@ -346,9 +353,14 @@ func (m *Machine) String() string {
 	for stateName, state := range m.States {
 		fmt.Fprintf(w, "state \"%s\" as %s\n", padStr(stateName), stateName)
 		for _, transition := range state.Transitions {
-			fmt.Fprintf(w, "%s --> %s: %s\n", stateName,
+			fmt.Fprintf(w, "%s --> %s: **%s**\\n", stateName,
 				transition.Target, transition.Trigger.String())
+			for _, send := range transition.Sends {
+				fmt.Fprintf(w, "{%s} ==>\\n", send)
+			}
+			fmt.Fprintln(w)
 		}
+		fmt.Fprintln(w)
 	}
 	io.WriteString(w, "@enduml\n")
 	return w.String()
