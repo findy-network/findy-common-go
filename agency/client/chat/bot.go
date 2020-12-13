@@ -31,13 +31,13 @@ func (b *Bot) LoadFSM(fName string) (err error) {
 }
 
 func loadFSMData(fName string, data []byte) *fsm.Machine {
-	var fsm fsm.Machine
+	var machine fsm.Machine
 	if filepath.Ext(fName) == ".json" {
-		err2.Check(json.Unmarshal(data, &fsm))
+		err2.Check(json.Unmarshal(data, &machine))
 	} else {
-		err2.Check(yaml.Unmarshal(data, &fsm))
+		err2.Check(yaml.Unmarshal(data, &machine))
 	}
-	return &fsm
+	return &machine
 }
 
 func (b *Bot) SaveFSM(fName string) (err error) {
