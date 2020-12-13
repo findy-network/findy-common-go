@@ -267,7 +267,6 @@ func Test_loadFSMData(t *testing.T) {
 			if !reflect.DeepEqual(gotFsm, tt.wantFsm) {
 				t.Errorf("loadFSMData() = %v, want %v", gotFsm, tt.wantFsm)
 			}
-			print(gotFsm.String())
 		})
 	}
 }
@@ -291,7 +290,6 @@ func Test_marshalFSM(t *testing.T) {
 			if reflect.DeepEqual(got, tt.want) {
 				t.Errorf("marshalFSM() = %v, want %v", got, tt.want)
 			}
-			print(got)
 		})
 	}
 }
