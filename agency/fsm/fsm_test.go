@@ -4,33 +4,10 @@ import (
 	"testing"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
-	"github.com/findy-network/findy-grpc/agency/client/chat"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	plantUMLMachine = `
-@startuml
-title email issuer machine
-[*] -> IDLE
-state "                  IDLE                  " as IDLE
-IDLE --> WAITING_EMAIL_ADDRESS: **basic_message{ ""}**\n{basic_message{ " Hello! I'm "}} ==>\n
-
-state "          WAITING_EMAIL_ADDRESS         " as WAITING_EMAIL_ADDRESS
-WAITING_EMAIL_ADDRESS --> WAITING_EMAIL_PIN: **basic_message{:= "EMAIL"}**\n{basic_message{%s "Thank you! I"}} ==>\n{email{new PIN "{"from":"cha"}} ==>\n
-
-state "            WAITING_EMAIL_PIN           " as WAITING_EMAIL_PIN
-WAITING_EMAIL_PIN --> WAITING_EMAIL_ADDRESS: **basic_message{== "reset"}**\n{basic_message{ "Please enter"}} ==>\n
-WAITING_EMAIL_PIN --> WAITING_EMAIL_PIN: **basic_message{!= "PIN"}**\n{basic_message{%s "Incorrect PI"}} ==>\n
-WAITING_EMAIL_PIN --> WAITING_ISSUING_STATUS: **basic_message{== "PIN"}**\n{basic_message{%s "Thank you! I"}} ==>\n{issue_cred{%s "[{"name":"em"}} ==>\n
-
-state "         WAITING_ISSUING_STATUS         " as WAITING_ISSUING_STATUS
-WAITING_ISSUING_STATUS --> IDLE: **issue_cred{STATUS ""}**\n{basic_message{%s "Thank you {{"}} ==>\n
-
-@enduml
-
-
-`
 	machine = Machine{
 		Name: "machine",
 		Initial: &Transition{
@@ -180,17 +157,5 @@ func TestMachine_Start(t *testing.T) {
 func TestMachine_Start_ProofMachine(t *testing.T) {
 	assert.NoError(t, showProofMachine.Initialize())
 	sends := showProofMachine.Start()
-	//assert.NotNil(t, sends)
 	assert.Len(t, sends, 0)
-}
-
-func TestMachine_Print(t *testing.T) {
-	assert.NoError(t, chat.EmailIssuerMachine.Initialize())
-	plantUml := chat.EmailIssuerMachine.String()
-	print(plantUml)
-	assert.NotEmpty(t, plantUml)
-	assert.NoError(t, chat.ReqProofMachine.Initialize())
-	plantUml = chat.ReqProofMachine.String()
-	print(plantUml)
-	assert.NotEmpty(t, plantUml)
 }
