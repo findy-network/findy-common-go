@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"math"
 	"math/rand"
 	"strings"
@@ -212,7 +211,7 @@ func removeLF(s string) string {
 
 func (e Event) String() string {
 	w := new(bytes.Buffer)
-	fmt.Fprintf(w,"%s{%s \"%.12s\"}", e.Protocol, ruleMap[e.Rule], removeLF(e.Data))
+	fmt.Fprintf(w, "%s{%s \"%.12s\"}", e.Protocol, ruleMap[e.Rule], removeLF(e.Data))
 	return w.String()
 }
 
@@ -336,7 +335,7 @@ func (m *Machine) Start() []*Event {
 	return nil
 }
 
-const stateWidthInChar = 40
+const stateWidthInChar = 100
 
 func padStr(s string) string {
 	firstPadWidth := stateWidthInChar / 2
@@ -345,9 +344,9 @@ func padStr(s string) string {
 	return fmt.Sprintf("%*s", stateWidthInChar, s)
 }
 
+//goland:noinspection ALL
 func (m *Machine) String() string {
 	w := new(bytes.Buffer)
-	io.WriteString(w, "@startuml\n")
 	fmt.Fprintf(w, "title %s\n", m.Name)
 	fmt.Fprintf(w, "[*] -> %s\n", m.Initial.Target)
 	for stateName, state := range m.States {
@@ -362,7 +361,6 @@ func (m *Machine) String() string {
 		}
 		fmt.Fprintln(w)
 	}
-	io.WriteString(w, "@enduml\n")
 	return w.String()
 }
 
