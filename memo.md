@@ -1,4 +1,5 @@
 - [ ] 0: design decision, what we do with the Failed PSM, should that be decided by caller, or should we retry automatically?
+- [ ] 1: old cmd structure which was inside agency is not working any more, because we don't want to have depencies to it. it's server we are client. this is for CLI
 - [ ] 1: check SA grpc implementation, the whole, deep call stack
 - [ ] 1: design a new mechanism for agency start cmd. Is it really needed that we can start it by all commands are flags in the runtime? If so, should we have two layer system where somekind of frontend parses the flags and send them as json struct when starting. Maybe we could find some kind of clever mechanism to build cmds which can be constructed from commandline or cfg file, but which would be simpler than current cobra.  
 - [ ] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
