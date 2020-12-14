@@ -100,8 +100,6 @@ type Transition struct {
 	Machine *Machine `json:"-"`
 }
 
-type EventType string
-
 type Event struct {
 	// todo: questions could be protocols here, then TypeID would not be needed?
 	Protocol string `json:"protocol"`
