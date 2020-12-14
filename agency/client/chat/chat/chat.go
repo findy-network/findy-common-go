@@ -131,7 +131,8 @@ func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
 		Info:     "testing says hello!",
 	})
 	err2.Check(err)
-	glog.Infof("Sending the answer (%s) send to client:%s\n", status.Notification.Id, cid.Id)
+	glog.V(1).Infof("Sending the answer (%s) send to client:%s\n",
+		status.Notification.Id, cid.Id)
 }
 
 func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
