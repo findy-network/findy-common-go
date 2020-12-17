@@ -20,7 +20,13 @@ import (
 
 type Bot struct {
 	client.Conn
-	*fsm.Machine
+	fsm.MachineData
+}
+
+func LoadFSMMachineData(fName string, r io.Reader) (m fsm.MachineData, err error) {
+	defer err2.Return(&err)
+	data := err2.Bytes.Try(ioutil.ReadAll(r))
+	return fsm.MachineData{FType: fName, Data: data}, nil
 }
 
 func LoadFSM(fName string, r io.Reader) (m *fsm.Machine, err error) {
@@ -86,12 +92,12 @@ func (b Bot) Run(intCh chan os.Signal) {
 	//
 	//b.Machine = m
 
-	err2.Check(b.Machine.Initialize())
-	url, err := fsm.GenerateURL("svg", b.Machine)
-	err2.Check(err)
-	println(url.String())
+	//err2.Check(b.Machine.Initialize())
+	//url, err := fsm.GenerateURL("svg", b.Machine)
+	//err2.Check(err)
+	//println(url.String())
 
-	chat.Machine = b.Machine
+	chat.Machine = b.MachineData
 
 	go chat.Multiplexer(b.Conn)
 

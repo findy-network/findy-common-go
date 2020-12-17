@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 )
@@ -67,6 +69,21 @@ func _(content string) *agency.ProtocolStatus {
 		Status: &agency.ProtocolStatus_BasicMessage_{BasicMessage: &agency.ProtocolStatus_BasicMessage{Content: content}},
 	}
 	return agencyProof
+}
+
+type MachineData struct {
+	FType string
+	Data  []byte
+}
+
+func NewMachine(data MachineData) *Machine {
+	var machine Machine
+	if filepath.Ext(data.FType) == ".json" {
+		err2.Check(json.Unmarshal(data.Data, &machine))
+	} else {
+		err2.Check(yaml.Unmarshal(data.Data, &machine))
+	}
+	return &machine
 }
 
 type Machine struct {
