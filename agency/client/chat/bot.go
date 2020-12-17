@@ -109,7 +109,7 @@ loop:
 				glog.V(2).Infoln("closed from server")
 				break loop
 			}
-			glog.V(1).Infoln("listen status:",
+			glog.V(5).Infoln("listen status:",
 				status.Notification.TypeId,
 				status.Notification.Role,
 				status.Notification.ProtocolId)
