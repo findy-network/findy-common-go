@@ -64,6 +64,11 @@ func Multiplexer(conn client.Conn) {
 }
 
 func (c *Conversation) RunConversation() {
+	// this is a new copy of the machine we need a new internal memory for it
+	// but we cannot handle any error here. the parsing errors should have
+	// taken care before this.
+	_ = c.Machine.Initialize()
+
 	c.send(c.Machine.Start(), nil)
 
 	for {
@@ -88,8 +93,11 @@ func (c *Conversation) RunConversation() {
 					glog.Warningln("current FSM steps only completed protocol steps", status.GetState().State)
 					continue
 				}
-				glog.V(10).Infoln("role:", status.GetState().ProtocolId.Role)
-				glog.V(1).Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
+				if glog.V(3) {
+					glog.Infof("Machine: %s (%p)", c.Machine.Name, c.Machine)
+					glog.Infoln("role:", status.GetState().ProtocolId.Role)
+					glog.Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
+				}
 
 				c.send(transition.BuildSendEvents(status), t)
 
@@ -99,7 +107,8 @@ func (c *Conversation) RunConversation() {
 					t.Notification.ProtocolType)
 			}
 		case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
-			glog.V(1).Infoln("proof QA")
+			glog.V(1).Infof("- %s: proof QA (%p)", c.Machine.Name,
+				c.Machine)
 			if transition := c.Machine.Answers(t); transition != nil {
 				c.send(transition.BuildSendAnswers(t), t)
 				c.Machine.Step(transition)
