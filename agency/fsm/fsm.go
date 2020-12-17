@@ -119,6 +119,7 @@ type Transition struct {
 
 type Event struct {
 	// todo: questions could be protocols here, then TypeID would not be needed?
+	// we will continue with this when other protocol QAs will be implemented
 	Protocol string `json:"protocol"`
 	TypeID   string `json:"type_id"`
 
