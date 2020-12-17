@@ -417,7 +417,7 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				if err != nil {
 					glog.Errorf("json error %v", err)
 				}
-				glog.Infoln("email:", emailJSON)
+				glog.V(1).Infoln("email:", emailJSON)
 				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
@@ -509,7 +509,7 @@ func pin(digit int) int {
 
 func (t *Transition) GenPIN(_ *Event) {
 	t.Machine.Memory["PIN"] = fmt.Sprintf("%v", pin(digitsInPIN))
-	glog.Infoln("pin code:", t.Machine.Memory["PIN"])
+	glog.V(1).Infoln("pin code:", t.Machine.Memory["PIN"])
 }
 
 func (t *Transition) BuildSendAnswers(status *agency.AgentStatus) []*Event {
