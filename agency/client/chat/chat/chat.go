@@ -76,7 +76,7 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 
 		switch t.Notification.TypeId {
 		case agency.Notification_STATUS_UPDATE:
-			glog.V(1).Infoln("status update")
+			glog.V(3).Infoln("status update")
 			if c.IsOursAndRm(t.Notification.ProtocolId) {
 				glog.V(10).Infoln("discarding event")
 				continue
@@ -138,7 +138,7 @@ func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
 		Info:     "testing says hello!",
 	})
 	err2.Check(err)
-	glog.V(1).Infof("Sending the answer (%s) send to client:%s\n",
+	glog.V(3).Infof("Sending the answer (%s) send to client:%s\n",
 		status.Notification.Id, cid.Id)
 }
 

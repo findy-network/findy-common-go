@@ -407,7 +407,7 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				}}
 			}
 		case MessageAnswer:
-			glog.V(1).Infoln("building answer") // it's so easy
+			glog.V(3).Infoln("building answer") // it's so easy
 		case MessageEmail:
 			switch send.Rule {
 			case TriggerTypePIN:
