@@ -11,18 +11,19 @@ import (
 	"github.com/lainio/err2"
 )
 
-// todo: check what of these types need to be exported.
-
 type ConnStatus *agency.AgentStatus
 
 type StatusChan chan ConnStatus
 
 type Conversation struct {
+	StatusChan
+
 	id string
 	client.Conn
 	lastProtocolID map[string]struct{} //*agency.ProtocolID
-	StatusChan
-	fsm.Machine
+
+	// machine can be ptr because multiplexer creates a new for each one
+	machine *fsm.Machine
 }
 
 // These are class level variables for this chat bot which means that every
@@ -39,31 +40,35 @@ var (
 
 	// Machine is the initial finite-state machine from where every
 	// conversations will be started
-	Machine *fsm.Machine
+	Machine fsm.MachineData
 )
 
 func Multiplexer(conn client.Conn) {
-	glog.V(3).Infoln("starting multiplexer", Machine.Current)
+	glog.V(4).Infoln("starting multiplexer", Machine.FType)
 	for {
 		t := <-Status
 		c, ok := conversations[t.Notification.ConnectionId]
 		if !ok {
-			glog.V(1).Infoln("Starting new conversation",
-				Machine.Current)
+			glog.V(5).Infoln("Starting new conversation",
+				Machine.FType)
 			c = &Conversation{
 				id:         t.Notification.ConnectionId,
 				Conn:       conn,
 				StatusChan: make(StatusChan),
-				Machine:    *Machine,
 			}
-			go c.RunConversation()
+			go c.RunConversation(Machine)
 			conversations[t.Notification.ConnectionId] = c
 		}
 		c.StatusChan <- t
 	}
 }
 
-func (c *Conversation) RunConversation() {
+func (c *Conversation) RunConversation(data fsm.MachineData) {
+	c.machine = fsm.NewMachine(data)
+	err2.Check(c.machine.Initialize())
+
+	c.send(c.machine.Start(), nil)
+
 	for {
 		t := <-c.StatusChan
 
@@ -71,7 +76,7 @@ func (c *Conversation) RunConversation() {
 
 		switch t.Notification.TypeId {
 		case agency.Notification_STATUS_UPDATE:
-			glog.V(1).Infoln("status update")
+			glog.V(3).Infoln("status update")
 			if c.IsOursAndRm(t.Notification.ProtocolId) {
 				glog.V(10).Infoln("discarding event")
 				continue
@@ -79,28 +84,32 @@ func (c *Conversation) RunConversation() {
 
 			status := c.getStatus(t)
 
-			if transition := c.Machine.Triggers(status); transition != nil {
+			if transition := c.machine.Triggers(status); transition != nil {
 
 				// todo: different transitions to FSM, move error handling to it!
 				if status.GetState().State != agency.ProtocolState_OK {
 					glog.Warningln("current FSM steps only completed protocol steps", status.GetState().State)
 					continue
 				}
-				glog.V(10).Infoln("role:", status.GetState().ProtocolId.Role)
-				glog.V(1).Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
+				if glog.V(3) {
+					glog.Infof("machine: %s (%p)", c.machine.Name, c.machine)
+					glog.Infoln("role:", status.GetState().ProtocolId.Role)
+					glog.Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
+				}
 
 				c.send(transition.BuildSendEvents(status), t)
 
-				c.Machine.Step(transition)
+				c.machine.Step(transition)
 			} else {
 				glog.V(1).Infoln("machine don't have transition for:",
 					t.Notification.ProtocolType)
 			}
 		case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
-			glog.V(1).Infoln("proof QA")
-			if transition := c.Machine.Answers(t); transition != nil {
+			glog.V(1).Infof("- %s: proof QA (%p)", c.machine.Name,
+				c.machine)
+			if transition := c.machine.Answers(t); transition != nil {
 				c.send(transition.BuildSendAnswers(t), t)
-				c.Machine.Step(transition)
+				c.machine.Step(transition)
 			}
 		}
 
@@ -129,7 +138,8 @@ func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
 		Info:     "testing says hello!",
 	})
 	err2.Check(err)
-	glog.Infof("Sending the answer (%s) send to client:%s\n", status.Notification.Id, cid.Id)
+	glog.V(3).Infof("Sending the answer (%s) send to client:%s\n",
+		status.Notification.Id, cid.Id)
 }
 
 func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
@@ -171,7 +181,7 @@ func (c *Conversation) sendReqProof(message *fsm.Proof, noAck bool) {
 	}
 }
 
-func (c *Conversation) sendEmail(message *fsm.Email, noAck bool) {
+func (c *Conversation) sendEmail(message *fsm.Email, _ bool) {
 	// todo: implement send email here
 	glog.V(0).Infoln("sending email to", message.To, message.Body)
 }
@@ -200,6 +210,9 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 		case fsm.EmailProtocol:
 			c.sendEmail(output.Email, output.NoStatus)
 		case fsm.QAProtocol:
+			if status == nil {
+				panic("FSM syntax error")
+			}
 			ack := false
 			if output.Data == "ACK" {
 				ack = true

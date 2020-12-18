@@ -1,5 +1,7 @@
 - [ ] 0: design decision, what we do with the Failed PSM, should that be decided by caller, or should we retry automatically?
+- [ ] 1: old cmd structure which was inside agency is not working any more, because we don't want to have depencies to it. it's server we are client. this is for CLI
 - [ ] 1: check SA grpc implementation, the whole, deep call stack
+- [ ] 1: design a new mechanism for agency start cmd. Is it really needed that we can start it by all commands are flags in the runtime? If so, should we have two layer system where somekind of frontend parses the flags and send them as json struct when starting. Maybe we could find some kind of clever mechanism to build cmds which can be constructed from commandline or cfg file, but which would be simpler than current cobra.  
 - [ ] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
 - [ ] 2: authenticator for SAs, how to build client for FIDO2
 - [ ] 3: split `grpc_test.go` file 
@@ -7,6 +9,9 @@
 - [ ] 3: we need the correct initial state in FSM, or this should be at least checked
 - [ ] 4: move bot start cmds to CLI
 - [ ] 9: add a handler or some sort of UI for waiting-state situation (what is this? does it mean the cli tool, or the API)
+- [ ] 9: tell how important CLI is, we could even offer it as a base for Aries
+- [ ] 9: when we will change interface between protocol processor and SA implementation
+- [ ] 9: when we will drop legacy API from agency? this is important, we should not support 2 API, it's too much for us
 - [ ] Check agent notifications and statuses 
 - [ ] figure out how to test system where listeners and other parties are many
 - [ ] how to solve persistence with chat bots. Especially, should they save their pairwise level conversations. If someone is coming back, can we take that data from there? We must test and see what is needed. Current key value map is live only under app life cycle.
@@ -16,7 +21,6 @@
 - [ ] old trust ping command says nothing on success
 - [ ] performance optimization potential is in agency by not read all the PSM access from Bolt but from memory
 - [ ] performance optimization potential is in agency by not writing so many state transitions to the DB
-- [ ] performance optimization potential is in agency by transferring PW name from processor to input/output function
 - [ ] psm rm: move current PSMhook clean up of `Archived` PSM and related REP to a background service
 - [ ] remember to check the command structure, should we have the same structures for both commands and have only some global flag to switch between modes
 - [ ] restructuring long testfiles like grpc_test.go: idea reuse testMainSuff, generalize them that you can split test files
@@ -53,6 +57,7 @@
 - [x] jwt status won't return the information that PSM is waiting action, or is it? Should be. **Done: was missing handling, had to update API**
 - [x] logging update from remotely
 - [x] **nice** test use of config files with CLI, if we have env variable just for cfg file that file could be per directory which would allow us another way to have directory based context for CLI
+- [x] performance optimization potential is in agency by transferring PW name from processor to input/output function
 - [x] **proof ready, agent notification role was addressee, which was wrong, protocol status return correct one which was initiator** we start with this now.
 - [x] psm rm: add rm functionality to Bold solution. DONE: psm with reps is implemented.
 - [x] remember Step() call in answers

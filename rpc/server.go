@@ -104,6 +104,6 @@ func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err er
 		ClientCAs:    rootCAs,
 	}
 
-	glog.V(1).Infoln("cert files loaded")
+	glog.V(3).Infoln("cert files loaded")
 	return credentials.NewTLS(config), nil
 }

@@ -50,7 +50,7 @@ func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
 }
 
 func TryOpen(user string, conf *rpc.ClientCfg) (c Conn) {
-	glog.V(1).Infof("client with user \"%s\"", user)
+	glog.V(3).Infof("client with user \"%s\"", user)
 	return TryAuthOpen(jwt.BuildJWT(user), conf)
 }
 
@@ -160,7 +160,7 @@ func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan
 
 	stream, err := c.Listen(ctx, protocol)
 	err2.Check(err)
-	glog.V(1).Infoln("successful start of listen id:", protocol.Id)
+	glog.V(3).Infoln("successful start of listen id:", protocol.Id)
 	go func() {
 		defer err2.CatchTrace(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)
@@ -188,7 +188,7 @@ func (conn Conn) PSMHook(ctx context.Context) (ch chan *agency.ProtocolStatus, e
 
 	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{Id: utils.UUID()})
 	err2.Check(err)
-	glog.V(1).Infoln("successful start of listen PSM hook id:")
+	glog.V(3).Infoln("successful start of listen PSM hook id:")
 	go func() {
 		defer err2.CatchTrace(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)

@@ -5,9 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"math/rand"
+	"path/filepath"
+	"strings"
 	"text/template"
+	"time"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 )
@@ -47,14 +53,16 @@ const (
 	QAProtocol    = 101
 )
 
-//	*ProtocolStatus_Connection_
-//	*ProtocolStatus_Issue_
-//	*ProtocolStatus_Proof
-//	*ProtocolStatus_TrustPing_
-//	*ProtocolStatus_BasicMessage_
+const digitsInPIN = 6
+
+var seed = time.Now().UnixNano()
+
+func init() {
+	rand.Seed(seed)
+}
 
 // NewBasicMessage creates a new message which can be send to machine
-func NewBasicMessage(content string) *agency.ProtocolStatus {
+func _(content string) *agency.ProtocolStatus {
 	agencyProof := &agency.ProtocolStatus{
 		State: &agency.ProtocolState{ProtocolId: &agency.ProtocolID{
 			TypeId: agency.Protocol_BASIC_MESSAGE}},
@@ -63,8 +71,24 @@ func NewBasicMessage(content string) *agency.ProtocolStatus {
 	return agencyProof
 }
 
-type Machine struct { // todo: should these have a name, for humans at least?
-	Initial string            `json:"initial"`
+type MachineData struct {
+	FType string
+	Data  []byte
+}
+
+func NewMachine(data MachineData) *Machine {
+	var machine Machine
+	if filepath.Ext(data.FType) == ".json" {
+		err2.Check(json.Unmarshal(data.Data, &machine))
+	} else {
+		err2.Check(yaml.Unmarshal(data.Data, &machine))
+	}
+	return &machine
+}
+
+type Machine struct {
+	Name    string            `json:"name,omitempty"`
+	Initial *Transition       `json:"initial"`
 	States  map[string]*State `json:"states"`
 
 	Current     string `json:"-"`
@@ -80,7 +104,7 @@ type State struct {
 }
 
 type Transition struct {
-	Trigger *Event `json:"trigger"`
+	Trigger *Event `json:"trigger,omitempty"`
 
 	Sends []*Event `json:"sends,omitempty"`
 
@@ -93,10 +117,9 @@ type Transition struct {
 	Machine *Machine `json:"-"`
 }
 
-type EventType string
-
 type Event struct {
 	// todo: questions could be protocols here, then TypeID would not be needed?
+	// we will continue with this when other protocol QAs will be implemented
 	Protocol string `json:"protocol"`
 	TypeID   string `json:"type_id"`
 
@@ -114,6 +137,9 @@ type Event struct {
 }
 
 func (e Event) Triggers(status *agency.ProtocolStatus) bool {
+	if status == nil {
+		return true
+	}
 	switch status.GetState().ProtocolId.TypeId {
 	case agency.Protocol_ISSUE, agency.Protocol_CONNECT, agency.Protocol_PROOF:
 		return true
@@ -176,6 +202,33 @@ func (e Event) Answers(status *agency.AgentStatus) bool {
 		}
 	}
 	return false
+}
+
+var ruleMap = map[string]string{
+	TriggerTypeOurMessage:    "STATUS",
+	TriggerTypeUseInput:      "<-",
+	TriggerTypeUseInputSave:  ":=",
+	TriggerTypeFormat:        "",
+	TriggerTypeFormatFromMem: "%s",
+	TriggerTypePIN:           "new PIN",
+	TriggerTypeData:          "",
+
+	TriggerTypeValidateInputEqual:    "==",
+	TriggerTypeValidateInputNotEqual: "!=",
+	TriggerTypeInputEqual:            "==",
+
+	TriggerTypeAcceptAndInputValues: "ACCEPT",
+	TriggerTypeNotAcceptValues:      "DECLINE",
+}
+
+func removeLF(s string) string {
+	return strings.ReplaceAll(s, "\n", " ")
+}
+
+func (e Event) String() string {
+	w := new(bytes.Buffer)
+	fmt.Fprintf(w, "%s{%s \"%.12s\"}", e.Protocol, ruleMap[e.Rule], removeLF(e.Data))
+	return w.String()
 }
 
 type EventData struct {
@@ -241,13 +294,19 @@ func (m *Machine) Initialize() (err error) {
 				}
 			}
 		}
-		if id == m.Initial {
+		if id == m.Initial.Target {
 			if initSet {
 				return errors.New("machine has multiple initial states")
 			}
-			m.Current = m.Initial
+			m.Current = m.Initial.Target
 			initSet = true
 		}
+	}
+	m.Initial.Machine = m
+	for i := range m.Initial.Sends {
+		m.Initial.Sends[i].Transition = m.Initial
+		m.Initial.Sends[i].ProtocolType =
+			ProtocolType[m.Initial.Sends[i].Protocol]
 	}
 	m.Initialized = true
 	return nil
@@ -284,6 +343,43 @@ func (m *Machine) Answers(status *agency.AgentStatus) *Transition {
 	return nil
 }
 
+func (m *Machine) Start() []*Event {
+	t := m.Initial
+	if (t.Trigger == nil || t.Trigger.Triggers(nil)) && t.Sends != nil {
+		return t.BuildSendEvents(nil)
+	}
+	return nil
+}
+
+const stateWidthInChar = 100
+
+func padStr(s string) string {
+	firstPadWidth := stateWidthInChar / 2
+	l := len(s)
+	s = fmt.Sprintf("%-*s", firstPadWidth+(l/2), s)
+	return fmt.Sprintf("%*s", stateWidthInChar, s)
+}
+
+//goland:noinspection ALL
+func (m *Machine) String() string {
+	w := new(bytes.Buffer)
+	fmt.Fprintf(w, "title %s\n", m.Name)
+	fmt.Fprintf(w, "[*] -> %s\n", m.Initial.Target)
+	for stateName, state := range m.States {
+		fmt.Fprintf(w, "state \"%s\" as %s\n", padStr(stateName), stateName)
+		for _, transition := range state.Transitions {
+			fmt.Fprintf(w, "%s --> %s: **%s**\\n", stateName,
+				transition.Target, transition.Trigger.String())
+			for _, send := range transition.Sends {
+				fmt.Fprintf(w, "{%s} ==>\\n", send)
+			}
+			fmt.Fprintln(w)
+		}
+		fmt.Fprintln(w)
+	}
+	return w.String()
+}
+
 func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 	input := t.buildInputEvent(status)
 	return t.doBuildSendEvents(input)
@@ -311,7 +407,7 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				}}
 			}
 		case MessageAnswer:
-			glog.V(1).Infoln("building answer") // it's so easy
+			glog.V(3).Infoln("building answer") // it's so easy
 		case MessageEmail:
 			switch send.Rule {
 			case TriggerTypePIN:
@@ -322,10 +418,13 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				if err != nil {
 					glog.Errorf("json error %v", err)
 				}
-				glog.Infoln("email:", emailJSON)
+				glog.V(1).Infoln("email:", emailJSON)
 				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
+			if input == nil && send.Rule != TriggerTypeData {
+				panic("FSM syntax error")
+			}
 			switch send.Rule {
 			case TriggerTypeUseInput:
 				sends[i].EventData = input.EventData
@@ -348,6 +447,9 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 }
 
 func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
+	if status == nil {
+		return nil
+	}
 	e = &Event{
 		ProtocolType:   status.GetState().ProtocolId.TypeId,
 		ProtocolStatus: status,
@@ -400,9 +502,15 @@ func (t *Transition) FmtFromMem(send *Event) string {
 	return buf.String()
 }
 
+func pin(digit int) int {
+	min := int(math.Pow(10, float64(digit-1)))
+	max := int(math.Pow(10, float64(digit)))
+	return min + rand.Intn(max-min)
+}
+
 func (t *Transition) GenPIN(_ *Event) {
-	t.Machine.Memory["PIN"] = "12234" // todo: real generator
-	glog.Infoln("pin code:", t.Machine.Memory["PIN"])
+	t.Machine.Memory["PIN"] = fmt.Sprintf("%v", pin(digitsInPIN))
+	glog.V(1).Infoln("pin code:", t.Machine.Memory["PIN"])
 }
 
 func (t *Transition) BuildSendAnswers(status *agency.AgentStatus) []*Event {
