@@ -180,11 +180,11 @@ func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan
 	return statusCh, nil
 }
 
-func (conn Conn) PSMHook(ctx context.Context) (ch chan *agency.ProtocolStatus, err error) {
+func (conn Conn) PSMHook(ctx context.Context) (ch chan *ops.AgencyStatus, err error) {
 	defer err2.Return(&err)
 
 	opsClient := ops.NewAgencyClient(conn)
-	statusCh := make(chan *agency.ProtocolStatus)
+	statusCh := make(chan *ops.AgencyStatus)
 
 	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{Id: utils.UUID()})
 	err2.Check(err)
@@ -202,7 +202,7 @@ func (conn Conn) PSMHook(ctx context.Context) (ch chan *agency.ProtocolStatus, e
 				break
 			}
 			err2.Check(err)
-			statusCh <- status.ProtocolStatus
+			statusCh <- status
 		}
 	}()
 	return statusCh, nil
