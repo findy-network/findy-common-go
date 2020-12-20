@@ -1,13 +1,10 @@
 - [ ] 0: design decision, what we do with the Failed PSM, should that be decided by caller, or should we retry automatically?
-- [ ] 1: old cmd structure which was inside agency is not working any more, because we don't want to have depencies to it. it's server we are client. this is for CLI
-- [ ] 1: check SA grpc implementation, the whole, deep call stack
 - [ ] 1: design a new mechanism for agency start cmd. Is it really needed that we can start it by all commands are flags in the runtime? If so, should we have two layer system where somekind of frontend parses the flags and send them as json struct when starting. Maybe we could find some kind of clever mechanism to build cmds which can be constructed from commandline or cfg file, but which would be simpler than current cobra.  
+- [ ] 1: old cmd structure which ment that cmds were inmplemented inside agency is not working any more, because we don't want to have depencies to it. it's server we are client. this is for CLI
 - [ ] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
 - [ ] 2: authenticator for SAs, how to build client for FIDO2
 - [ ] 3: split `grpc_test.go` file 
 - [ ] 3: start to make first version of the gRPC API as a release!!
-- [ ] 3: we need the correct initial state in FSM, or this should be at least checked
-- [ ] 4: move bot start cmds to CLI
 - [ ] 9: add a handler or some sort of UI for waiting-state situation (what is this? does it mean the cli tool, or the API)
 - [ ] 9: tell how important CLI is, we could even offer it as a base for Aries
 - [ ] 9: when we will change interface between protocol processor and SA implementation
@@ -15,7 +12,6 @@
 - [ ] Check agent notifications and statuses 
 - [ ] figure out how to test system where listeners and other parties are many
 - [ ] how to solve persistence with chat bots. Especially, should they save their pairwise level conversations. If someone is coming back, can we take that data from there? We must test and see what is needed. Current key value map is live only under app life cycle.
-- [ ] Idea: use plantuml format for state machines: if there is not enough experssions in the language we could have 2 files where other is plant uml for visualization, and the other is detailed descriptions for other stuff: named list of events or named list of transitions! plant file just names the transitions and other file describes what to do in the triggers and sends!! quite cool.
 - [ ] input message source could be URL's e.g. when we send pin code for email it could be inside a link which would direct right to us. But note, if we are doing chat bot, it doesn't do everything in the world, dosen't it?
 - [ ] new settings for gRPC agency and clients: tls cert and key file locations, address and port file locations, could that be a config file or should we stay with single envs and cmd flags?
 - [ ] old trust ping command says nothing on success
@@ -36,6 +32,9 @@
 - [x] 0: Give() grpc API function doesn't return any ID info, not error, but result is empty
 - [x] 0: inputs to input in fsm answer building
 - [x] 0: refactor all Bold db stuff to same interface as grpc/enclave is
+- [x] 1: check SA grpc implementation, the whole, deep call stack
+- [x] 3: we need the correct initial state in FSM, or this should be at least checked
+- [x] 4: move bot start cmds to CLI
 - [x] add API for giving permission to continue protocol. in progress...
 - [x] addon for ledger: should load all of them when addon directory is imported
 - [x] build archiving aka protocol.Release() ready, remove the PSM from data base, maybe we need another state for that Archived -> removed. DONE1, `Archived` added, missing actual cleanup
@@ -51,6 +50,7 @@
 - [x] **found solution which is generic** every grpc-function in service must be protected by err2.Catch aka recovery, they are in own goroutines, panics will crash the whole server
 - [x] how to merge question/answer to listen/resume pair, we have same listener but how about continue? we have different .proto files. we must merge the notification types atleast! **we keep these different at least for the moment. this means that need actions and answer required are different and answering to them need to use different apis, even the listening can be done with the same function**
 - [x] **how we will implement the on boarding in grpc** that will lead to everything, how we will implement the everything!!, we did use previous mechanism for onboarding. Made gRPC API which uses one EA wallet for all.
+- [x] Idea: use plantuml format for state machines: if there is not enough experssions in the language we could have 2 files where other is plant uml for visualization, and the other is detailed descriptions for other stuff: named list of events or named list of transitions! plant file just names the transitions and other file describes what to do in the triggers and sends!! quite cool.
 - [x] implementation ID (permissive, grpc, ..) must be saved to wallet. **Done** by saving grpc id's to same endpoints by using sheme of endpoint url like grpc://localhost
 - [x] initially tested to use only one EA client wallet which worked just fine. EA wallets have only pairwises to CA stored to them. that seems to be enouhg
 - [x] `jwt status` returns plain json, should we start to use types finally i.e. start to typing the status information!
