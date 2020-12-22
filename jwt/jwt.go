@@ -33,6 +33,7 @@ type UserCtxKey string
 
 type customClaims struct {
 	Username string `json:"un"`
+	Label    string `json:"label,omitempty"`
 	jwt.StandardClaims
 }
 
@@ -45,8 +46,13 @@ func User(ctx context.Context) string {
 // ID, or DID, or something similar. This function is called to generate a token
 // for client. The token is checked with the check function.
 func BuildJWT(user string) string {
+	return BuildJWTWithLabel(user, "")
+}
+
+func BuildJWTWithLabel(user, label string) string {
 	claims := customClaims{
 		Username: user,
+		Label:    label,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(timeValid).Unix(),
 		},
