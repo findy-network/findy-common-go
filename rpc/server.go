@@ -33,7 +33,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 
 	// TODO: require always a custom secret in production mode
 	if cfg.JWTSecret != "" {
-		jwt.JWTSecret = cfg.JWTSecret
+		jwt.SetJWTSecret(cfg.JWTSecret)
 	}
 
 	opts := make([]grpc.ServerOption, 0, 4)
