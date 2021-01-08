@@ -18,9 +18,12 @@ import (
 // as a salt when hashing our tokens.
 // Please make your own way more secure than this,
 // use a randomly generated md5 hash or something.
-var key = []byte("mySuperSecretKeyLol")
+var (
+	JWTSecret = "mySuperSecretKeyLol"
 
-var timeValid = 72 * time.Hour
+	key       = []byte(JWTSecret)
+	timeValid = 72 * time.Hour
+)
 
 var (
 	errMissingMetadata = status.Errorf(codes.InvalidArgument, "missing metadata")
