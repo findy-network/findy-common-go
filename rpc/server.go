@@ -21,14 +21,20 @@ import (
 // ServerCfg is gRPC server configuration struct for service init
 type ServerCfg struct {
 	*PKI
-	Port     int
-	TestLis  *bufconn.Listener
-	Register func(s *grpc.Server) error
+	Port      int
+	TestLis   *bufconn.Listener
+	Register  func(s *grpc.Server) error
+	JWTSecret string
 }
 
 // Server creates a gRPC server with TLS and JWT token authorization.
 func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	defer err2.Return(&err)
+
+	// TODO: require always a custom secret in production mode
+	if cfg.JWTSecret != "" {
+		jwt.SetJWTSecret(cfg.JWTSecret)
+	}
 
 	opts := make([]grpc.ServerOption, 0, 4)
 	if cfg.PKI != nil {

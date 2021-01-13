@@ -18,9 +18,10 @@ import (
 // as a salt when hashing our tokens.
 // Please make your own way more secure than this,
 // use a randomly generated md5 hash or something.
-var key = []byte("mySuperSecretKeyLol")
-
-var timeValid = 72 * time.Hour
+var (
+	key       = []byte("mySuperSecretKeyLol")
+	timeValid = 72 * time.Hour
+)
 
 var (
 	errMissingMetadata = status.Errorf(codes.InvalidArgument, "missing metadata")
@@ -35,6 +36,10 @@ type customClaims struct {
 	Username string `json:"un"`
 	Label    string `json:"label,omitempty"`
 	jwt.StandardClaims
+}
+
+func SetJWTSecret(jwtSecret string) {
+	key = []byte(jwtSecret)
 }
 
 // User is a helper function to get user from the current ctx as a string.
