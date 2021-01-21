@@ -31,6 +31,7 @@ func NewCipher(k []byte) *Cipher {
 	return &Cipher{block: newBlock, aesGCM: newAesGCM}
 }
 
+// Encrypt is same as TryEncrypt but note used yet
 func (c *Cipher) _(in []byte) (out []byte, err error) {
 	defer err2.Return(&err)
 	return c.TryEncrypt(in), nil
@@ -48,6 +49,7 @@ func (c *Cipher) TryEncrypt(in []byte) (out []byte) {
 	return c.aesGCM.Seal(nonce, nonce, in, nil)
 }
 
+// Decrypt is same as TryDecrypt but note used yet
 func (c *Cipher) _(in []byte) (out []byte, err error) {
 	defer err2.Return(&err)
 	return c.TryDecrypt(in), nil
