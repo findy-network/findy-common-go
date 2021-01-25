@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/form3tech-oss/jwt-go"
 	"github.com/golang/glog"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
