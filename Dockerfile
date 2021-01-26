@@ -10,10 +10,10 @@ RUN apk update && \
 
 WORKDIR /work
 
-COPY go.* .
+COPY go.* ./
 RUN go mod download
 
-COPY . .
+COPY . ./
 
 RUN go build -o /go/bin/findy-agent-auth
 
