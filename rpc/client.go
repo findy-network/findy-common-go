@@ -63,7 +63,7 @@ func loadClientTLSFromFile(pw *PKI) (creds credentials.TransportCredentials, err
 		Certificates:       []tls.Certificate{clientCert},
 		RootCAs:            rootCAs,
 		InsecureSkipVerify: false,
-		MinVersion:         tls.VersionTLS13,
+		MinVersion:         tls.VersionTLS12,
 		ServerName:         "localhost",
 	}
 
