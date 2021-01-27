@@ -12,8 +12,9 @@ func TestTokenFromContext(t *testing.T) {
 	ctx := context.Background()
 	key := "user"
 	userName := "cloudDID"
-	raw := "token"
 	label := "label"
+	raw := BuildJWTWithLabel(userName, label)
+	rawNoLabel := BuildJWT(userName)
 
 	var createCtx = func(val interface{}) context.Context {
 		return context.WithValue(ctx, key, val)
@@ -37,8 +38,8 @@ func TestTokenFromContext(t *testing.T) {
 			&jwt.Token{Valid: true, Claims: &customClaims{Username: userName}},
 		), true, nil},
 		{"no label", createCtx(
-			&jwt.Token{Valid: true, Claims: &customClaims{Username: userName}, Raw: raw},
-		), false, &Token{Label: defaultLabel, AgentID: userName, Raw: raw}},
+			&jwt.Token{Valid: true, Claims: &customClaims{Username: userName}, Raw: rawNoLabel},
+		), false, &Token{Label: defaultLabel, AgentID: userName, Raw: rawNoLabel}},
 		{"full data", createCtx(
 			&jwt.Token{Valid: true, Claims: &customClaims{Username: userName, Label: label}, Raw: raw},
 		), false, &Token{Label: label, AgentID: userName, Raw: raw}},

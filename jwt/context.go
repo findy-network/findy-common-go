@@ -19,7 +19,7 @@ type Token struct {
 
 // TokenFromContext receives the user data stored to context
 // NOTE: token is validated by middleware
-// before storing to context, actual verification skipped here
+// before storing to context, actual verification is done currently there
 func TokenFromContext(ctx context.Context, contextKey interface{}) (*Token, error) {
 	user := ctx.Value(contextKey)
 	if user == nil {
@@ -35,17 +35,28 @@ func TokenFromContext(ctx context.Context, contextKey interface{}) (*Token, erro
 		return nil, errors.New("token is not valid")
 	}
 
-	claims, ok := jwtToken.Claims.(*customClaims)
+	if jwtToken.Raw == "" {
+		return nil, fmt.Errorf("no raw token found")
+	}
+
+	// TODO: middleware does not support custom claims currently
+	// so token is parsed twice, refactor!
+	tokenWithClaims, err := jwt.ParseWithClaims(jwtToken.Raw, &customClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			return key, nil
+		})
+	if err != nil {
+		glog.Errorf("custom claims parsing failed, is token generated properly? (%s)", err)
+		return nil, errors.New("custom claims missing")
+	}
+
+	claims, ok := tokenWithClaims.Claims.(*customClaims)
 	if !ok {
 		return nil, errors.New("no claims found for token")
 	}
 
 	if claims.Username == "" {
 		return nil, errors.New("no cloud agent DID found for token")
-	}
-
-	if jwtToken.Raw == "" {
-		return nil, fmt.Errorf("no raw token found for user %s", claims.Username)
 	}
 
 	label := defaultLabel
