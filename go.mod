@@ -3,6 +3,7 @@ module github.com/findy-network/findy-grpc
 go 1.15
 
 require (
+	github.com/auth0/go-jwt-middleware v1.0.0
 	github.com/duo-labs/webauthn v0.0.0-20200714211715-1daaee874e43
 	github.com/duo-labs/webauthn.io v0.0.0-20200929144140-c031a3e0f95d
 	github.com/findy-network/findy-agent v0.0.0-20210114065508-eabbdc925408

@@ -19,8 +19,7 @@ import (
 // Please make your own way more secure than this,
 // use a randomly generated md5 hash or something.
 var (
-	key       = []byte("mySuperSecretKeyLol")
-	timeValid = 72 * time.Hour
+	key = []byte("mySuperSecretKeyLol")
 )
 
 var (
@@ -35,7 +34,7 @@ type UserCtxKey string
 type customClaims struct {
 	Username string `json:"un"`
 	Label    string `json:"label,omitempty"`
-	jwt.StandardClaims
+	*jwt.StandardClaims
 }
 
 func SetJWTSecret(jwtSecret string) {
@@ -55,10 +54,16 @@ func BuildJWT(user string) string {
 }
 
 func BuildJWTWithLabel(user, label string) string {
-	claims := customClaims{
+	const timeValid = 72 * time.Hour
+
+	return BuildJWTWithTime(user, label, timeValid)
+}
+
+func BuildJWTWithTime(user, label string, timeValid time.Duration) string {
+	claims := &customClaims{
 		Username: user,
 		Label:    label,
-		StandardClaims: jwt.StandardClaims{
+		StandardClaims: &jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(timeValid).Unix(),
 		},
 	}
