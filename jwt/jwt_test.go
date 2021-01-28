@@ -17,9 +17,7 @@ func TestBuildJWT(t *testing.T) {
 	assert.NotNil(t, ctx2)
 	assert.True(t, ok)
 
-	timeValid = time.Second
-
-	jwt2 := BuildJWT("user id 2")
+	jwt2 := BuildJWTWithTime("user id 2", "", time.Second)
 	time.Sleep(2 * time.Second)
 	ctx2, ok = check(ctx, jwt2)
 	assert.NotNil(t, ctx2)
