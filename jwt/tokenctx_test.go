@@ -56,10 +56,8 @@ func TestTokenFromContext(t *testing.T) {
 				if data != nil {
 					t.Errorf("%s = err (%v)\n want (%v)", tc.name, data, nil)
 				}
-			} else {
-				if !reflect.DeepEqual(data, tc.data) {
-					t.Errorf("%s = err (%v)\n want (%v)", tc.name, data, tc.data)
-				}
+			} else if !reflect.DeepEqual(data, tc.data) {
+				t.Errorf("%s = err (%v)\n want (%v)", tc.name, data, tc.data)
 			}
 		})
 	}
