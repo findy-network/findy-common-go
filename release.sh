@@ -18,6 +18,8 @@ if [[ "$BRANCH" != "dev" ]]; then
 fi
 
 if [ -z "$(git status --porcelain)" ]; then
+  git pull origin dev
+
   VERSION=v$VERSION_NBR
   go mod tidy
   go test ./...
