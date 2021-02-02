@@ -18,9 +18,10 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/lainio/err2 v0.6.1
 	github.com/rs/cors v1.7.0
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.6.1
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
-	golang.org/x/oauth2 v0.0.0-20210126194326-f9ce19ea3013
+	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c
 	google.golang.org/grpc v1.35.0
+	google.golang.org/grpc/examples v0.0.0-20210129004707-0bc741730b81 // indirect
 )
