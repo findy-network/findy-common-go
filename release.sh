@@ -19,13 +19,16 @@ fi
 
 if [ -z "$(git status --porcelain)" ]; then
   git pull origin dev
-
-  VERSION=v$VERSION_NBR
-  # TODO: resolve mismatch in GRPC deps
-  # go mod tidy 
   go test ./...
 
+  VERSION=v$VERSION_NBR
+
+  # TODO: resolve mismatch in GRPC deps
+  set +e
+  go mod tidy 
   git commit -a -m "Releasing version $VERSION."
+  set -e
+
   git tag -a $VERSION -m "Version $VERSION"
   git push origin dev --tags
 
