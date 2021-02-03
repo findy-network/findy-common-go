@@ -7,7 +7,7 @@ require (
 	github.com/duo-labs/webauthn v0.0.0-20200714211715-1daaee874e43
 	github.com/duo-labs/webauthn.io v0.0.0-20200929144140-c031a3e0f95d
 	github.com/findy-network/findy-agent v0.0.0-20210127105449-9f763e8866a9
-	github.com/findy-network/findy-agent-api v0.0.0-20201220164103-15fb6a83ff0a
+	github.com/findy-network/findy-agent-api v0.0.0-20210203141241-3272a9f5c37f
 	github.com/findy-network/findy-wrapper-go v0.0.0-20201026120712-dc9ac6619595
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 	github.com/fxamacker/cbor/v2 v2.2.0

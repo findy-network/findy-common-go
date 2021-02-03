@@ -171,6 +171,8 @@ github.com/findy-network/findy-agent-api v0.0.0-20201117092904-2c15be0d866b/go.m
 github.com/findy-network/findy-agent-api v0.0.0-20201219123952-3cdb51cfb26d/go.mod h1:9rsIf/AtsdQgVUiGA77sbXInk2FnaPSCS2P+TmBUeIc=
 github.com/findy-network/findy-agent-api v0.0.0-20201220164103-15fb6a83ff0a h1:Emoi0dVTEOaPxh5VehTF7H1iimlCKnRBi6GSftrOc98=
 github.com/findy-network/findy-agent-api v0.0.0-20201220164103-15fb6a83ff0a/go.mod h1:9rsIf/AtsdQgVUiGA77sbXInk2FnaPSCS2P+TmBUeIc=
+github.com/findy-network/findy-agent-api v0.0.0-20210203141241-3272a9f5c37f h1:RLze4psefv5TY/9lRJgU2BrgHwsh+8CMJCzxv5rJk1A=
+github.com/findy-network/findy-agent-api v0.0.0-20210203141241-3272a9f5c37f/go.mod h1:9rsIf/AtsdQgVUiGA77sbXInk2FnaPSCS2P+TmBUeIc=
 github.com/findy-network/findy-grpc v0.0.0-20201113091436-e47cd902d2c7/go.mod h1:JIDCAuvF/tejnV1BfS4STPKI3MYGch23XclLeETglIM=
 github.com/findy-network/findy-grpc v0.0.0-20210108131015-372836897ab4/go.mod h1:HijcPhtuP3dKowt9rUSJKZF4xL4LnLM4R0Q3CvXlsSY=
 github.com/findy-network/findy-grpc v0.0.0-20210127104251-9687b3532b14/go.mod h1:7wsaOZE8iRD6XR4ZxKxQB4yFcEerxRaenzUcyoff8VU=
