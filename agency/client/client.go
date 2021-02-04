@@ -180,13 +180,13 @@ func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID, cOpts ..
 	return statusCh, nil
 }
 
-func (conn Conn) PSMHook(ctx context.Context) (ch chan *ops.AgencyStatus, err error) {
+func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan *ops.AgencyStatus, err error) {
 	defer err2.Return(&err)
 
 	opsClient := ops.NewAgencyClient(conn)
 	statusCh := make(chan *ops.AgencyStatus)
 
-	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{Id: utils.UUID()})
+	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{Id: utils.UUID()}, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of listen PSM hook id:")
 	go func() {
