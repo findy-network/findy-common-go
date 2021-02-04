@@ -276,6 +276,6 @@ func (conn Conn) DoStatus(ctx context.Context, id *agency.ProtocolID, cOpts ...g
 	status, err = c.Status(ctx, id, cOpts...)
 	err2.Check(err)
 
-	glog.V(3).Infoln("successful release of:", id.TypeId)
+	glog.V(3).Infoln("successful status of:", id.TypeId)
 	return status, nil
 }
