@@ -27,7 +27,7 @@ func (pw Pairwise) BasicMessage(ctx context.Context, content string) (pid *agenc
 		Role:         agency.Protocol_INITIATOR,
 		StartMsg:     &agency.Protocol_BasicMessage{BasicMessage: content},
 	}
-	return pw.Conn.DoStart(ctx, protocol)
+	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
 
 func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (pid *agency.ProtocolID, err error) {
@@ -40,7 +40,7 @@ func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (pid 
 			Attrs:     &agency.Protocol_Issuing_AttributesJson{AttributesJson: attrsJSON},
 		}},
 	}
-	return pw.Conn.DoStart(ctx, protocol)
+	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
 
 func (pw Pairwise) IssueWithAttrs(ctx context.Context, credDefID string, attrs *agency.Protocol_Attrs) (pid *agency.ProtocolID, err error) {
@@ -53,7 +53,7 @@ func (pw Pairwise) IssueWithAttrs(ctx context.Context, credDefID string, attrs *
 			Attrs:     &agency.Protocol_Issuing_Attrs_{Attrs_: attrs},
 		}},
 	}
-	return pw.Conn.DoStart(ctx, protocol)
+	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
 
 func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (pid *agency.ProtocolID, err error) {
@@ -66,7 +66,7 @@ func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (pid *agency
 				AttrFmt: &agency.Protocol_ProofRequest_AttributesJson{
 					AttributesJson: proofAttrs}}},
 	}
-	return pw.Conn.DoStart(ctx, protocol)
+	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
 
 func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Protocol_Proof) (pid *agency.ProtocolID, err error) {
@@ -79,7 +79,7 @@ func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Pro
 				AttrFmt: &agency.Protocol_ProofRequest_Attrs{
 					Attrs: proofAttrs}}},
 	}
-	return pw.Conn.DoStart(ctx, protocol)
+	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
 
 func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (pid *agency.ProtocolID, err error) {
