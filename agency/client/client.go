@@ -268,3 +268,14 @@ func (conn Conn) DoRelease(ctx context.Context, id *agency.ProtocolID, cOpts ...
 	glog.V(3).Infoln("successful release of:", id.TypeId)
 	return pid, nil
 }
+
+func (conn Conn) DoStatus(ctx context.Context, id *agency.ProtocolID, cOpts ...grpc.CallOption) (status *agency.ProtocolStatus, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewDIDCommClient(conn)
+	status, err = c.Status(ctx, id, cOpts...)
+	err2.Check(err)
+
+	glog.V(3).Infoln("successful release of:", id.TypeId)
+	return status, nil
+}

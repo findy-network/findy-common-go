@@ -127,3 +127,10 @@ func (pw *Pairwise) Release(ctx context.Context, id string) (pid *agency.Protoco
 	}
 	return pw.Conn.DoRelease(ctx, protocolID, pw.cOpts...)
 }
+
+func (pw *Pairwise) Status(ctx context.Context, id string) (pid *agency.ProtocolStatus, err error) {
+	protocolID := &agency.ProtocolID{
+		Id: id,
+	}
+	return pw.Conn.DoStatus(ctx, protocolID, pw.cOpts...)
+}
