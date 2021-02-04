@@ -34,15 +34,15 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
 	if cfg.PKI != nil {
-		// we wrap our JWT token to Oauth token
-		perRPC := oauth.NewOauthAccess(jwt.OauthToken(cfg.JWT))
-		glog.V(10).Infoln("grpc oauth wrap for JWT done")
-
-		opts = []grpc.DialOption{
-			grpc.WithPerRPCCredentials(perRPC),
-			grpc.WithTransportCredentials(creds),
-			//grpc.WithBlock(), // dont use!! you don't get immediate error messages
+		opts = make([]grpc.DialOption, 0)
+		if cfg.JWT != "" {
+			// we wrap our JWT token to Oauth token
+			perRPC := oauth.NewOauthAccess(jwt.OauthToken(cfg.JWT))
+			glog.V(10).Infoln("grpc oauth wrap for JWT done")
+			opts = append(opts, grpc.WithPerRPCCredentials(perRPC))
 		}
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+		// dont use grpc.WithBlock()!! you don't get immediate error messages
 	}
 	if cfg.Opts != nil {
 		opts = append(opts, cfg.Opts...)
