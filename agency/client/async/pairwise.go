@@ -120,4 +120,3 @@ func (pw *Pairwise) Resume(
 	}
 	return pw.Conn.DoResume(ctx, state, pw.cOpts...)
 }
-
