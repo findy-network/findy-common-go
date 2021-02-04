@@ -236,11 +236,11 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 	return statusCh, nil
 }
 
-func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol) (pid *agency.ProtocolID, err error) {
+func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
 	defer err2.Return(&err)
 
 	c := agency.NewDIDCommClient(conn)
-	pid, err = c.Start(ctx, protocol)
+	pid, err = c.Start(ctx, protocol, cOpts...)
 	err2.Check(err)
 
 	glog.V(3).Infoln("successful start of:", protocol.TypeId)

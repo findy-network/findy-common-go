@@ -8,14 +8,16 @@ import (
 	didexchange "github.com/findy-network/findy-agent/std/didexchange/invitation"
 	"github.com/findy-network/findy-grpc/agency/client"
 	"github.com/lainio/err2"
+	"google.golang.org/grpc"
 )
 
 type Pairwise struct {
 	client.Pairwise
+	cOpts []grpc.CallOption
 }
 
-func NewPairwise(conn client.Conn, ID string) *Pairwise {
-	return &Pairwise{Pairwise: client.Pairwise{Conn: conn, ID: ID}}
+func NewPairwise(conn client.Conn, ID string, cOpts ...grpc.CallOption) *Pairwise {
+	return &Pairwise{Pairwise: client.Pairwise{Conn: conn, ID: ID}, cOpts: cOpts}
 }
 
 func (pw Pairwise) BasicMessage(ctx context.Context, content string) (pid *agency.ProtocolID, err error) {
@@ -96,7 +98,7 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (pid 
 			InvitationJson: invitationJSON,
 		}},
 	}
-	pid, err = pw.Conn.DoStart(ctx, protocol)
+	pid, err = pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 	err2.Check(err)
 	pw.ID = invitation.ID
 	return pid, err
