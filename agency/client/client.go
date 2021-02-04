@@ -257,3 +257,14 @@ func (conn Conn) DoResume(ctx context.Context, state *agency.ProtocolState, cOpt
 	glog.V(3).Infoln("successful resume of:", state.ProtocolId.TypeId)
 	return pid, nil
 }
+
+func (conn Conn) DoRelease(ctx context.Context, id *agency.ProtocolID, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewDIDCommClient(conn)
+	pid, err = c.Release(ctx, id, cOpts...)
+	err2.Check(err)
+
+	glog.V(3).Infoln("successful release of:", id.TypeId)
+	return pid, nil
+}

@@ -120,3 +120,10 @@ func (pw *Pairwise) Resume(
 	}
 	return pw.Conn.DoResume(ctx, state, pw.cOpts...)
 }
+
+func (pw *Pairwise) Release(ctx context.Context, id string) (pid *agency.ProtocolID, err error) {
+	protocolID := &agency.ProtocolID{
+		Id: id,
+	}
+	return pw.Conn.DoRelease(ctx, protocolID, pw.cOpts...)
+}
