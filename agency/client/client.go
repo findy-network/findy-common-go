@@ -152,13 +152,13 @@ func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Pro
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan *agency.AgentStatus, err error) {
+func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.AgentStatus, err error) {
 	defer err2.Return(&err)
 
 	c := agency.NewAgentClient(conn)
 	statusCh := make(chan *agency.AgentStatus)
 
-	stream, err := c.Listen(ctx, protocol)
+	stream, err := c.Listen(ctx, protocol, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of listen id:", protocol.Id)
 	go func() {
