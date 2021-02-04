@@ -246,3 +246,14 @@ func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol, cOpts .
 	glog.V(3).Infoln("successful start of:", protocol.TypeId)
 	return pid, nil
 }
+
+func (conn Conn) DoResume(ctx context.Context, state *agency.ProtocolState, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewDIDCommClient(conn)
+	pid, err = c.Resume(ctx, state, cOpts...)
+	err2.Check(err)
+
+	glog.V(3).Infoln("successful resume of:", state.ProtocolId.TypeId)
+	return pid, nil
+}

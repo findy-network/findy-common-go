@@ -103,3 +103,20 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (pid 
 	pw.ID = invitation.ID
 	return pid, err
 }
+
+func (pw *Pairwise) Resume(
+	ctx context.Context,
+	id string,
+	protocol agency.Protocol_Type,
+	protocolState agency.ProtocolState_State,
+) (pid *agency.ProtocolID, err error) {
+	state := &agency.ProtocolState{
+		ProtocolId: &agency.ProtocolID{
+			TypeId: protocol,
+			Role:   agency.Protocol_RESUME,
+			Id:     id,
+		},
+		State: protocolState,
+	}
+	return pw.Conn.DoResume(ctx, state, pw.cOpts...)
+}
