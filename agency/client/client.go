@@ -152,13 +152,13 @@ func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Pro
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan *agency.AgentStatus, err error) {
+func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.AgentStatus, err error) {
 	defer err2.Return(&err)
 
 	c := agency.NewAgentClient(conn)
 	statusCh := make(chan *agency.AgentStatus)
 
-	stream, err := c.Listen(ctx, protocol)
+	stream, err := c.Listen(ctx, protocol, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of listen id:", protocol.Id)
 	go func() {
@@ -180,13 +180,13 @@ func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID) (ch chan
 	return statusCh, nil
 }
 
-func (conn Conn) PSMHook(ctx context.Context) (ch chan *ops.AgencyStatus, err error) {
+func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan *ops.AgencyStatus, err error) {
 	defer err2.Return(&err)
 
 	opsClient := ops.NewAgencyClient(conn)
 	statusCh := make(chan *ops.AgencyStatus)
 
-	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{Id: utils.UUID()})
+	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{Id: utils.UUID()}, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of listen PSM hook id:")
 	go func() {
@@ -236,13 +236,46 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 	return statusCh, nil
 }
 
-func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol) (pid *agency.ProtocolID, err error) {
+func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
 	defer err2.Return(&err)
 
 	c := agency.NewDIDCommClient(conn)
-	pid, err = c.Start(ctx, protocol)
+	pid, err = c.Start(ctx, protocol, cOpts...)
 	err2.Check(err)
 
 	glog.V(3).Infoln("successful start of:", protocol.TypeId)
 	return pid, nil
+}
+
+func (conn Conn) DoResume(ctx context.Context, state *agency.ProtocolState, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewDIDCommClient(conn)
+	pid, err = c.Resume(ctx, state, cOpts...)
+	err2.Check(err)
+
+	glog.V(3).Infoln("successful resume of:", state.ProtocolId.TypeId)
+	return pid, nil
+}
+
+func (conn Conn) DoRelease(ctx context.Context, id *agency.ProtocolID, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewDIDCommClient(conn)
+	pid, err = c.Release(ctx, id, cOpts...)
+	err2.Check(err)
+
+	glog.V(3).Infoln("successful release of:", id.TypeId)
+	return pid, nil
+}
+
+func (conn Conn) DoStatus(ctx context.Context, id *agency.ProtocolID, cOpts ...grpc.CallOption) (status *agency.ProtocolStatus, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewDIDCommClient(conn)
+	status, err = c.Status(ctx, id, cOpts...)
+	err2.Check(err)
+
+	glog.V(3).Infoln("successful status of:", id.TypeId)
+	return status, nil
 }
