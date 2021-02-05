@@ -20,7 +20,7 @@ type Cfg struct {
 type Mgd struct {
 	Cfg
 	db *bolt.DB
-	l  sync.RWMutex
+	l  sync.Mutex
 }
 
 func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
@@ -32,15 +32,17 @@ func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
 	if m.db == nil {
 		err2.Check(m.open())
 	}
-	return f(MgdDB.db)
+	return f(mgedDB.db)
 }
 
 var (
-	MgdDB Mgd
+	mgedDB Mgd
 )
 
+// Init initializes managed version of the encrypted database. Database is ready
+// to use after this call. See more information of Cfg struct.
 func Init(cfg Cfg) (err error) {
-	MgdDB = Mgd{
+	mgedDB = Mgd{
 		Cfg: cfg,
 	}
 	return nil
@@ -67,6 +69,8 @@ func (m *Mgd) open() (err error) {
 type Filter func(value []byte) (k []byte)
 type Use func(value []byte) interface{}
 
+// Data is general data element for encrypted database. It offers placeholders
+// for read, write, and use operators to over write.
 type Data struct {
 	Data  []byte
 	Read  Filter
@@ -97,8 +101,7 @@ func (d *Data) set(b []byte) {
 	}
 }
 
-// close closes the sealed box of the enclave. It can be open again with
-// InitSealedBox.
+// close closes managed encrypted db. Note! Instance must be locked!
 func (m *Mgd) close() (err error) {
 	defer err2.Return(&err)
 
@@ -115,8 +118,10 @@ func (m *Mgd) backupName() string {
 	return backupName
 }
 
+// AddKeyValueToBucket add value to bucket pointed by the index. keyValue and
+// index use Data types operators to encrypt and hash data on the fly.
 func AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
-	return MgdDB.operate(func(DB *bolt.DB) error {
+	return mgedDB.operate(func(DB *bolt.DB) error {
 		defer err2.Annotate("add key", &err)
 
 		err2.Check(DB.Update(func(tx *bolt.Tx) (err error) {
@@ -130,10 +135,13 @@ func AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
 	})
 }
 
+// GetKeyValueFromBucket writes keyValue data by the index from a bucket. It
+// returns found if key value exists. Returns are only if it cannot perform the
+// transaction successfully.
 func GetKeyValueFromBucket(bucket []byte, index, keyValue *Data) (found bool, err error) {
 	defer err2.Annotate("get value", &err)
 
-	err2.Check(MgdDB.operate(func(DB *bolt.DB) error {
+	err2.Check(mgedDB.operate(func(DB *bolt.DB) error {
 		err2.Check(DB.View(func(tx *bolt.Tx) (err error) {
 			defer err2.Return(&err)
 
@@ -152,6 +160,9 @@ func GetKeyValueFromBucket(bucket []byte, index, keyValue *Data) (found bool, er
 	return found, nil
 }
 
+// BackupTicker creates a backup ticker which takes backup copy of the database
+// file specified by the interval. Ticker can be stopped with returned done
+// channel.
 func BackupTicker(interval time.Duration) (done chan<- struct{}) {
 	ticker := time.NewTicker(interval)
 	doneCh := make(chan struct{})
@@ -174,38 +185,53 @@ func BackupTicker(interval time.Duration) (done chan<- struct{}) {
 	return doneCh
 }
 
+// Backup takes backup copy of the database. Before backup the database is
+// closed.
 func Backup() (err error) {
 	defer err2.Annotate("backup", &err)
 
-	MgdDB.l.Lock()
-	defer MgdDB.l.Unlock()
+	mgedDB.l.Lock()
+	defer mgedDB.l.Unlock()
 
-	if MgdDB.db != nil {
-		glog.V(1).Infoln("close DB")
-		err2.Check(MgdDB.close())
+	if mgedDB.db != nil {
+		err2.Check(mgedDB.close())
 	}
 
 	// we keep locks on during the whole copy, but try to do it as fast as
 	// possible. If this would be critical we could first read the source file
 	// when locks are on and then write the target file in a new gorountine.
-	backupName := MgdDB.backupName()
-	err2.Check(fileCopy(MgdDB.Filename, backupName))
+	backupName := mgedDB.backupName()
+	err2.Check(fileCopy(mgedDB.Filename, backupName))
 	glog.V(1).Infoln("successful backup to file:", backupName)
 
 	return nil
 }
 
+// Wipe removes the whole database and its master file.
 func Wipe() (err error) {
 	defer err2.Annotate("wipe", &err)
 
-	MgdDB.l.Lock()
-	defer MgdDB.l.Unlock()
+	mgedDB.l.Lock()
+	defer mgedDB.l.Unlock()
 
-	if MgdDB.db != nil {
-		err2.Check(MgdDB.close())
+	if mgedDB.db != nil {
+		err2.Check(mgedDB.close())
 	}
 
-	return os.RemoveAll(MgdDB.Filename)
+	return os.RemoveAll(mgedDB.Filename)
+}
+
+// Close closes the database. It can be used after that if wanted. Transactions
+// opens the database when needed.
+func Close() (err error) {
+	mgedDB.l.Lock()
+	defer mgedDB.l.Unlock()
+
+	if mgedDB.db != nil {
+		return mgedDB.close()
+	}
+
+	return nil
 }
 
 func fileCopy(src, dst string) (err error) {
