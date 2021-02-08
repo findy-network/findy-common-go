@@ -3,6 +3,7 @@ package db
 import (
 	"io"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -112,8 +113,14 @@ func (m *Mgd) close() (err error) {
 }
 
 func (m *Mgd) backupName() string {
-	tsStr := time.Now().Format(time.RFC3339)
-	backupName := tsStr + "_" + m.BackupName
+	timeStr := time.Now().Format(time.RFC3339)
+	return prefixName(timeStr, m.BackupName)
+}
+
+func prefixName(prefix, name string) string {
+	dir, file := filepath.Split(name)
+	file = prefix + "_" + file
+	backupName := filepath.Join(dir, file)
 	glog.V(3).Infoln("backup name:", backupName)
 	return backupName
 }
