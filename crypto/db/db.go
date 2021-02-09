@@ -3,10 +3,10 @@ package db
 import (
 	"io"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/findy-network/findy-grpc/backup"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	bolt "go.etcd.io/bbolt"
@@ -114,15 +114,7 @@ func (m *Mgd) close() (err error) {
 
 func (m *Mgd) backupName() string {
 	timeStr := time.Now().Format(time.RFC3339)
-	return prefixName(timeStr, m.BackupName)
-}
-
-func prefixName(prefix, name string) string {
-	dir, file := filepath.Split(name)
-	file = prefix + "_" + file
-	backupName := filepath.Join(dir, file)
-	glog.V(3).Infoln("backup name:", backupName)
-	return backupName
+	return backup.PrefixName(timeStr, m.BackupName)
 }
 
 // AddKeyValueToBucket add value to bucket pointed by the index. keyValue and
