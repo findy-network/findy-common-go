@@ -1,7 +1,6 @@
 package db
 
 import (
-	"io"
 	"os"
 	"sync"
 	"time"
@@ -200,7 +199,7 @@ func Backup() (err error) {
 	// possible. If this would be critical we could first read the source file
 	// when locks are on and then write the target file in a new gorountine.
 	backupName := mgedDB.backupName()
-	err2.Check(fileCopy(mgedDB.Filename, backupName))
+	err2.Check(backup.FileCopy(mgedDB.Filename, backupName))
 	glog.V(1).Infoln("successful backup to file:", backupName)
 
 	return nil
@@ -230,20 +229,5 @@ func Close() (err error) {
 		return mgedDB.close()
 	}
 
-	return nil
-}
-
-func fileCopy(src, dst string) (err error) {
-	defer err2.Returnf(&err, "copy %s %s", src, dst)
-
-	r := err2.File.Try(os.Open(src))
-	defer r.Close()
-
-	w := err2.File.Try(os.Create(dst))
-	defer err2.Handle(&err, func() {
-		os.Remove(dst)
-	})
-	defer w.Close()
-	err2.Empty.Try(io.Copy(w, r))
 	return nil
 }
