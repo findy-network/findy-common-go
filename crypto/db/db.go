@@ -19,8 +19,9 @@ type Cfg struct {
 
 type Mgd struct {
 	Cfg
-	db *bolt.DB
-	l  sync.Mutex
+	db    *bolt.DB
+	dirty bool
+	l     sync.Mutex
 }
 
 func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
@@ -29,6 +30,7 @@ func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 
+	m.dirty = true
 	if m.db == nil {
 		err2.Check(m.open())
 	}
@@ -173,7 +175,7 @@ func BackupTicker(interval time.Duration) (done chan<- struct{}) {
 			case <-doneCh:
 				return
 			case <-ticker.C:
-				err := Backup()
+				_, err := Backup()
 				if err != nil {
 					glog.Errorln("backup ticker:", err)
 				}
@@ -185,12 +187,16 @@ func BackupTicker(interval time.Duration) (done chan<- struct{}) {
 
 // Backup takes backup copy of the database. Before backup the database is
 // closed.
-func Backup() (err error) {
+func Backup() (did bool, err error) {
 	defer err2.Annotate("backup", &err)
 
 	mgedDB.l.Lock()
 	defer mgedDB.l.Unlock()
 
+	if !mgedDB.dirty {
+		glog.V(1).Infoln("db isn't dirty, skipping backup")
+		return false, nil
+	}
 	if mgedDB.db != nil {
 		err2.Check(mgedDB.close())
 	}
@@ -202,7 +208,8 @@ func Backup() (err error) {
 	err2.Check(backup.FileCopy(mgedDB.Filename, backupName))
 	glog.V(1).Infoln("successful backup to file:", backupName)
 
-	return nil
+	mgedDB.dirty = false
+	return true, nil
 }
 
 // Wipe removes the whole database and its master file.
