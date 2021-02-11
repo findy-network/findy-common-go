@@ -20,9 +20,9 @@ import (
 
 var baseCfg *rpc.ClientCfg
 
-func Init(addr string, port int) {
-	glog.V(3).Infoln("addr:", addr, "port:", port)
-	baseCfg = client.BuildClientConnBase("./cert", addr, port, nil)
+func Init(certPath, addr string, port int) {
+	glog.V(3).Infoln("certPath:", certPath, "addr:", addr, "port:", port)
+	baseCfg = client.BuildClientConnBase(certPath, addr, port, nil)
 }
 
 // User represents the user model
@@ -117,12 +117,15 @@ func (u User) CredentialExcludeList() []protocol.CredentialDescriptor {
 	return credentialExcludeList
 }
 
-func (u *User) AllocateCloudAgent() (err error) {
+// AllocateCloudAgent allocates new cloud agent from the agency. adminID is part
+// of the security for the current agency ecosystem. It must match what's
+// configured to server side i.e. agency.
+func (u *User) AllocateCloudAgent(adminID string) (err error) {
 	defer err2.Return(&err)
 
 	glog.V(1).Infoln("starting cloud agent allocation for", u.Name)
 
-	conn := client.TryOpen("findy-root", baseCfg)
+	conn := client.TryOpen(adminID, baseCfg)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	agencyClient := ops.NewAgencyClient(conn)
@@ -135,7 +138,6 @@ func (u *User) AllocateCloudAgent() (err error) {
 		return fmt.Errorf("cannot allocate cloud agent for %v", u.Name)
 	}
 	u.DID = result.GetResult().CADID
-	//u.JWT = result.GetResult().JWT // we must build it by our selves each time it's needed
 
 	return nil
 }

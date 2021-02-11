@@ -38,6 +38,8 @@ type customClaims struct {
 }
 
 func SetJWTSecret(jwtSecret string) {
+	// todo: remove from the log after jwt secret flag is used commonly
+	glog.V(3).Infoln("===== USING given JWT secret ====")
 	key = []byte(jwtSecret)
 }
 
