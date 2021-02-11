@@ -84,29 +84,42 @@ func TestGetKeyValueFromBucket(t *testing.T) {
 
 func TestBackup(t *testing.T) {
 	tests := []struct {
-		name    string
-		wantErr bool
+		name       string
+		dirtyAfter bool
+		wantDid    bool
+		wantErr    bool
 	}{
-		{"1st", false},
-		{"2nd", false},
+		{name: "db already dirty", dirtyAfter: true, wantDid: true, wantErr: false},
+		{name: "we made it dirty", dirtyAfter: false, wantDid: true, wantErr: false},
+
+		{name: "db is clean", dirtyAfter: false, wantDid: false, wantErr: false},
+		{name: "db is still clean", dirtyAfter: true, wantDid: false, wantErr: false},
+
+		{name: "db dirty again", dirtyAfter: true, wantDid: true, wantErr: false},
+		{name: "we made it dirty", dirtyAfter: false, wantDid: true, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := Backup(); (err != nil) != tt.wantErr {
+			did, err := Backup()
+			if (err != nil) != tt.wantErr {
 				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
 			}
+			if did != tt.wantDid {
+				t.Errorf("Backup() did = %v, wantDid %v", did, tt.wantDid)
+			}
 
-			err2.Check(AddKeyValueToBucket(buckets[0],
-				&Data{
-					Data: []byte{0, 0, 1, 1, 1, 1},
-					Read: encrypt,
-				},
-				&Data{
-					Data: []byte{0, 0, 1, 1, 1, 1},
-					Read: hash,
-				},
-			))
-
+			if tt.dirtyAfter {
+				err2.Check(AddKeyValueToBucket(buckets[0],
+					&Data{
+						Data: []byte{0, 0, 1, 1, 1, 1},
+						Read: encrypt,
+					},
+					&Data{
+						Data: []byte{0, 0, 1, 1, 1, 1},
+						Read: hash,
+					},
+				))
+			}
 		})
 	}
 }
