@@ -1,14 +1,12 @@
-- [ ] 0: design decision, what we do with the Failed PSM, should that be decided by caller, or should we retry automatically?
-- [ ] 1: design a new mechanism for agency start cmd. Is it really needed that we can start it by all commands are flags in the runtime? If so, should we have two layer system where somekind of frontend parses the flags and send them as json struct when starting. Maybe we could find some kind of clever mechanism to build cmds which can be constructed from commandline or cfg file, but which would be simpler than current cobra.  
-- [ ] 1: old cmd structure which ment that cmds were inmplemented inside agency is not working any more, because we don't want to have depencies to it. it's server we are client. this is for CLI
-- [ ] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret.
-- [ ] 2: authenticator for SAs, how to build client for FIDO2
-- [ ] 3: split `grpc_test.go` file 
+- [ ] 1: design a new mechanism for agency start cmd. Is it really needed that we can start it by all commands are flags in the runtime? If so, should we have two layer system where some kind of frontend parses the flags and send them as json struct when starting. Maybe we could find some kind of clever mechanism to build cmds which can be constructed from commandline or cfg file, but which would be simpler than current cobra. **note** check how an authenticator cmd is done.
+- [ ] 1: old cmd structure which ment that cmds were inmplemented inside agency is not working any more, because we don't want to have depencies to it. it's server we are client. this is for CLI. New task: split the CLI.
 - [ ] 3: start to make first version of the gRPC API as a release!!
+- [ ] 5: split `grpc_test.go` file 
 - [ ] 9: add a handler or some sort of UI for waiting-state situation (what is this? does it mean the cli tool, or the API)
+- [ ] 9: design decision, what we do with the Failed PSM, should that be decided by caller, or should we retry automatically? This will be related to if we need to take backups of PSM db
 - [ ] 9: tell how important CLI is, we could even offer it as a base for Aries
 - [ ] 9: when we will change interface between protocol processor and SA implementation
-- [ ] 9: when we will drop legacy API from agency? this is important, we should not support 2 API, it's too much for us
+- [ ] 9: when we will drop legacy API from agency? **this is important, we should not support 2 API, it's too much for us**. When we drop the legacy API support we can finalize the agency to one compact package and product. Similar to reddis, mango, etc.
 - [ ] Check agent notifications and statuses 
 - [ ] figure out how to test system where listeners and other parties are many
 - [ ] how to solve persistence with chat bots. Especially, should they save their pairwise level conversations. If someone is coming back, can we take that data from there? We must test and see what is needed. Current key value map is live only under app life cycle.
@@ -24,7 +22,7 @@
 - [ ] should we be able to listen one pairwise, and everything what's happening for it. Now we can listen our CA, but with gRPC should we be able to listen that too? we can listen one protocol when we are starting it by us with the **Run** function. does this bring more complexity to agency, or not? at least with other languages which don't have same concurrency as Go has it might help?
 - [ ] should we move Aries specific message structs a somewhere generic repo, we don't want to have dependencies to agency, good-one! should we even start to move some stuff out of agency for that same reason?
 - [ ] started: list all secrets like JWT generation key, all enclave keys, ...
-- [ ] use exactly same Cmds as previously, but internally switch to use wallet+key or CA-DID / jwt token, this is the best version!!! have to make a design for the implementation.
+- [ ] use exactly same Cmds as previously, but internally switch to use wallet+key or CA-DID / jwt token, this is the best version!!! have to make a design for the implementation. **Note** this is related to CLI splitting.
 - [ ] we have wrong error handling in bolt database, it reports error when it is not founding data!!
 - [ ] what whould be a good demo?
 - [x] 0: a test in a playground what happens when output interface is assigned to output interface. how it will be from outside? DONE: only the interface value is transported which should affect that if you try to change something after the pointer switch you set wrong variable!!
@@ -33,6 +31,8 @@
 - [x] 0: inputs to input in fsm answer building
 - [x] 0: refactor all Bold db stuff to same interface as grpc/enclave is
 - [x] 1: check SA grpc implementation, the whole, deep call stack
+- [x] 1: salt validation warning, or something else, in future we don't need to salt at all but at some point. we might be a similar thing with our JWT secret. Salt is deprecated.
+- [x] 2: authenticator for SAs, how to build client for FIDO2
 - [x] 3: we need the correct initial state in FSM, or this should be at least checked
 - [x] 4: move bot start cmds to CLI
 - [x] add API for giving permission to continue protocol. in progress...
