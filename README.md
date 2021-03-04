@@ -25,3 +25,12 @@ Both client and server use configuration structs to init them. The most importan
 - [x] fix Go 1.15 tls certificate format problems
 - [x] Simplify cert format and generation process (see `cert/`)
 - [x] check if client TLS certificate could be used as well. **We now have mutual TLS authentication and 1.2 version in use** 
+
+## Publishing new version
+
+Release script will tag the current version and push the tag to remote. Release script assumes it is triggered from dev branch. It takes one parameter, the next working version. E.g. if current working version is 0.1.0, following will release version 0.1.0 and update working version to 0.2.0.
+
+```bash
+git checkout dev
+./release 0.2.0
+```
