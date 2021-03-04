@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net"
 
-	"github.com/findy-network/findy-grpc/jwt"
+	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/golang/glog"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"

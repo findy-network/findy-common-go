@@ -1,6 +1,6 @@
 package chat
 
-import "github.com/findy-network/findy-grpc/agency/fsm"
+import "github.com/findy-network/findy-common-go/agency/fsm"
 
 var EmailIssuerMachine = fsm.Machine{
 	Name: "email issuer machine",

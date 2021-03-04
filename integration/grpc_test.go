@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/findy-network/findy-agent-api/grpc/ops"
-	"github.com/findy-network/findy-grpc/jwt"
-	"github.com/findy-network/findy-grpc/rpc"
+	"github.com/findy-network/findy-common-go/jwt"
+	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"github.com/stretchr/testify/assert"

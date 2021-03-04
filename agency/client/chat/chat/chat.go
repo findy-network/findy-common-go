@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
-	"github.com/findy-network/findy-grpc/agency/client"
-	"github.com/findy-network/findy-grpc/agency/client/async"
-	"github.com/findy-network/findy-grpc/agency/fsm"
+	"github.com/findy-network/findy-common-go/agency/client"
+	"github.com/findy-network/findy-common-go/agency/client/async"
+	"github.com/findy-network/findy-common-go/agency/fsm"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 )

@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 
-	"github.com/findy-network/findy-grpc/jwt"
+	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
