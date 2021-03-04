@@ -47,56 +47,56 @@ linters:
   # inverted configuration with `enable-all` and `disable` is not scalable during updates of golangci-lint
   disable-all: true
   enable:
-#    - bodyclose
+    - bodyclose
     - deadcode
     - depguard
     - dogsled
     - dupl
     - errcheck
-#    - exhaustive
+    #    - exhaustive
     - funlen
-#    - gochecknoinits
-#    - goconst
-#    - gocritic
-#    - gocyclo
+    #    - gochecknoinits
+    #    - goconst
+    #    - gocritic
+    #    - gocyclo
     - gofmt
     - goimports
-#    - golint
-#    - gomnd
+    #    - golint
+    #    - gomnd
     - goprintffuncname
-#    - gosec
+    #    - gosec
     - gosimple
     - govet
     - ineffassign
-#    - interfacer
+    #    - interfacer
     - lll
     - misspell
     - nakedret
-#    - noctx
+    - noctx
     - nolintlint
     - rowserrcheck
-#    - scopelint
+    #    - scopelint
     - staticcheck
     - structcheck
-#    - stylecheck
+    #    - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
     - varcheck
 #    - whitespace
-  # don't enable:
-  # - asciicheck
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - testpackage
-  # - wsl
+# don't enable:
+# - asciicheck
+# - gochecknoglobals
+# - gocognit
+# - godot
+# - godox
+# - goerr113
+# - maligned
+# - nestif
+# - prealloc
+# - testpackage
+# - wsl
 issues:
   exclude-rules:
     - path: jwt/tokenctx_test.go
@@ -110,4 +110,4 @@ issues:
 # golangci.com configuration
 # https://github.com/golangci/golangci/wiki/Configuration
 service:
-  golangci-lint-version: 1.36.x # use the fixed version to not introduce new linters unexpectedly
+  golangci-lint-version: 1.37.x # use the fixed version to not introduce new linters unexpectedly
