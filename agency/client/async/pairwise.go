@@ -6,7 +6,7 @@ import (
 
 	"github.com/findy-network/findy-agent-api/grpc/agency"
 	didexchange "github.com/findy-network/findy-agent/std/didexchange/invitation"
-	"github.com/findy-network/findy-grpc/agency/client"
+	"github.com/findy-network/findy-common-go/agency/client"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 )

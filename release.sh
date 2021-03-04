@@ -23,9 +23,8 @@ if [ -z "$(git status --porcelain)" ]; then
 
   VERSION=v$VERSION_NBR
 
-  # TODO: resolve mismatch in GRPC deps
+  go mod tidy
   set +e
-  go mod tidy 
   git commit -a -m "Releasing version $VERSION."
   set -e
 

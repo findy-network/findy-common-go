@@ -20,7 +20,7 @@ type PKI struct {
 func LoadPKI(tlsPath string) *PKI {
 	if tlsPath == "" {
 		p := os.Getenv("GOPATH")
-		tlsPath = path.Join(p, "src/github.com/findy-network/findy-grpc/cert")
+		tlsPath = path.Join(p, "src/github.com/findy-network/findy-common-go/cert")
 	}
 	return &PKI{
 		Server: CertFiles{

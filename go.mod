@@ -1,4 +1,4 @@
-module github.com/findy-network/findy-grpc
+module github.com/findy-network/findy-common-go
 
 go 1.16
 

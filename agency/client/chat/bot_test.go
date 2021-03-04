@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/findy-network/findy-grpc/agency/fsm"
+	"github.com/findy-network/findy-common-go/agency/fsm"
 )
 
 var issuerFSMYaml = `initial:

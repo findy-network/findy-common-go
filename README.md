@@ -1,6 +1,5 @@
 # findy-grpc
 
-Includes WebAuthn sample server. That will work as a reference implementation how to allocate `findy-agent` cloud agents from fido2 compatible web wallets.
 
 Main purpose of the package is to provide helpers for JWT and gRPC handling that sill is under construction.
 
@@ -10,10 +9,6 @@ The `findy-grpc` package is first client API implementation for `findy-agent` DI
 
 #### Usage
 
-A current version of the WebAuthn server can be started from package root:
-```shell script
-$ go run .
-```
 
 These helper packages are made to help use gRPC and JWT together. It also helps with TLS keys.
 
@@ -29,4 +24,13 @@ Both client and server use configuration structs to init them. The most importan
 - [x] add a client and server main programs for manual testing
 - [x] fix Go 1.15 tls certificate format problems
 - [x] Simplify cert format and generation process (see `cert/`)
-- [x] check if client TLS certificate could be used as well. **We now have mutual TLS authentication and 1.3 version in use** 
+- [x] check if client TLS certificate could be used as well. **We now have mutual TLS authentication and 1.2 version in use** 
+
+## Publishing new version
+
+Release script will tag the current version and push the tag to remote. Release script assumes it is triggered from dev branch. It takes one parameter, the next working version. E.g. if current working version is 0.1.0, following will release version 0.1.0 and update working version to 0.2.0.
+
+```bash
+git checkout dev
+./release 0.2.0
+```

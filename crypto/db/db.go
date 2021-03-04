@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/findy-network/findy-grpc/backup"
+	"github.com/findy-network/findy-common-go/backup"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	bolt "go.etcd.io/bbolt"
