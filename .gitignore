@@ -22,3 +22,5 @@ cli
 
 # Environment variables
 .envrc
+
+.DS_Store
