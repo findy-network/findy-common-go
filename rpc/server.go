@@ -40,21 +40,22 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	if cfg.PKI != nil {
 		creds, err := loadTLSCredentials(cfg.PKI)
 		err2.Check(err)
-
-		opts = append(opts,
-			grpc.Creds(creds),
-			//grpc.UnaryInterceptor(jwt.EnsureValidToken),
-			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-				grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
-				grpc_recovery.UnaryServerInterceptor(),
-			)),
-			//grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
-			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-				grpc_auth.StreamServerInterceptor(jwt.CheckTokenValidity),
-				grpc_recovery.StreamServerInterceptor(),
-			)),
-		)
+		opts = append(opts, grpc.Creds(creds))
 	}
+
+	opts = append(opts,
+		//grpc.UnaryInterceptor(jwt.EnsureValidToken),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
+			grpc_recovery.UnaryServerInterceptor(),
+		)),
+		//grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc_auth.StreamServerInterceptor(jwt.CheckTokenValidity),
+			grpc_recovery.StreamServerInterceptor(),
+		)),
+	)
+
 	return grpc.NewServer(opts...), nil
 }
 
