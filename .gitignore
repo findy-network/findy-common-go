@@ -16,6 +16,7 @@ cli
 # Build tool specifics
 .idea
 .vscode
+*.vim
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
