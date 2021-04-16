@@ -11,12 +11,17 @@ import (
 	"github.com/lainio/err2"
 )
 
+type HookFn func(data map[string]string)
+
 type ConnStatus *agency.AgentStatus
 
 type StatusChan chan ConnStatus
 
+type HookChan chan map[string]string
+
 type Conversation struct {
 	StatusChan
+	HookChan
 
 	id string
 	client.Conn
@@ -41,6 +46,10 @@ var (
 	// Machine is the initial finite-state machine from where every
 	// conversations will be started
 	Machine fsm.MachineData
+
+	// Hook is function to be set from user of the chat bot. It will be called
+	// when state machine has triggered transition where Hook should be called.
+	Hook HookFn
 )
 
 func Multiplexer(conn client.Conn) {
@@ -70,49 +79,63 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 	c.send(c.machine.Start(), nil)
 
 	for {
-		t := <-c.StatusChan
+		select {
+		case t := <-c.StatusChan:
+			c.statusReceived(t)
+		case hookData := <-c.HookChan:
+			c.hookReceived(hookData)
+		}
+	}
+}
 
-		glog.V(10).Infoln("conversation:", t.Notification.ConnectionId)
+func (c *Conversation) hookReceived(hookData map[string]string) {
+	glog.V(4).Infoln("hook data arriwed:", hookData)
+	if transition := c.machine.TriggersByHook(); transition != nil {
+		c.send(transition.BuildSendEventsFromHook(hookData), nil)
+		c.machine.Step(transition)
+	}
+}
 
-		switch t.Notification.TypeId {
-		case agency.Notification_STATUS_UPDATE:
-			glog.V(3).Infoln("status update")
-			if c.IsOursAndRm(t.Notification.ProtocolId) {
-				glog.V(10).Infoln("discarding event")
-				continue
-			}
+func (c *Conversation) statusReceived(as *agency.AgentStatus) {
+	glog.V(10).Infoln("conversation:", as.Notification.ConnectionId)
 
-			status := c.getStatus(t)
-
-			if transition := c.machine.Triggers(status); transition != nil {
-
-				// todo: different transitions to FSM, move error handling to it!
-				if status.GetState().State != agency.ProtocolState_OK {
-					glog.Warningln("current FSM steps only completed protocol steps", status.GetState().State)
-					continue
-				}
-				if glog.V(3) {
-					glog.Infof("machine: %s (%p)", c.machine.Name, c.machine)
-					glog.Infoln("role:", status.GetState().ProtocolId.Role)
-					glog.Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
-				}
-
-				c.send(transition.BuildSendEvents(status), t)
-
-				c.machine.Step(transition)
-			} else {
-				glog.V(1).Infoln("machine don't have transition for:",
-					t.Notification.ProtocolType)
-			}
-		case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
-			glog.V(1).Infof("- %s: proof QA (%p)", c.machine.Name,
-				c.machine)
-			if transition := c.machine.Answers(t); transition != nil {
-				c.send(transition.BuildSendAnswers(t), t)
-				c.machine.Step(transition)
-			}
+	switch as.Notification.TypeId {
+	case agency.Notification_STATUS_UPDATE:
+		glog.V(3).Infoln("status update")
+		if c.IsOursAndRm(as.Notification.ProtocolId) {
+			glog.V(10).Infoln("discarding event")
+			return
 		}
 
+		// translate notification to actual status data
+		status := c.getStatus(as)
+
+		if transition := c.machine.Triggers(status); transition != nil {
+			// TODO: different transitions to FSM, move error handling to it!
+			if status.GetState().State != agency.ProtocolState_OK {
+				glog.Warningln("FSM steps only completed protocol steps",
+					status.GetState().State)
+				return
+			}
+			if glog.V(3) {
+				glog.Infof("machine: %s (%p)", c.machine.Name, c.machine)
+				glog.Infoln("role:", status.GetState().ProtocolId.Role)
+				glog.Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
+			}
+
+			c.send(transition.BuildSendEvents(status), as)
+			c.machine.Step(transition)
+		} else {
+			glog.V(1).Infoln("machine don't have transition for:",
+				as.Notification.ProtocolType)
+		}
+	case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
+		glog.V(1).Infof("- %s: proof QA (%p)", c.machine.Name,
+			c.machine)
+		if transition := c.machine.Answers(as); transition != nil {
+			c.send(transition.BuildSendAnswers(as), as)
+			c.machine.Step(transition)
+		}
 	}
 }
 
@@ -181,8 +204,23 @@ func (c *Conversation) sendReqProof(message *fsm.Proof, noAck bool) {
 	}
 }
 
+func (c *Conversation) sendHook(hookData *fsm.Hook, _ bool) {
+	// TODO: implement call real hook implementation here
+	glog.V(0).Infoln("call hook implementation")
+	callHook(hookData.Data)
+}
+
+func callHook(hookData map[string]string) {
+	if Hook != nil {
+		glog.V(3).Infoln("calling hook")
+		Hook(hookData)
+	} else {
+		glog.Warningln("call hook but hook not set")
+	}
+}
+
 func (c *Conversation) sendEmail(message *fsm.Email, _ bool) {
-	// todo: implement send email here
+	// TODO: implement send email here
 	glog.V(0).Infoln("sending email to", message.To, message.Body)
 }
 
@@ -218,6 +256,8 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 				ack = true
 			}
 			c.reply(status, ack)
+		case fsm.HookProtocol:
+			c.sendHook(output.Hook, false)
 		}
 	}
 }
