@@ -485,7 +485,7 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				}}
 			case TriggerTypeUseInput:
 				dataStr := ""
-				if input.Protocol == MessageBasicMessage
+				if input.Protocol == MessageBasicMessage {
 					dataStr = input.EventData.BasicMessage.Content
 				}
 				sends[i].EventData = &EventData{Hook: &Hook{
