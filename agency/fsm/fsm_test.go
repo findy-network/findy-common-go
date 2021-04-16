@@ -57,6 +57,21 @@ var (
 				Transitions: []*Transition{
 					{
 						Trigger: &Event{
+							Protocol: "hook",
+							TypeID:   "input-hook",
+						},
+						Sends: []*Event{
+							{
+								Protocol: "hook",
+								TypeID:   "output-hook",
+								// Testing if it can handle this!
+								Rule: "INPUT",
+							},
+						},
+						Target: "IDLE",
+					},
+					{
+						Trigger: &Event{
 							Protocol: "connection",
 							TypeID:   "STATUS_UPDATE",
 						},
@@ -143,6 +158,21 @@ func TestMachine_Step2(t *testing.T) {
 	assert.NotNil(t, o)
 	showProofMachine.Step(transition)
 	assert.Equal(t, "WAITING_STATUS", showProofMachine.Current)
+}
+
+func TestMachine_StepByHook(t *testing.T) {
+	assert.NoError(t, showProofMachine.Initialize())
+	transition := showProofMachine.TriggersByHook()
+	assert.NotNil(t, transition)
+	hookData := map[string]string{"key": "value"}
+	e := transition.BuildSendEventsFromHook(hookData)
+	assert.NotNil(t, e)
+	assert.NotEmpty(t, e)
+	event := e[0]
+	assert.Equal(t, HookProtocol, int(event.ProtocolType))
+	assert.Equal(t, "output-hook", event.Hook.Data["ID"])
+	showProofMachine.Step(transition)
+	assert.Equal(t, "IDLE", showProofMachine.Current)
 }
 
 func TestMachine_Start(t *testing.T) {
