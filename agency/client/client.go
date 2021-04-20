@@ -29,6 +29,18 @@ type Pairwise struct {
 	Label string
 }
 
+// BuildConnBase builds the rpc.ClientCfg from tls path and full service address
+// including the port e.g. localhost:50051.
+func BuildConnBase(tlsPath, fullAddr string, opts []grpc.DialOption) *rpc.ClientCfg {
+	cfg := &rpc.ClientCfg{
+		PKI:  rpc.LoadPKI(tlsPath),
+		JWT:  "",
+		Addr: fullAddr,
+		Opts: opts,
+	}
+	return cfg
+}
+
 func BuildClientConnBase(tlsPath, addr string, port int, opts []grpc.DialOption) *rpc.ClientCfg {
 	cfg := &rpc.ClientCfg{
 		PKI:  rpc.LoadPKI(tlsPath),
