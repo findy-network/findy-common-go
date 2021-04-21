@@ -99,17 +99,89 @@ func check(ctx context.Context, ts string) (context.Context, bool) {
 	return ctx, token.Valid
 }
 
-// valid validates the authorization.
+func validateAndUser(ts string) string {
+	token, err := jwt.ParseWithClaims(ts, &customClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			return key, nil
+		})
+
+	if err != nil {
+		glog.Error(err)
+		return ""
+	}
+	if claims, ok := token.Claims.(*customClaims); ok && token.Valid {
+		return claims.Username
+	}
+	glog.Error("no claims in token")
+	return ""
+}
+
+// valid validates the authorization and returns new ctx with it.
 func valid(ctx context.Context, authorization []string) (context.Context, bool) {
 	if len(authorization) < 1 {
 		glog.Error("no authorization meta data")
 		return ctx, false
 	}
-	token := strings.TrimPrefix(authorization[0], "Bearer ")
+	prefix := "Bearer "
+	token := strings.TrimPrefix(authorization[0], prefix)
 	glog.V(13).Infoln("token:", token)
+	for _, a := range authorization {
+		if strings.HasPrefix(a, prefix) {
+			token := strings.TrimPrefix(a, prefix)
+			glog.V(10).Infoln("token:", token)
+			if validateAndUser(token) != "" {
+				return check(ctx, token)
+			}
+		}
+	}
+	return ctx, false
+}
 
-	// Perform the JWT token validation here
-	return check(ctx, token)
+// ParseValidate validates the JWT token and that cheks it contains the correct
+// the Username.
+func ParseValidate(user, tokenStr string) bool {
+	return user == validateAndUser(tokenStr)
+}
+
+// IsValidUser loops thru the authorization and checks that correct user is in
+// the Bearer JWT token.
+func IsValidUser(user string, authorization []string) bool {
+	if len(authorization) < 1 {
+		glog.Error("no authorization data")
+		return false
+	}
+	prefix := "Bearer "
+	for _, a := range authorization {
+		if strings.HasPrefix(a, prefix) {
+			token := strings.TrimPrefix(a, prefix)
+			glog.V(10).Infoln("token:", token)
+			if ParseValidate(user, token) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// IsTimeLeft calculates if time is left in token with given duration.
+func IsTimeLeft(tokenStr string, delta time.Duration) bool {
+	token, err := jwt.ParseWithClaims(tokenStr, &customClaims{},
+		func(token *jwt.Token) (interface{}, error) {
+			return key, nil
+		})
+
+	if err != nil {
+		glog.Error(err)
+		return false
+	}
+
+	if claims, ok := token.Claims.(*customClaims); ok && token.Valid {
+		stamp := time.Now().Add(delta).Unix()
+		return claims.StandardClaims.VerifyExpiresAt(stamp, false)
+	}
+	glog.Error("no claims in token")
+	return false
+
 }
 
 // EnsureValidToken ensures a valid token exists within a request's metadata. If

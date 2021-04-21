@@ -23,3 +23,24 @@ func TestBuildJWT(t *testing.T) {
 	assert.NotNil(t, ctx2)
 	assert.False(t, ok)
 }
+
+func TestValidateUser(t *testing.T) {
+	user := "user-name"
+	wrong := "wrong-name"
+	jwt := BuildJWT(user)
+	assert.Equal(t, user, validateAndUser(jwt))
+	assert.NotEmpty(t, validateAndUser(jwt))
+	a := []string{"Bearer " + jwt}
+	ok := IsValidUser(user, a)
+	assert.True(t, ok)
+	ok = IsValidUser(wrong, a)
+	assert.False(t, ok)
+}
+
+func TestCalcExpiration(t *testing.T) {
+	jwt := BuildJWT("user-name")
+	yes := IsTimeLeft(jwt, 24*time.Hour)
+	assert.True(t, yes)
+	yes = IsTimeLeft(jwt, 3*24*time.Hour+time.Second)
+	assert.False(t, yes)
+}
