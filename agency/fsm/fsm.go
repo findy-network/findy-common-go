@@ -20,8 +20,8 @@ import (
 
 const (
 	TriggerTypeOurMessage    = "OUR_STATUS"
-	TriggerTypeUseInput      = "INPUT"
-	TriggerTypeUseInputSave  = "INPUT_SAVE"
+	TriggerTypeUseInput      = "INPUT"      // works like echo
+	TriggerTypeUseInputSave  = "INPUT_SAVE" // saves input data
 	TriggerTypeFormat        = "FORMAT"
 	TriggerTypeFormatFromMem = "FORMAT_MEM"
 	TriggerTypePIN           = "GEN_PIN"
@@ -46,11 +46,13 @@ const (
 	MessageAnswer = "answer"
 
 	MessageEmail = "email"
+	MessageHook  = "hook"
 )
 
 const (
 	EmailProtocol = 100
 	QAProtocol    = 101
+	HookProtocol  = 102
 )
 
 const digitsInPIN = 6
@@ -118,10 +120,12 @@ type Transition struct {
 }
 
 type Event struct {
-	// todo: questions could be protocols here, then TypeID would not be needed?
+	// TODO: questions could be protocols here, then TypeID would not be needed?
 	// we will continue with this when other protocol QAs will be implemented
-	Protocol string `json:"protocol"`
-	TypeID   string `json:"type_id"`
+	// New! Hook now uses TypeID for hook name/ID
+
+	Protocol string `json:"protocol"` // Note! See ProtocolType below
+	TypeID   string `json:"type_id"`  // Note! See NotificationType below
 
 	Rule     string `json:"rule"`
 	Data     string `json:"data,omitempty"`
@@ -134,6 +138,10 @@ type Event struct {
 
 	*agency.ProtocolStatus `json:"-"`
 	*Transition            `json:"-"`
+}
+
+func (e Event) TriggersByHook() bool {
+	return true
 }
 
 func (e Event) Triggers(status *agency.ProtocolStatus) bool {
@@ -236,6 +244,7 @@ type EventData struct {
 	Issuing      *Issuing      `json:"issuing,omitempty"`
 	Email        *Email        `json:"email,omitempty"`
 	Proof        *Proof        `json:"proof,omitempty"`
+	Hook         *Hook         `json:"hook,omitempty"`
 }
 
 type Email struct {
@@ -265,6 +274,10 @@ type ProofAttr struct {
 
 type BasicMessage struct {
 	Content string
+}
+
+type Hook struct {
+	Data map[string]string
 }
 
 // Initialize initializes and optimizes the state machine because the JSON is
@@ -328,6 +341,18 @@ func (m *Machine) Triggers(status *agency.ProtocolStatus) *Transition {
 	return nil
 }
 
+// TriggersByHook returns a transition if machine has it in its current state.
+// If not it returns nil.
+func (m *Machine) TriggersByHook() *Transition {
+	for _, transition := range m.CurrentState().Transitions {
+		if transition.Trigger.ProtocolType == HookProtocol &&
+			transition.Trigger.TriggersByHook() {
+			return transition
+		}
+	}
+	return nil
+}
+
 func (m *Machine) Step(t *Transition) {
 	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
@@ -378,6 +403,14 @@ func (m *Machine) String() string {
 		fmt.Fprintln(w)
 	}
 	return w.String()
+}
+
+func (t *Transition) BuildSendEventsFromHook(hookData map[string]string) []*Event {
+	input := &Event{
+		ProtocolType: HookProtocol,
+		EventData:    &EventData{Hook: &Hook{Data: hookData}},
+	}
+	return t.doBuildSendEvents(input)
 }
 
 func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
@@ -441,6 +474,42 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 					Content: t.FmtFromMem(send),
 				}}
 			}
+		case MessageHook:
+			switch send.Rule {
+			case TriggerTypeData:
+				sends[i].EventData = &EventData{Hook: &Hook{
+					Data: map[string]string{
+						"ID":   send.TypeID,
+						"data": send.Data,
+					},
+				}}
+			case TriggerTypeUseInput:
+				dataStr := ""
+				if input.Protocol == MessageBasicMessage {
+					dataStr = input.EventData.BasicMessage.Content
+				}
+				sends[i].EventData = &EventData{Hook: &Hook{
+					Data: map[string]string{
+						"ID":   send.TypeID,
+						"data": dataStr,
+					},
+				}}
+			case TriggerTypeFormat:
+				sends[i].EventData = &EventData{Hook: &Hook{
+					Data: map[string]string{
+						"ID":   send.TypeID,
+						"data": fmt.Sprintf(send.Data, input.Data),
+					},
+				}}
+			case TriggerTypeFormatFromMem:
+				sends[i].EventData = &EventData{Hook: &Hook{
+					Data: map[string]string{
+						"ID":   send.TypeID,
+						"data": t.FmtFromMem(send),
+					},
+				}}
+			}
+
 		}
 	}
 	return sends
@@ -527,6 +596,7 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageBasicMessage: agency.Protocol_BASIC_MESSAGE,
 	MessageEmail:        EmailProtocol,
 	MessageAnswer:       QAProtocol,
+	MessageHook:         HookProtocol,
 }
 
 var NotificationTypeID = map[string]agency.Notification_Type{
