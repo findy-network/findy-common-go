@@ -3,7 +3,7 @@ package fsm
 import (
 	"testing"
 
-	"github.com/findy-network/findy-agent-api/grpc/agency"
+	agency "github.com/findy-network/findy-agent-api/grpc/agency/v1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,14 +122,14 @@ func TestMachine_Initialize(t *testing.T) {
 func TestMachine_Triggers(t *testing.T) {
 	assert.NoError(t, machine.Initialize())
 	assert.Nil(t, machine.Triggers(
-		protocolStatus(agency.Protocol_PROOF)))
+		protocolStatus(agency.Protocol_PRESENT_PROOF)))
 	assert.NotNil(t, machine.Triggers(
 		protocolStatus(agency.Protocol_BASIC_MESSAGE)))
 }
 
 func protocolStatus(typeID agency.Protocol_Type) *agency.ProtocolStatus {
 	agencyProof := &agency.ProtocolStatus{
-		State: &agency.ProtocolState{ProtocolId: &agency.ProtocolID{TypeId: typeID}},
+		State: &agency.ProtocolState{ProtocolID: &agency.ProtocolID{TypeID: typeID}},
 		Status: &agency.ProtocolStatus_BasicMessage_{BasicMessage: &agency.ProtocolStatus_BasicMessage{
 			Content: "test string",
 		}},
@@ -139,7 +139,7 @@ func protocolStatus(typeID agency.Protocol_Type) *agency.ProtocolStatus {
 
 func TestMachine_Step(t *testing.T) {
 	assert.NoError(t, machine.Initialize())
-	transition := machine.Triggers(protocolStatus(agency.Protocol_PROOF))
+	transition := machine.Triggers(protocolStatus(agency.Protocol_PRESENT_PROOF))
 	assert.Nil(t, transition)
 	transition = machine.Triggers(protocolStatus(agency.Protocol_BASIC_MESSAGE))
 	assert.NotNil(t, transition)
@@ -149,7 +149,7 @@ func TestMachine_Step(t *testing.T) {
 
 func TestMachine_Step2(t *testing.T) {
 	assert.NoError(t, showProofMachine.Initialize())
-	status := protocolStatus(agency.Protocol_CONNECT)
+	status := protocolStatus(agency.Protocol_DIDEXCHANGE)
 	transition := showProofMachine.Triggers(status)
 	assert.NotNil(t, transition)
 	e := transition.buildInputEvent(status)
