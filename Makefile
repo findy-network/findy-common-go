@@ -1,5 +1,15 @@
 API_BRANCH=$(shell ./branch.sh ../findy-agent-api/)
 
+drop_api:
+	go mod edit -dropreplace github.com/findy-network/findy-agent-api
+
+drop_all: drop_api
+
+repl_api:
+	go mod edit -replace github.com/findy-network/findy-agent-api=../findy-agent-api
+
+repl_all: repl_api
+
 modules:
 	@echo Syncing modules for work brances ...
 	go get github.com/findy-network/findy-agent-api@$(API_BRANCH)
