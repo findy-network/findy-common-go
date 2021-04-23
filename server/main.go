@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/findy-network/findy-agent-api/grpc/ops"
+	ops "github.com/findy-network/findy-agent-api/grpc/ops/v1"
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
