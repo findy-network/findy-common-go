@@ -174,13 +174,76 @@ func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Pro
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (conn Conn) Listen(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.AgentStatus, err error) {
+func (conn Conn) Listen(ctx context.Context, client *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.Question, err error) {
+	defer err2.Return(&err)
+
+	listenStatusCh, err := conn.ListenStatus(ctx, client, cOpts...)
+	err2.Check(err)
+	waitQuestionCh, err := conn.Wait(ctx, client, cOpts...)
+	err2.Check(err)
+	glog.V(3).Infoln("successful start of general listen id:", client.ID)
+	ch = make(chan *agency.Question)
+
+	go func() {
+		defer close(ch)
+	loop:
+		for {
+			select {
+			case status, ok := <-listenStatusCh:
+				if !ok {
+					break loop
+				}
+				q := &agency.Question{
+					Status: status,
+				}
+				ch <- q
+			case question, ok := <-waitQuestionCh:
+				if !ok {
+					break loop
+				}
+				ch <- question
+			}
+		}
+		glog.V(3).Infoln("general listen return")
+	}()
+	return ch, nil
+}
+
+func (conn Conn) ListenStatus(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.AgentStatus, err error) {
 	defer err2.Return(&err)
 
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.AgentStatus)
 
 	stream, err := c.Listen(ctx, protocol, cOpts...)
+	err2.Check(err)
+	glog.V(3).Infoln("successful start of listen id:", protocol.ID)
+	go func() {
+		defer err2.CatchTrace(func(err error) {
+			glog.V(1).Infoln("WARNING: error when reading response:", err)
+			close(statusCh)
+		})
+		for {
+			status, err := stream.Recv()
+			if err == io.EOF {
+				glog.V(3).Infoln("status stream end")
+				close(statusCh)
+				break
+			}
+			err2.Check(err)
+			statusCh <- status
+		}
+	}()
+	return statusCh, nil
+}
+
+func (conn Conn) Wait(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.Question, err error) {
+	defer err2.Return(&err)
+
+	c := agency.NewAgentServiceClient(conn)
+	statusCh := make(chan *agency.Question)
+
+	stream, err := c.Wait(ctx, protocol, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of listen id:", protocol.ID)
 	go func() {
