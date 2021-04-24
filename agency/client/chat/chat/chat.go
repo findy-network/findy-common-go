@@ -13,14 +13,17 @@ import (
 
 type HookFn func(data map[string]string)
 
+type QuestionStatus *agency.Question
 type ConnStatus *agency.AgentStatus
 
 type StatusChan chan ConnStatus
+type QuestionChan chan QuestionStatus
 
 type HookChan chan map[string]string
 
 type Conversation struct {
 	StatusChan
+	QuestionChan
 	HookChan
 
 	id string
@@ -35,9 +38,14 @@ type Conversation struct {
 // conversation of this bot will share these variables
 var (
 	// Status is input channel for multiplexing this chat bot i.e. CA sends
-	// every message t this channel from here they are transported to according
-	// conversations
+	// every message to this channel from here they are transported to
+	// according conversations
 	Status = make(StatusChan)
+
+	// Question is input channel for multiplexing this chat bot i.e. CA sends
+	// every question to this channel.
+	// conversations
+	Question = make(QuestionChan)
 
 	// conversations is a map of all instances indexed by connection id aka
 	// pairwise id
@@ -55,20 +63,41 @@ var (
 func Multiplexer(conn client.Conn) {
 	glog.V(4).Infoln("starting multiplexer", Machine.FType)
 	for {
-		t := <-Status
-		c, ok := conversations[t.Notification.ConnectionID]
-		if !ok {
-			glog.V(5).Infoln("Starting new conversation",
-				Machine.FType)
-			c = &Conversation{
-				id:         t.Notification.ConnectionID,
-				Conn:       conn,
-				StatusChan: make(StatusChan),
+		select {
+		case t := <-Status:
+			c, ok := conversations[t.Notification.ConnectionID]
+			if !ok {
+				glog.V(5).Infoln("Starting new conversation",
+					Machine.FType)
+				c = &Conversation{
+					id:           t.Notification.ConnectionID,
+					Conn:         conn,
+					StatusChan:   make(StatusChan),
+					QuestionChan: make(QuestionChan),
+					HookChan:     make(HookChan),
+				}
+				go c.RunConversation(Machine)
+				conversations[t.Notification.ConnectionID] = c
 			}
-			go c.RunConversation(Machine)
-			conversations[t.Notification.ConnectionID] = c
+			c.StatusChan <- t
+		case question := <-Question:
+			c, ok := conversations[question.Status.Notification.ConnectionID]
+			if !ok {
+				glog.V(5).Infoln("Starting new conversation w/ question",
+					Machine.FType)
+				c = &Conversation{
+					id:           question.Status.Notification.ConnectionID,
+					Conn:         conn,
+					StatusChan:   make(StatusChan),
+					QuestionChan: make(QuestionChan),
+					HookChan:     make(HookChan),
+				}
+				go c.RunConversation(Machine)
+				conversations[question.Status.Notification.ConnectionID] = c
+			}
+			c.QuestionChan <- question
 		}
-		c.StatusChan <- t
+		// TODO HookChan handler isn't implemented yet!
 	}
 }
 
@@ -82,6 +111,8 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 		select {
 		case t := <-c.StatusChan:
 			c.statusReceived(t)
+		case q := <-c.QuestionChan:
+			c.questionReceived(q)
 		case hookData := <-c.HookChan:
 			c.hookReceived(hookData)
 		}
@@ -93,6 +124,20 @@ func (c *Conversation) hookReceived(hookData map[string]string) {
 	if transition := c.machine.TriggersByHook(); transition != nil {
 		c.send(transition.BuildSendEventsFromHook(hookData), nil)
 		c.machine.Step(transition)
+	}
+}
+
+func (c *Conversation) questionReceived(q QuestionStatus) {
+	glog.V(10).Infoln("conversation:", q.Status.Notification.ConnectionID)
+
+	switch q.TypeID {
+	case agency.Question_ANSWER_NEEDED_PROOF_VERIFY:
+		glog.V(1).Infof("- %s: proof QA (%p)", c.machine.Name,
+			c.machine)
+		if transition := c.machine.Answers(q); transition != nil {
+			c.send(transition.BuildSendAnswers(q.Status), q.Status)
+			c.machine.Step(transition)
+		}
 	}
 }
 
@@ -128,13 +173,6 @@ func (c *Conversation) statusReceived(as *agency.AgentStatus) {
 		} else {
 			glog.V(1).Infoln("machine don't have transition for:",
 				as.Notification.ProtocolType)
-		}
-	case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
-		glog.V(1).Infof("- %s: proof QA (%p)", c.machine.Name,
-			c.machine)
-		if transition := c.machine.Answers(as); transition != nil {
-			c.send(transition.BuildSendAnswers(as), as)
-			c.machine.Step(transition)
 		}
 	}
 }

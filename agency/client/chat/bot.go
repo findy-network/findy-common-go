@@ -68,7 +68,10 @@ func (b Bot) Run(intCh chan os.Signal) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // for server side stops, for proper cleanup
 
-	ch, err := b.Conn.Listen(ctx, &agency.ClientID{ID: utils.UUID()})
+	client := &agency.ClientID{ID: utils.UUID()}
+	ch, err := b.Conn.ListenStatus(ctx, client)
+	err2.Check(err)
+	questionCh, err := b.Conn.Wait(ctx, client)
 	err2.Check(err)
 
 	chat.Machine = b.MachineData
@@ -88,6 +91,16 @@ loop:
 				status.Notification.Role,
 				status.Notification.ProtocolID)
 			chat.Status <- status
+		case question, ok := <-questionCh:
+			if !ok {
+				glog.V(2).Infoln("closed from server")
+				break loop
+			}
+			glog.V(5).Infoln("listen question status:",
+				question.TypeID,
+				question.Status.Notification.Role,
+				question.Status.Notification.ProtocolID)
+			chat.Question <- question
 		case <-intCh:
 			cancel()
 			glog.V(2).Infoln("interrupted by user, cancel() called")
