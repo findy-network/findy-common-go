@@ -27,7 +27,7 @@ func main() {
 		Port: 50051,
 		PKI:  pki,
 		Register: func(s *grpc.Server) error {
-			ops.RegisterDevOpsServer(s, &devOpsServer{Root: "findy-root"})
+			ops.RegisterDevOpsServiceServer(s, &devOpsServer{Root: "findy-root"})
 			glog.V(10).Infoln("GRPC registration all done")
 			return nil
 		},
@@ -35,7 +35,7 @@ func main() {
 }
 
 type devOpsServer struct {
-	ops.UnimplementedDevOpsServer
+	ops.UnimplementedDevOpsServiceServer
 	Root string
 }
 

@@ -35,7 +35,7 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-	c := ops.NewDevOpsClient(conn)
+	c := ops.NewDevOpsServiceClient(conn)
 	r, err := c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})
