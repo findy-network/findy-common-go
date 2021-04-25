@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 
-	agency "github.com/findy-network/findy-agent-api/grpc/agency/v1"
-	ops "github.com/findy-network/findy-agent-api/grpc/ops/v1"
 	didexchange "github.com/findy-network/findy-agent/std/didexchange/invitation"
+	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
+	ops "github.com/findy-network/findy-common-go/grpc/ops/v1"
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/findy-network/findy-common-go/utils"

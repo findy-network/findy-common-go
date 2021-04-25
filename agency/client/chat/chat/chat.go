@@ -3,10 +3,10 @@ package chat
 import (
 	"context"
 
-	agency "github.com/findy-network/findy-agent-api/grpc/agency/v1"
 	"github.com/findy-network/findy-common-go/agency/client"
 	"github.com/findy-network/findy-common-go/agency/client/async"
 	"github.com/findy-network/findy-common-go/agency/fsm"
+	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 )

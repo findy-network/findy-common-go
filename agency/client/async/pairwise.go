@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	agency "github.com/findy-network/findy-agent-api/grpc/agency/v1"
 	didexchange "github.com/findy-network/findy-agent/std/didexchange/invitation"
 	"github.com/findy-network/findy-common-go/agency/client"
+	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 )

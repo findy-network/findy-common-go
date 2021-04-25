@@ -8,10 +8,10 @@ import (
 	"os"
 	"path/filepath"
 
-	agency "github.com/findy-network/findy-agent-api/grpc/agency/v1"
 	"github.com/findy-network/findy-common-go/agency/client"
 	"github.com/findy-network/findy-common-go/agency/client/chat/chat"
 	"github.com/findy-network/findy-common-go/agency/fsm"
+	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/findy-network/findy-common-go/utils"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"

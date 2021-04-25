@@ -3,7 +3,7 @@ package fsm
 import (
 	"testing"
 
-	agency "github.com/findy-network/findy-agent-api/grpc/agency/v1"
+	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/stretchr/testify/assert"
 )
 
