@@ -217,7 +217,7 @@ func (conn Conn) ListenStatus(ctx context.Context, protocol *agency.ClientID, cO
 
 	stream, err := c.Listen(ctx, protocol, cOpts...)
 	err2.Check(err)
-	glog.V(3).Infoln("successful start of listen id:", protocol.ID)
+	glog.V(3).Infoln("successful start of ListenStatus id:", protocol.ID)
 	go func() {
 		defer err2.CatchTrace(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)
@@ -231,6 +231,10 @@ func (conn Conn) ListenStatus(ctx context.Context, protocol *agency.ClientID, cO
 				break
 			}
 			err2.Check(err)
+			if status.Notification.TypeID == agency.Notification_KEEPALIVE {
+				glog.V(5).Infoln("keepalive, no forward to client")
+				continue
+			}
 			statusCh <- status
 		}
 	}()
@@ -245,7 +249,7 @@ func (conn Conn) Wait(ctx context.Context, protocol *agency.ClientID, cOpts ...g
 
 	stream, err := c.Wait(ctx, protocol, cOpts...)
 	err2.Check(err)
-	glog.V(3).Infoln("successful start of listen id:", protocol.ID)
+	glog.V(3).Infoln("successful start of Wait id:", protocol.ID)
 	go func() {
 		defer err2.CatchTrace(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)
@@ -259,6 +263,10 @@ func (conn Conn) Wait(ctx context.Context, protocol *agency.ClientID, cOpts ...g
 				break
 			}
 			err2.Check(err)
+			if status.TypeID == agency.Question_KEEPALIVE {
+				glog.V(5).Infoln("keepalive, no forward to client")
+				continue
+			}
 			statusCh <- status
 		}
 	}()
