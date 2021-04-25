@@ -608,8 +608,7 @@ func NotificationTypeID(typeName string) NotificationType {
 	} else if _, ok := QuestionTypeID[typeName]; ok {
 		return NotificationType(10) * NotificationType(QuestionTypeID[typeName])
 	}
-	glog.Warningln("unknown type:", typeName)
-	//println("unknown type:", typeName)
+	glog.V(10).Infoln("unknown type: \"", typeName, "\" setting zero")
 	return 0
 }
 
