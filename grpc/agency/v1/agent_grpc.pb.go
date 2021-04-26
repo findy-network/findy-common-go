@@ -24,24 +24,33 @@ type AgentServiceClient interface {
 	Listen(ctx context.Context, in *ClientID, opts ...grpc.CallOption) (AgentService_ListenClient, error)
 	// Wait is bidirectional function to stream service agent Questions. With
 	// Wait you listen your agent and if it's Issuing or Verifying VC it needs
-	// more information and immetiate answers e.g. proof can be validated. Note!
-	// if your agent is only casual Holder it doesn't need to answer any of these
-	// questions. Holder communicate goes with ProtocolService.Resume(). Please
-	// see Give for more information.
+	// more information and immetiate answers from you. For instance, if a proof
+	// can be validated. Note! if your agent is only casual Holder it doesn't
+	// need to answer any of these questions. Holder communicate goes with
+	// ProtocolService.Resume(). Please see Give for more information.
 	Wait(ctx context.Context, in *ClientID, opts ...grpc.CallOption) (AgentService_WaitClient, error)
-	// Give is function to give answer to ANSWER_NEEDED_xx Questions arived from
-	// Wait function. Questions have ID and clientID which should be used when
-	// answering the questions.
+	// Give is function to give answer to ANSWER_NEEDED_xx(TODO name!) Questions
+	// arived from Wait function. Questions have ID and clientID which should be
+	// used when answering the questions.
 	Give(ctx context.Context, in *Answer, opts ...grpc.CallOption) (*ClientID, error)
 	// CreateInvitation returns an invitation according to InvitationBase.
 	CreateInvitation(ctx context.Context, in *InvitationBase, opts ...grpc.CallOption) (*Invitation, error)
 	// SetImplId sets implementation ID for the clould agent. It should be "grpc".
-	// TODO: REMOVE!! Check Agency implementation first.
+	// TODO: REMOVE!! Check Agency implementation first. We still need something
+	// for this. At least the autoaccept mode for now.
+	// TODO: Rename? Rethink logic: SetSAMode(), etc.?
 	SetImplId(ctx context.Context, in *SAImplementation, opts ...grpc.CallOption) (*SAImplementation, error)
+	// Ping pings the cloud agent.
 	Ping(ctx context.Context, in *PingMsg, opts ...grpc.CallOption) (*PingMsg, error)
+	// CreateSchema creates a new schema and writes it to ledger.
 	CreateSchema(ctx context.Context, in *SchemaCreate, opts ...grpc.CallOption) (*Schema, error)
+	// CreateCredDef creates a new credential definition to wallet and writes it
+	// to the ledger. Note! With current indysdk VC structure the running time is
+	// long, like 10-20 seconds.
 	CreateCredDef(ctx context.Context, in *CredDefCreate, opts ...grpc.CallOption) (*CredDef, error)
+	// GetSchema returns a schema structure.
 	GetSchema(ctx context.Context, in *Schema, opts ...grpc.CallOption) (*SchemaData, error)
+	// GetCredDef returns a credential definition.
 	GetCredDef(ctx context.Context, in *CredDef, opts ...grpc.CallOption) (*CredDefData, error)
 }
 
@@ -200,24 +209,33 @@ type AgentServiceServer interface {
 	Listen(*ClientID, AgentService_ListenServer) error
 	// Wait is bidirectional function to stream service agent Questions. With
 	// Wait you listen your agent and if it's Issuing or Verifying VC it needs
-	// more information and immetiate answers e.g. proof can be validated. Note!
-	// if your agent is only casual Holder it doesn't need to answer any of these
-	// questions. Holder communicate goes with ProtocolService.Resume(). Please
-	// see Give for more information.
+	// more information and immetiate answers from you. For instance, if a proof
+	// can be validated. Note! if your agent is only casual Holder it doesn't
+	// need to answer any of these questions. Holder communicate goes with
+	// ProtocolService.Resume(). Please see Give for more information.
 	Wait(*ClientID, AgentService_WaitServer) error
-	// Give is function to give answer to ANSWER_NEEDED_xx Questions arived from
-	// Wait function. Questions have ID and clientID which should be used when
-	// answering the questions.
+	// Give is function to give answer to ANSWER_NEEDED_xx(TODO name!) Questions
+	// arived from Wait function. Questions have ID and clientID which should be
+	// used when answering the questions.
 	Give(context.Context, *Answer) (*ClientID, error)
 	// CreateInvitation returns an invitation according to InvitationBase.
 	CreateInvitation(context.Context, *InvitationBase) (*Invitation, error)
 	// SetImplId sets implementation ID for the clould agent. It should be "grpc".
-	// TODO: REMOVE!! Check Agency implementation first.
+	// TODO: REMOVE!! Check Agency implementation first. We still need something
+	// for this. At least the autoaccept mode for now.
+	// TODO: Rename? Rethink logic: SetSAMode(), etc.?
 	SetImplId(context.Context, *SAImplementation) (*SAImplementation, error)
+	// Ping pings the cloud agent.
 	Ping(context.Context, *PingMsg) (*PingMsg, error)
+	// CreateSchema creates a new schema and writes it to ledger.
 	CreateSchema(context.Context, *SchemaCreate) (*Schema, error)
+	// CreateCredDef creates a new credential definition to wallet and writes it
+	// to the ledger. Note! With current indysdk VC structure the running time is
+	// long, like 10-20 seconds.
 	CreateCredDef(context.Context, *CredDefCreate) (*CredDef, error)
+	// GetSchema returns a schema structure.
 	GetSchema(context.Context, *Schema) (*SchemaData, error)
+	// GetCredDef returns a credential definition.
 	GetCredDef(context.Context, *CredDef) (*CredDefData, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }

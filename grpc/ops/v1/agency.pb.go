@@ -7,6 +7,18 @@
 // 	protoc        v3.13.0
 // source: agency.proto
 
+// Package ops.v1 is the first version of findy gRPC API. As long as we'll not
+// have changes that aren't backward compatible, we can just update the API.
+// The gRPC itself will take care off that, like adding a new fields to
+// messages. We just need to follow the gRPC practises and rules.
+//
+// As said, as long as we can maintain backward compatibility, we are working
+// with version 1.0.  The version 2.0 will be introduced when we cannot solve
+// something only with the version 1.0. The 2.0 will include all the current
+// APIs of 1.0 and we support them both together until the decision shall be
+// made to depracate 1.0 totally. The deprecation rules will be specified
+// later.
+
 package v1
 
 import (
@@ -73,12 +85,13 @@ func (Cmd_Type) EnumDescriptor() ([]byte, []int) {
 	return file_agency_proto_rawDescGZIP(), []int{4, 0}
 }
 
+// Onboarding is structure for cloud agent (CA) onboarding.
 type Onboarding struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
+	Email string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"` // email is then name or handle used for pointing the CA.
 }
 
 func (x *Onboarding) Reset() {
@@ -120,13 +133,14 @@ func (x *Onboarding) GetEmail() string {
 	return ""
 }
 
+// OnboardResult is structure to transport Onboarding result.
 type OnboardResult struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Ok     bool                    `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
-	Result *OnboardResult_OKResult `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
+	Ok     bool                    `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`        // result if Onboarding was successful.
+	Result *OnboardResult_OKResult `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"` // Instance of the OK result.
 }
 
 func (x *OnboardResult) Reset() {
@@ -252,6 +266,7 @@ func (x *AgencyStatus) GetConnectionID() string {
 	return ""
 }
 
+// DataHook is structure identify data hook.
 type DataHook struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -299,12 +314,15 @@ func (x *DataHook) GetID() string {
 	return ""
 }
 
+// Cmd is structure to transport agency cmds.
 type Cmd struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	Type Cmd_Type `protobuf:"varint,1,opt,name=type,proto3,enum=ops.v1.Cmd_Type" json:"type,omitempty"`
+	// Request is the structure to gather cmd specific arguments to type fields.
+	//
 	// Types that are assignable to Request:
 	//	*Cmd_Logging
 	Request isCmd_Request `protobuf_oneof:"Request"`
@@ -368,11 +386,12 @@ type isCmd_Request interface {
 }
 
 type Cmd_Logging struct {
-	Logging string `protobuf:"bytes,2,opt,name=logging,proto3,oneof"`
+	Logging string `protobuf:"bytes,2,opt,name=logging,proto3,oneof"` // Type is LOGGING includes argument string.
 }
 
 func (*Cmd_Logging) isCmd_Request() {}
 
+// CmdReturn is structure to return cmd results.
 type CmdReturn struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -450,11 +469,11 @@ type isCmdReturn_Response interface {
 }
 
 type CmdReturn_Ping struct {
-	Ping string `protobuf:"bytes,2,opt,name=ping,proto3,oneof"`
+	Ping string `protobuf:"bytes,2,opt,name=ping,proto3,oneof"` // Ping cmd's result.
 }
 
 type CmdReturn_Count struct {
-	Count string `protobuf:"bytes,3,opt,name=count,proto3,oneof"`
+	Count string `protobuf:"bytes,3,opt,name=count,proto3,oneof"` // Count cmd's result.
 }
 
 func (*CmdReturn_Ping) isCmdReturn_Response() {}
@@ -466,9 +485,9 @@ type OnboardResult_OKResult struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	JWT            string `protobuf:"bytes,1,opt,name=JWT,proto3" json:"JWT,omitempty"`
-	CADID          string `protobuf:"bytes,2,opt,name=CADID,proto3" json:"CADID,omitempty"`
-	InvitationJson string `protobuf:"bytes,3,opt,name=invitation_json,json=invitationJson,proto3" json:"invitation_json,omitempty"`
+	JWT            string `protobuf:"bytes,1,opt,name=JWT,proto3" json:"JWT,omitempty"`                                             // pregenerated JWT token, mostly usefull for development.
+	CADID          string `protobuf:"bytes,2,opt,name=CADID,proto3" json:"CADID,omitempty"`                                         // Cloud Agent DID. The UID for CA.
+	InvitationJson string `protobuf:"bytes,3,opt,name=invitation_json,json=invitationJson,proto3" json:"invitation_json,omitempty"` // pregenerated Invitation, mostly in dev use.
 }
 
 func (x *OnboardResult_OKResult) Reset() {

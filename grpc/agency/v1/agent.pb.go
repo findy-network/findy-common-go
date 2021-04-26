@@ -7,6 +7,18 @@
 // 	protoc        v3.13.0
 // source: agent.proto
 
+// Package ops.v1 is the first version of findy gRPC API. As long as we'll not
+// have changes that aren't backward compatible, we can just update the API.
+// The gRPC itself will take care off that, like adding a new fields to
+// messages. We just need to follow the gRPC practises and rules.
+//
+// As said, as long as we can maintain backward compatibility, we are working
+// with version 1.0.  The version 2.0 will be introduced when we cannot solve
+// something only with the version 1.0. The 2.0 will include all the current
+// APIs of 1.0 and we support them both together until the decision shall be
+// made to depracate 1.0 totally. The deprecation rules will be specified
+// later.
+
 package v1
 
 import (
@@ -135,13 +147,14 @@ func (Question_Type) EnumDescriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{14, 0}
 }
 
+// SchemaData is structure to fetch schema information from the ledger.
 type SchemaData struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID   string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
-	Data string `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	ID   string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`     // ID is schema ID
+	Data string `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"` // data is a schema JSON string from the ledger.
 }
 
 func (x *SchemaData) Reset() {
@@ -190,13 +203,14 @@ func (x *SchemaData) GetData() string {
 	return ""
 }
 
+// CredDefData is structure to fetch credential definition from the ledger.
 type CredDefData struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID   string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
-	Data string `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
+	ID   string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`     // ID is CredDef ID.
+	Data string `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"` // data is a cred def JSON string from the ledger.
 }
 
 func (x *CredDefData) Reset() {
@@ -245,14 +259,15 @@ func (x *CredDefData) GetData() string {
 	return ""
 }
 
+// SchemaCreate is structure for schema creation.
 type SchemaCreate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name       string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Version    string   `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`
-	Attributes []string `protobuf:"bytes,3,rep,name=attributes,proto3" json:"attributes,omitempty"`
+	Name       string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`             // name is the name of the schema.
+	Version    string   `protobuf:"bytes,2,opt,name=version,proto3" json:"version,omitempty"`       // version is the schema version.
+	Attributes []string `protobuf:"bytes,3,rep,name=attributes,proto3" json:"attributes,omitempty"` // attributes is JSON array string.
 }
 
 func (x *SchemaCreate) Reset() {
@@ -308,12 +323,13 @@ func (x *SchemaCreate) GetAttributes() []string {
 	return nil
 }
 
+// Schema is structure to transport schema ID.
 type Schema struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"` // ID is a schema ID.
 }
 
 func (x *Schema) Reset() {
@@ -355,13 +371,14 @@ func (x *Schema) GetID() string {
 	return ""
 }
 
+// CredDefCreate is structure to transport credential definition identity.
 type CredDefCreate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	SchemaID string `protobuf:"bytes,1,opt,name=schemaID,proto3" json:"schemaID,omitempty"`
-	Tag      string `protobuf:"bytes,2,opt,name=tag,proto3" json:"tag,omitempty"`
+	SchemaID string `protobuf:"bytes,1,opt,name=schemaID,proto3" json:"schemaID,omitempty"` // schemaID is ID of the schema.
+	Tag      string `protobuf:"bytes,2,opt,name=tag,proto3" json:"tag,omitempty"`           // tag is schema tag.
 }
 
 func (x *CredDefCreate) Reset() {
@@ -410,6 +427,7 @@ func (x *CredDefCreate) GetTag() string {
 	return ""
 }
 
+// CredDef is structure to transport credential definition ID.
 type CredDef struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -457,13 +475,14 @@ func (x *CredDef) GetID() string {
 	return ""
 }
 
+// PingMsg is structure to indentify ping messages.
 type PingMsg struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID             int32 `protobuf:"varint,1,opt,name=ID,proto3" json:"ID,omitempty"`
-	PingController bool  `protobuf:"varint,2,opt,name=ping_controller,json=pingController,proto3" json:"ping_controller,omitempty"`
+	ID             int32 `protobuf:"varint,1,opt,name=ID,proto3" json:"ID,omitempty"`                                               // ID is ping message ID.
+	PingController bool  `protobuf:"varint,2,opt,name=ping_controller,json=pingController,proto3" json:"ping_controller,omitempty"` // Tells if CA's controller should pinged once.
 }
 
 func (x *PingMsg) Reset() {
@@ -512,15 +531,16 @@ func (x *PingMsg) GetPingController() bool {
 	return false
 }
 
+// SAImplementation is structure to specify SA implementation. TODO: refactor.
 type SAImplementation struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	ID         string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
-	Endpoint   string `protobuf:"bytes,2,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	Key        string `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
-	Persistent bool   `protobuf:"varint,4,opt,name=persistent,proto3" json:"persistent,omitempty"`
+	ID         string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`                  // Implementation ID.
+	Endpoint   string `protobuf:"bytes,2,opt,name=endpoint,proto3" json:"endpoint,omitempty"`      // For old API, was a web hook address.
+	Key        string `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`                // For old API, was VerKey, see indy sdk.
+	Persistent bool   `protobuf:"varint,4,opt,name=persistent,proto3" json:"persistent,omitempty"` // Tells if information should be saved to wallet.
 }
 
 func (x *SAImplementation) Reset() {
@@ -583,13 +603,15 @@ func (x *SAImplementation) GetPersistent() bool {
 	return false
 }
 
+// InvitationBase is structure to create actual Aries invitations. See more info
+// from Aries documentation about the fields.
 type InvitationBase struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Label      string `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
-	ID         string `protobuf:"bytes,2,opt,name=ID,proto3" json:"ID,omitempty"`
+	Label      string `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`            // Gives a human readable name for this end of the pairwise.
+	ID         string `protobuf:"bytes,2,opt,name=ID,proto3" json:"ID,omitempty"`                  // Pairwise ID, must be unique, and no collition w/ previous.
 	Expiration int64  `protobuf:"varint,3,opt,name=expiration,proto3" json:"expiration,omitempty"` // not implemented yet
 }
 
@@ -646,13 +668,14 @@ func (x *InvitationBase) GetExpiration() int64 {
 	return 0
 }
 
+// Invitation is structure for ready invitation.
 type Invitation struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	JsonStr string `protobuf:"bytes,1,opt,name=json_str,json=jsonStr,proto3" json:"json_str,omitempty"`
-	Url     string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"` // not implemented yet
+	JsonStr string `protobuf:"bytes,1,opt,name=json_str,json=jsonStr,proto3" json:"json_str,omitempty"` // Actual invitation to be shown to other end.
+	Url     string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`                        // Shor URL, not implemented yet
 }
 
 func (x *Invitation) Reset() {

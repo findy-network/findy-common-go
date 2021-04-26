@@ -27,7 +27,7 @@ func (pw Pairwise) BasicMessage(ctx context.Context, content string) (pid *agenc
 		Role:         agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_BasicMessage{
 			BasicMessage: &agency.Protocol_BasicMessageMsg{
-				Text: content,
+				Content: content,
 			},
 		},
 	}

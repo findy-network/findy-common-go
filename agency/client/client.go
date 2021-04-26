@@ -141,7 +141,7 @@ func (pw Pairwise) BasicMessage(ctx context.Context, content string) (ch chan *a
 		Role:         agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_BasicMessage{
 			BasicMessage: &agency.Protocol_BasicMessageMsg{
-				Text: content,
+				Content: content,
 			},
 		},
 	}

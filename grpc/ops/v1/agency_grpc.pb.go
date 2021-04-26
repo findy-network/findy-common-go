@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AgencyServiceClient interface {
 	// PSMHook listens realtime stream of archived protocol state machines
 	PSMHook(ctx context.Context, in *DataHook, opts ...grpc.CallOption) (AgencyService_PSMHookClient, error)
-	// Onboard allocates cloud agent and wallet from Agency
+	// Onboard allocates cloud agent and its wallet from Agency
 	Onboard(ctx context.Context, in *Onboarding, opts ...grpc.CallOption) (*OnboardResult, error)
 }
 
@@ -78,7 +78,7 @@ func (c *agencyServiceClient) Onboard(ctx context.Context, in *Onboarding, opts 
 type AgencyServiceServer interface {
 	// PSMHook listens realtime stream of archived protocol state machines
 	PSMHook(*DataHook, AgencyService_PSMHookServer) error
-	// Onboard allocates cloud agent and wallet from Agency
+	// Onboard allocates cloud agent and its wallet from Agency
 	Onboard(context.Context, *Onboarding) (*OnboardResult, error)
 	mustEmbedUnimplementedAgencyServiceServer()
 }
@@ -168,6 +168,7 @@ var _AgencyService_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DevOpsServiceClient interface {
+	// Enter is the cmd exec interface.
 	Enter(ctx context.Context, in *Cmd, opts ...grpc.CallOption) (*CmdReturn, error)
 }
 
@@ -192,6 +193,7 @@ func (c *devOpsServiceClient) Enter(ctx context.Context, in *Cmd, opts ...grpc.C
 // All implementations must embed UnimplementedDevOpsServiceServer
 // for forward compatibility
 type DevOpsServiceServer interface {
+	// Enter is the cmd exec interface.
 	Enter(context.Context, *Cmd) (*CmdReturn, error)
 	mustEmbedUnimplementedDevOpsServiceServer()
 }
