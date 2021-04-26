@@ -88,7 +88,7 @@ func (Notification_Type) EnumDescriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{13, 0}
 }
 
-// Type is enum type to tell what happening
+// Type is enum type to tell what happening. TODO naming? How explicit?
 type Question_Type int32
 
 const (

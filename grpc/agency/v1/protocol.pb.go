@@ -522,9 +522,11 @@ type ProtocolStatus struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	State      *ProtocolState `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
-	Timestamp  int64          `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
-	StatusJson string         `protobuf:"bytes,3,opt,name=status_json,json=statusJson,proto3" json:"status_json,omitempty"`
+	State      *ProtocolState `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`                             // Protocol state header.
+	Timestamp  int64          `protobuf:"varint,2,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                    // Status'es timestamp (UNIX).
+	StatusJson string         `protobuf:"bytes,3,opt,name=status_json,json=statusJson,proto3" json:"status_json,omitempty"` // Protocol status in JSON string from previous API.
+	// Status is one of these. Protocol.State.TypeID tells which.
+	//
 	// Types that are assignable to Status:
 	//	*ProtocolStatus_DIDExchange
 	//	*ProtocolStatus_IssueCredential
@@ -1145,6 +1147,8 @@ func (x *Protocol_Proof_Attribute) GetCredDefID() string {
 	return ""
 }
 
+// DIDExchangeStatus is structure telling what's going on with DID exchange
+// protocol.
 type ProtocolStatus_DIDExchangeStatus struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1224,6 +1228,8 @@ func (x *ProtocolStatus_DIDExchangeStatus) GetTheirLabel() string {
 	return ""
 }
 
+// IssueCredentialStatus is structure telling what's going on with issue
+// credential protocol.
 type ProtocolStatus_IssueCredentialStatus struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1287,6 +1293,7 @@ func (x *ProtocolStatus_IssueCredentialStatus) GetAttrs() []*Protocol_Attribute 
 	return nil
 }
 
+// TrustPingStatus is structure telling its status.
 type ProtocolStatus_TrustPingStatus struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1334,6 +1341,7 @@ func (x *ProtocolStatus_TrustPingStatus) GetReplied() bool {
 	return false
 }
 
+// BasicMessageStatus telling its protocol status.
 type ProtocolStatus_BasicMessageStatus struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
