@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 
-	didexchange "github.com/findy-network/findy-agent/std/didexchange/invitation"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	ops "github.com/findy-network/findy-common-go/grpc/ops/v1"
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/findy-network/findy-common-go/rpc"
+	didexchange "github.com/findy-network/findy-common-go/std/didexchange/invitation"
 	"github.com/findy-network/findy-common-go/utils"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
