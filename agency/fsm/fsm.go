@@ -68,7 +68,11 @@ func _(content string) *agency.ProtocolStatus {
 	agencyProof := &agency.ProtocolStatus{
 		State: &agency.ProtocolState{ProtocolID: &agency.ProtocolID{
 			TypeID: agency.Protocol_BASIC_MESSAGE}},
-		Status: &agency.ProtocolStatus_BasicMessage_{BasicMessage: &agency.ProtocolStatus_BasicMessage{Content: content}},
+		Status: &agency.ProtocolStatus_BasicMessage{
+			BasicMessage: &agency.ProtocolStatus_BasicMessageStatus{
+				Content: content,
+			},
+		},
 	}
 	return agencyProof
 }

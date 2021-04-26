@@ -130,9 +130,11 @@ func TestMachine_Triggers(t *testing.T) {
 func protocolStatus(typeID agency.Protocol_Type) *agency.ProtocolStatus {
 	agencyProof := &agency.ProtocolStatus{
 		State: &agency.ProtocolState{ProtocolID: &agency.ProtocolID{TypeID: typeID}},
-		Status: &agency.ProtocolStatus_BasicMessage_{BasicMessage: &agency.ProtocolStatus_BasicMessage{
-			Content: "test string",
-		}},
+		Status: &agency.ProtocolStatus_BasicMessage{
+			BasicMessage: &agency.ProtocolStatus_BasicMessageStatus{
+				Content: "test string",
+			},
+		},
 	}
 	return agencyProof
 }
