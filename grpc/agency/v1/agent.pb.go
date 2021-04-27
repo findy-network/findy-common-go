@@ -1127,8 +1127,11 @@ type Question_IssueProposeMsg struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	CredDefID  string `protobuf:"bytes,1,opt,name=cred_defID,json=credDefID,proto3" json:"cred_defID,omitempty"` // The ID of the credential to issue.
-	ValuesJSON string `protobuf:"bytes,2,opt,name=valuesJSON,proto3" json:"valuesJSON,omitempty"`                // TODO check why json is here and if it's used.
+	CredDefID string `protobuf:"bytes,1,opt,name=cred_defID,json=credDefID,proto3" json:"cred_defID,omitempty"` // The ID of the credential to issue.
+	// valuesJSON is currently used for PreviewCredentialToCodedVales (see
+	// findy-agent) and for that reason the excat format or layot is not clear.
+	// TODO: we refactor this later.
+	ValuesJSON string `protobuf:"bytes,2,opt,name=valuesJSON,proto3" json:"valuesJSON,omitempty"`
 }
 
 func (x *Question_IssueProposeMsg) Reset() {
