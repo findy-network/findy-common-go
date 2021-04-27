@@ -29,9 +29,9 @@ type AgentServiceClient interface {
 	// need to answer any of these questions. Holder communicate goes with
 	// ProtocolService.Resume(). Please see Give for more information.
 	Wait(ctx context.Context, in *ClientID, opts ...grpc.CallOption) (AgentService_WaitClient, error)
-	// Give is function to give answer to ANSWER_NEEDED_xx(TODO name!) Questions
-	// arived from Wait function. Questions have ID and clientID which should be
-	// used when answering the questions.
+	// Give is function to answer to Questions sent from CA and arived from Wait
+	// function. Questions have ID and clientID which should be used when
+	// answering the questions.
 	Give(ctx context.Context, in *Answer, opts ...grpc.CallOption) (*ClientID, error)
 	// CreateInvitation returns an invitation according to InvitationBase.
 	CreateInvitation(ctx context.Context, in *InvitationBase, opts ...grpc.CallOption) (*Invitation, error)
@@ -214,9 +214,9 @@ type AgentServiceServer interface {
 	// need to answer any of these questions. Holder communicate goes with
 	// ProtocolService.Resume(). Please see Give for more information.
 	Wait(*ClientID, AgentService_WaitServer) error
-	// Give is function to give answer to ANSWER_NEEDED_xx(TODO name!) Questions
-	// arived from Wait function. Questions have ID and clientID which should be
-	// used when answering the questions.
+	// Give is function to answer to Questions sent from CA and arived from Wait
+	// function. Questions have ID and clientID which should be used when
+	// answering the questions.
 	Give(context.Context, *Answer) (*ClientID, error)
 	// CreateInvitation returns an invitation according to InvitationBase.
 	CreateInvitation(context.Context, *InvitationBase) (*Invitation, error)

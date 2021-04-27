@@ -176,10 +176,10 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 
 func (e Event) Answers(status *agency.Question) bool {
 	switch status.TypeID {
-	case agency.Question_ANSWER_NEEDED_PING:
-	case agency.Question_ANSWER_NEEDED_ISSUE_PROPOSE:
-	case agency.Question_ANSWER_NEEDED_PROOF_PROPOSE:
-	case agency.Question_ANSWER_NEEDED_PROOF_VERIFY:
+	case agency.Question_PING_WAITS:
+	case agency.Question_ISSUE_PROPOSE_WAITS:
+	case agency.Question_PROOF_PROPOSE_WAITS:
+	case agency.Question_PROOF_VERIFY_WAITS:
 		if e.ProtocolType != agency.Protocol_PRESENT_PROOF {
 			panic("programming error")
 		}
@@ -622,8 +622,8 @@ var notificationTypeID = map[string]agency.Notification_Type{
 }
 
 var QuestionTypeID = map[string]agency.Question_Type{
-	"ANSWER_NEEDED_PING":          agency.Question_ANSWER_NEEDED_PING,
-	"ANSWER_NEEDED_ISSUE_PROPOSE": agency.Question_ANSWER_NEEDED_ISSUE_PROPOSE,
-	"ANSWER_NEEDED_PROOF_PROPOSE": agency.Question_ANSWER_NEEDED_PROOF_PROPOSE,
-	"ANSWER_NEEDED_PROOF_VERIFY":  agency.Question_ANSWER_NEEDED_PROOF_VERIFY,
+	"ANSWER_NEEDED_PING":          agency.Question_PING_WAITS,
+	"ANSWER_NEEDED_ISSUE_PROPOSE": agency.Question_ISSUE_PROPOSE_WAITS,
+	"ANSWER_NEEDED_PROOF_PROPOSE": agency.Question_PROOF_PROPOSE_WAITS,
+	"ANSWER_NEEDED_PROOF_VERIFY":  agency.Question_PROOF_VERIFY_WAITS,
 }

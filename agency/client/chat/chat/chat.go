@@ -131,7 +131,7 @@ func (c *Conversation) questionReceived(q QuestionStatus) {
 	glog.V(10).Infoln("conversation:", q.Status.Notification.ConnectionID)
 
 	switch q.TypeID {
-	case agency.Question_ANSWER_NEEDED_PROOF_VERIFY:
+	case agency.Question_PROOF_VERIFY_WAITS:
 		glog.V(1).Infof("- %s: proof QA (%p)", c.machine.Name,
 			c.machine)
 		if transition := c.machine.Answers(q); transition != nil {
