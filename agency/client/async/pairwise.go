@@ -51,7 +51,14 @@ func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (pid 
 	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
 
-func (pw Pairwise) IssueWithAttrs(ctx context.Context, credDefID string, attrs *agency.Protocol_AttributesMsg) (pid *agency.ProtocolID, err error) {
+func (pw Pairwise) IssueWithAttrs(
+	ctx context.Context,
+	credDefID string,
+	attrs *agency.Protocol_IssuingAttributes,
+) (
+	pid *agency.ProtocolID,
+	err error,
+) {
 	protocol := &agency.Protocol{
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_ISSUE_CREDENTIAL,
@@ -119,7 +126,9 @@ func (pw *Pairwise) Resume(
 	id string,
 	protocol agency.Protocol_Type,
 	protocolState agency.ProtocolState_State,
-) (pid *agency.ProtocolID, err error) {
+) (
+	pid *agency.ProtocolID, err error,
+) {
 	state := &agency.ProtocolState{
 		ProtocolID: &agency.ProtocolID{
 			TypeID: protocol,

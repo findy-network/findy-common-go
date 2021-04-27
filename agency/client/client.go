@@ -87,7 +87,12 @@ func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (ch c
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (pw Pairwise) IssueWithAttrs(ctx context.Context, credDefID string, attrs *agency.Protocol_AttributesMsg) (ch chan *agency.ProtocolState, err error) {
+func (pw Pairwise) IssueWithAttrs(
+	ctx context.Context,
+	credDefID string,
+	attrs *agency.Protocol_IssuingAttributes,
+) (
+	ch chan *agency.ProtocolState, err error) {
 	protocol := &agency.Protocol{
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_ISSUE_CREDENTIAL,
