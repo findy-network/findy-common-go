@@ -920,7 +920,7 @@ type Notification struct {
 	ConnectionID   string            `protobuf:"bytes,3,opt,name=connectionID,proto3" json:"connectionID,omitempty"`                           // Current pairwise ID between agents
 	ProtocolID     string            `protobuf:"bytes,4,opt,name=protocolID,proto3" json:"protocolID,omitempty"`                               // Current protocol ID, see Aries Thread ID
 	ProtocolFamily string            `protobuf:"bytes,5,opt,name=protocol_family,json=protocolFamily,proto3" json:"protocol_family,omitempty"` // Text version of the protocol family/namespace
-	Timestamp      int64             `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                                // timestamp in nano because this is part of the key TODO check!!!
+	Timestamp      int64             `protobuf:"varint,6,opt,name=timestamp,proto3" json:"timestamp,omitempty"`                                // timestamp in nano because this is part of the key
 	ProtocolType   Protocol_Type     `protobuf:"varint,7,opt,name=protocol_type,json=protocolType,proto3,enum=agency.v1.Protocol_Type" json:"protocol_type,omitempty"`
 	Role           Protocol_Role     `protobuf:"varint,8,opt,name=role,proto3,enum=agency.v1.Protocol_Role" json:"role,omitempty"`
 	PID            string            `protobuf:"bytes,9,opt,name=PID,proto3" json:"PID,omitempty"`
