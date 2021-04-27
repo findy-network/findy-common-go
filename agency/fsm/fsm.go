@@ -618,7 +618,7 @@ func NotificationTypeID(typeName string) NotificationType {
 
 var notificationTypeID = map[string]agency.Notification_Type{
 	"STATUS_UPDATE": agency.Notification_STATUS_UPDATE,
-	"ACTION_NEEDED": agency.Notification_ACTION_NEEDED,
+	"ACTION_NEEDED": agency.Notification_PROTOCOL_PAUSED,
 }
 
 var QuestionTypeID = map[string]agency.Question_Type{

@@ -78,8 +78,8 @@ func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (ch c
 		StartMsg: &agency.Protocol_IssueCredential{
 			IssueCredential: &agency.Protocol_IssueCredentialMsg{
 				CredDefID: credDefID,
-				AttrFmt: &agency.Protocol_IssueCredentialMsg_AttributesJson{
-					AttributesJson: attrsJSON,
+				AttrFmt: &agency.Protocol_IssueCredentialMsg_AttributesJSON{
+					AttributesJSON: attrsJSON,
 				},
 			},
 		},
@@ -115,7 +115,7 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (conn
 		Role:   agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_DIDExchange{DIDExchange: &agency.Protocol_DIDExchangeMsg{
 			Label:          pw.Label,
-			InvitationJson: invitationJSON,
+			InvitationJSON: invitationJSON,
 		}},
 	}
 	ch, err = pw.Conn.doRun(ctx, protocol)
@@ -155,8 +155,8 @@ func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (ch chan *ag
 		Role:         agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_PresentProof{
 			PresentProof: &agency.Protocol_PresentProofMsg{
-				AttrFmt: &agency.Protocol_PresentProofMsg_AttributesJson{
-					AttributesJson: proofAttrs}}},
+				AttrFmt: &agency.Protocol_PresentProofMsg_AttributesJSON{
+					AttributesJSON: proofAttrs}}},
 	}
 	return pw.Conn.doRun(ctx, protocol)
 }

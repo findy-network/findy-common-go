@@ -42,8 +42,8 @@ func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (pid 
 		StartMsg: &agency.Protocol_IssueCredential{
 			IssueCredential: &agency.Protocol_IssueCredentialMsg{
 				CredDefID: credDefID,
-				AttrFmt: &agency.Protocol_IssueCredentialMsg_AttributesJson{
-					AttributesJson: attrsJSON,
+				AttrFmt: &agency.Protocol_IssueCredentialMsg_AttributesJSON{
+					AttributesJSON: attrsJSON,
 				},
 			},
 		},
@@ -73,8 +73,8 @@ func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (pid *agency
 		Role:         agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_PresentProof{
 			PresentProof: &agency.Protocol_PresentProofMsg{
-				AttrFmt: &agency.Protocol_PresentProofMsg_AttributesJson{
-					AttributesJson: proofAttrs}}},
+				AttrFmt: &agency.Protocol_PresentProofMsg_AttributesJSON{
+					AttributesJSON: proofAttrs}}},
 	}
 	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
@@ -105,7 +105,7 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (pid 
 		Role:   agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_DIDExchange{DIDExchange: &agency.Protocol_DIDExchangeMsg{
 			Label:          pw.Label,
-			InvitationJson: invitationJSON,
+			InvitationJSON: invitationJSON,
 		}},
 	}
 	pid, err = pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
