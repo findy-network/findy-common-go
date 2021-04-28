@@ -12,7 +12,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/findy-network/findy-agent-api/grpc/agency"
+	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
@@ -66,9 +66,13 @@ func init() {
 // NewBasicMessage creates a new message which can be send to machine
 func _(content string) *agency.ProtocolStatus {
 	agencyProof := &agency.ProtocolStatus{
-		State: &agency.ProtocolState{ProtocolId: &agency.ProtocolID{
-			TypeId: agency.Protocol_BASIC_MESSAGE}},
-		Status: &agency.ProtocolStatus_BasicMessage_{BasicMessage: &agency.ProtocolStatus_BasicMessage{Content: content}},
+		State: &agency.ProtocolState{ProtocolID: &agency.ProtocolID{
+			TypeID: agency.Protocol_BASIC_MESSAGE}},
+		Status: &agency.ProtocolStatus_BasicMessage{
+			BasicMessage: &agency.ProtocolStatus_BasicMessageStatus{
+				Content: content,
+			},
+		},
 	}
 	return agencyProof
 }
@@ -119,6 +123,8 @@ type Transition struct {
 	Machine *Machine `json:"-"`
 }
 
+type NotificationType int32
+
 type Event struct {
 	// TODO: questions could be protocols here, then TypeID would not be needed?
 	// we will continue with this when other protocol QAs will be implemented
@@ -133,8 +139,9 @@ type Event struct {
 
 	*EventData `json:"event_data,omitempty"`
 
-	ProtocolType     agency.Protocol_Type     `json:"-"`
-	NotificationType agency.Notification_Type `json:"-"`
+	ProtocolType     agency.Protocol_Type `json:"-"`
+	NotificationType NotificationType     `json:"-"`
+	//NotificationType agency.Notification_Type `json:"-"`
 
 	*agency.ProtocolStatus `json:"-"`
 	*Transition            `json:"-"`
@@ -148,8 +155,8 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 	if status == nil {
 		return true
 	}
-	switch status.GetState().ProtocolId.TypeId {
-	case agency.Protocol_ISSUE, agency.Protocol_CONNECT, agency.Protocol_PROOF:
+	switch status.GetState().ProtocolID.TypeID {
+	case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_DIDEXCHANGE, agency.Protocol_PRESENT_PROOF:
 		return true
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
@@ -167,13 +174,13 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 	return false
 }
 
-func (e Event) Answers(status *agency.AgentStatus) bool {
-	switch status.Notification.TypeId {
-	case agency.Notification_ANSWER_NEEDED_PING:
-	case agency.Notification_ANSWER_NEEDED_ISSUE_PROPOSE:
-	case agency.Notification_ANSWER_NEEDED_PROOF_PROPOSE:
-	case agency.Notification_ANSWER_NEEDED_PROOF_VERIFY:
-		if e.ProtocolType != agency.Protocol_PROOF {
+func (e Event) Answers(status *agency.Question) bool {
+	switch status.TypeID {
+	case agency.Question_PING_WAITS:
+	case agency.Question_ISSUE_PROPOSE_WAITS:
+	case agency.Question_PROOF_PROPOSE_WAITS:
+	case agency.Question_PROOF_VERIFY_WAITS:
+		if e.ProtocolType != agency.Protocol_PRESENT_PROOF {
 			panic("programming error")
 		}
 		var attrValues []ProofAttr
@@ -181,12 +188,12 @@ func (e Event) Answers(status *agency.AgentStatus) bool {
 
 		switch e.Rule {
 		case TriggerTypeNotAcceptValues:
-			if len(attrValues) != len(status.Notification.GetProofVerify().Attrs) {
+			if len(attrValues) != len(status.GetProofVerify().Attributes) {
 				return true
 			}
-			for _, attr := range status.Notification.GetProofVerify().Attrs {
+			for _, attr := range status.GetProofVerify().Attributes {
 				for i, value := range attrValues {
-					if value.Name == attr.Name && value.CredDefID == attr.CredDefId {
+					if value.Name == attr.Name && value.CredDefID == attr.CredDefID {
 						attrValues[i].found = true
 					}
 				}
@@ -198,7 +205,7 @@ func (e Event) Answers(status *agency.AgentStatus) bool {
 			}
 		case TriggerTypeAcceptAndInputValues:
 			count := 0
-			for _, attr := range status.Notification.GetProofVerify().Attrs {
+			for _, attr := range status.GetProofVerify().Attributes {
 				for _, value := range attrValues {
 					if value.Name == attr.Name {
 						e.Machine.Memory[value.Name] = attr.Value
@@ -206,7 +213,7 @@ func (e Event) Answers(status *agency.AgentStatus) bool {
 					}
 				}
 			}
-			return count == len(status.Notification.GetProofVerify().Attrs)
+			return count == len(status.GetProofVerify().Attributes)
 		}
 	}
 	return false
@@ -293,13 +300,13 @@ func (m *Machine) Initialize() (err error) {
 			m.States[id].Transitions[j].Trigger.ProtocolType =
 				ProtocolType[m.States[id].Transitions[j].Trigger.Protocol]
 			m.States[id].Transitions[j].Trigger.NotificationType =
-				NotificationTypeID[m.States[id].Transitions[j].Trigger.TypeID]
+				NotificationTypeID(m.States[id].Transitions[j].Trigger.TypeID)
 			for k := range m.States[id].Transitions[j].Sends {
 				m.States[id].Transitions[j].Sends[k].Transition = m.States[id].Transitions[j]
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
 					ProtocolType[m.States[id].Transitions[j].Sends[k].Protocol]
 				m.States[id].Transitions[j].Sends[k].NotificationType =
-					NotificationTypeID[m.States[id].Transitions[j].Sends[k].TypeID]
+					NotificationTypeID(m.States[id].Transitions[j].Sends[k].TypeID)
 				if m.States[id].Transitions[j].Sends[k].Protocol == MessageIssueCred &&
 					m.States[id].Transitions[j].Sends[k].EventData.Issuing == nil {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
@@ -333,7 +340,7 @@ func (m *Machine) CurrentState() *State {
 // it returns nil.
 func (m *Machine) Triggers(status *agency.ProtocolStatus) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
-		if transition.Trigger.ProtocolType == status.State.ProtocolId.TypeId &&
+		if transition.Trigger.ProtocolType == status.State.ProtocolID.TypeID &&
 			transition.Trigger.Triggers(status) {
 			return transition
 		}
@@ -358,10 +365,10 @@ func (m *Machine) Step(t *Transition) {
 	m.Current = t.Target
 }
 
-func (m *Machine) Answers(status *agency.AgentStatus) *Transition {
+func (m *Machine) Answers(q *agency.Question) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
-		if transition.Trigger.ProtocolType == status.Notification.ProtocolType &&
-			transition.Trigger.Answers(status) {
+		if transition.Trigger.ProtocolType == q.Status.Notification.ProtocolType &&
+			transition.Trigger.Answers(q) {
 			return transition
 		}
 	}
@@ -520,16 +527,16 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 		return nil
 	}
 	e = &Event{
-		ProtocolType:   status.GetState().ProtocolId.TypeId,
+		ProtocolType:   status.GetState().ProtocolID.TypeID,
 		ProtocolStatus: status,
 	}
-	switch status.GetState().ProtocolId.TypeId {
-	case agency.Protocol_ISSUE, agency.Protocol_PROOF:
+	switch status.GetState().ProtocolID.TypeID {
+	case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
 		switch t.Trigger.Rule {
 		case TriggerTypeOurMessage:
 			return e
 		}
-	case agency.Protocol_CONNECT:
+	case agency.Protocol_DIDEXCHANGE:
 		return e
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
@@ -589,9 +596,9 @@ func (t *Transition) BuildSendAnswers(status *agency.AgentStatus) []*Event {
 
 var ProtocolType = map[string]agency.Protocol_Type{
 	MessageNone:         agency.Protocol_NONE,
-	MessageConnection:   agency.Protocol_CONNECT,
-	MessageIssueCred:    agency.Protocol_ISSUE,
-	MessagePresentProof: agency.Protocol_PROOF,
+	MessageConnection:   agency.Protocol_DIDEXCHANGE,
+	MessageIssueCred:    agency.Protocol_ISSUE_CREDENTIAL,
+	MessagePresentProof: agency.Protocol_PRESENT_PROOF,
 	MessageTrustPing:    agency.Protocol_TRUST_PING,
 	MessageBasicMessage: agency.Protocol_BASIC_MESSAGE,
 	MessageEmail:        EmailProtocol,
@@ -599,11 +606,24 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageHook:         HookProtocol,
 }
 
-var NotificationTypeID = map[string]agency.Notification_Type{
-	"STATUS_UPDATE":               agency.Notification_STATUS_UPDATE,
-	"ACTION_NEEDED":               agency.Notification_ACTION_NEEDED,
-	"ANSWER_NEEDED_PING":          agency.Notification_ANSWER_NEEDED_PING,
-	"ANSWER_NEEDED_ISSUE_PROPOSE": agency.Notification_ANSWER_NEEDED_ISSUE_PROPOSE,
-	"ANSWER_NEEDED_PROOF_PROPOSE": agency.Notification_ANSWER_NEEDED_PROOF_PROPOSE,
-	"ANSWER_NEEDED_PROOF_VERIFY":  agency.Notification_ANSWER_NEEDED_PROOF_VERIFY,
+func NotificationTypeID(typeName string) NotificationType {
+	if _, ok := notificationTypeID[typeName]; ok {
+		return NotificationType(notificationTypeID[typeName])
+	} else if _, ok := QuestionTypeID[typeName]; ok {
+		return NotificationType(10) * NotificationType(QuestionTypeID[typeName])
+	}
+	glog.V(10).Infoln("unknown type: \"", typeName, "\" setting zero")
+	return 0
+}
+
+var notificationTypeID = map[string]agency.Notification_Type{
+	"STATUS_UPDATE": agency.Notification_STATUS_UPDATE,
+	"ACTION_NEEDED": agency.Notification_PROTOCOL_PAUSED,
+}
+
+var QuestionTypeID = map[string]agency.Question_Type{
+	"ANSWER_NEEDED_PING":          agency.Question_PING_WAITS,
+	"ANSWER_NEEDED_ISSUE_PROPOSE": agency.Question_ISSUE_PROPOSE_WAITS,
+	"ANSWER_NEEDED_PROOF_PROPOSE": agency.Question_PROOF_PROPOSE_WAITS,
+	"ANSWER_NEEDED_PROOF_VERIFY":  agency.Question_PROOF_VERIFY_WAITS,
 }

@@ -1,4 +1,28 @@
 API_BRANCH=$(shell ./branch.sh ../findy-agent-api/)
+SRC_ROOT=$(GOPATH)/src
+IDL_PATH=../findy-agent-api/idl/v1
+
+protoc_protocol:
+	protoc --proto_path=$(IDL_PATH) --go_out=$(SRC_ROOT) --go-grpc_out=$(SRC_ROOT) protocol.proto
+
+protoc_agency:
+	protoc --proto_path=$(IDL_PATH) --go_out=$(SRC_ROOT) --go-grpc_out=$(SRC_ROOT) agency.proto
+
+protoc_agent:
+	protoc --proto_path=$(IDL_PATH) --go_out=$(SRC_ROOT) --go-grpc_out=$(SRC_ROOT) agent.proto
+
+protoc:	protoc_protocol protoc_agency protoc_agent
+
+
+drop_api:
+	go mod edit -dropreplace github.com/findy-network/findy-agent-api
+
+drop_all: drop_api
+
+repl_api:
+	go mod edit -replace github.com/findy-network/findy-agent-api=../findy-agent-api
+
+repl_all: repl_api
 
 modules:
 	@echo Syncing modules for work brances ...

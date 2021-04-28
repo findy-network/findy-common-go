@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/findy-network/findy-agent-api/grpc/ops"
+	ops "github.com/findy-network/findy-common-go/grpc/ops/v1"
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
@@ -35,7 +35,7 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-	c := ops.NewDevOpsClient(conn)
+	c := ops.NewDevOpsServiceClient(conn)
 	r, err := c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})

@@ -8,10 +8,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/findy-network/findy-agent-api/grpc/agency"
 	"github.com/findy-network/findy-common-go/agency/client"
 	"github.com/findy-network/findy-common-go/agency/client/chat/chat"
 	"github.com/findy-network/findy-common-go/agency/fsm"
+	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/findy-network/findy-common-go/utils"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
@@ -68,34 +68,11 @@ func (b Bot) Run(intCh chan os.Signal) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // for server side stops, for proper cleanup
 
-	ch, err := b.Conn.Listen(ctx, &agency.ClientID{Id: utils.UUID()})
+	client := &agency.ClientID{ID: utils.UUID()}
+	ch, err := b.Conn.ListenStatus(ctx, client)
 	err2.Check(err)
-
-	// this block is for development without fsm file
-	//m := &EchoMachine //ReqProofMachine //EmailIssuerMachine //
-	//err2.Check(SaveFSM(m, "echo-bot.yaml"))
-	//url, err := fsm.GenerateURL("svg", m)
-	//err2.Check(err)
-	//println(url.String())
-	//
-	//m = &EmailIssuerMachine //
-	//err2.Check(SaveFSM(m, "email-issuer-bot.yaml"))
-	//url, err = fsm.GenerateURL("svg", m)
-	//err2.Check(err)
-	//println(url.String())
-	//
-	//m = &ReqProofMachine //EmailIssuerMachine //
-	//err2.Check(SaveFSM(m, "email-verifier-bot.yaml"))
-	//url, err = fsm.GenerateURL("svg", m)
-	//err2.Check(err)
-	//println(url.String())
-	//
-	//b.Machine = m
-
-	//err2.Check(b.Machine.Initialize())
-	//url, err := fsm.GenerateURL("svg", b.Machine)
-	//err2.Check(err)
-	//println(url.String())
+	questionCh, err := b.Conn.Wait(ctx, client)
+	err2.Check(err)
 
 	chat.Machine = b.MachineData
 
@@ -110,10 +87,20 @@ loop:
 				break loop
 			}
 			glog.V(5).Infoln("listen status:",
-				status.Notification.TypeId,
+				status.Notification.TypeID,
 				status.Notification.Role,
-				status.Notification.ProtocolId)
+				status.Notification.ProtocolID)
 			chat.Status <- status
+		case question, ok := <-questionCh:
+			if !ok {
+				glog.V(2).Infoln("closed from server")
+				break loop
+			}
+			glog.V(5).Infoln("listen question status:",
+				question.TypeID,
+				question.Status.Notification.Role,
+				question.Status.Notification.ProtocolID)
+			chat.Question <- question
 		case <-intCh:
 			cancel()
 			glog.V(2).Infoln("interrupted by user, cancel() called")

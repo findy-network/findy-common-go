@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/findy-network/findy-agent-api/grpc/ops"
+	ops "github.com/findy-network/findy-common-go/grpc/ops/v1"
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
@@ -56,7 +56,7 @@ func tearDown() {
 func TestEnter(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
-	c := ops.NewDevOpsClient(conn)
+	c := ops.NewDevOpsServiceClient(conn)
 	r, err := c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})
@@ -102,7 +102,7 @@ func runServer() {
 			PKI:     pki,
 			TestLis: lis,
 			Register: func(s *grpc.Server) error {
-				ops.RegisterDevOpsServer(s, &devOpsServer{Root: "findy-root"})
+				ops.RegisterDevOpsServiceServer(s, &devOpsServer{Root: "findy-root"})
 				glog.V(10).Infoln("GRPC registration all done")
 				return nil
 			},
@@ -118,7 +118,7 @@ func bufDialer(context.Context, string) (net.Conn, error) {
 }
 
 type devOpsServer struct {
-	ops.UnimplementedDevOpsServer
+	ops.UnimplementedDevOpsServiceServer
 	Root string
 }
 
