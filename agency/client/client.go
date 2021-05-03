@@ -19,6 +19,9 @@ import (
 	"google.golang.org/grpc"
 )
 
+// TODO: for now we have linear retry interval. Let's see how it works first.
+const retryTimeout = 20 * time.Second
+
 type Conn struct {
 	*grpc.ClientConn
 	cfg *rpc.ClientCfg
@@ -180,7 +183,60 @@ func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Pro
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (conn Conn) Listen(ctx context.Context, client *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.Question, err error) {
+// ListenAndRetry listens both status notifications and agent questions. Client
+// is specified by clientID. Both notifications and questions arriwe from same
+// channel which is Question type. NOTE! This function handles connection errors
+// by itself i.e. it tries to reopen error connnections until its terminated by
+// ctx.Cancel. The actual retry logic is implemented in ListenStatusAndRetry and
+// WaitAndRetry functions.
+func (conn Conn) ListenAndRetry(
+	ctx context.Context,
+	client *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.Question,
+) {
+	listenStatusCh := conn.ListenStatusAndRetry(ctx, client, cOpts...)
+	waitQuestionCh := conn.WaitAndRetry(ctx, client, cOpts...)
+	glog.V(3).Infoln("successful start of general listen id:", client.ID)
+	ch = make(chan *agency.Question)
+
+	go func() {
+		defer close(ch)
+	loop:
+		for {
+			select {
+			case status, ok := <-listenStatusCh:
+				if !ok {
+					break loop
+				}
+				q := &agency.Question{
+					Status: status,
+				}
+				ch <- q
+			case question, ok := <-waitQuestionCh:
+				if !ok {
+					break loop
+				}
+				ch <- question
+			}
+		}
+		glog.V(3).Infoln("general listen return")
+	}()
+	return ch
+}
+
+// Listen listens both status notifications and agent questions. Client is
+// specified by clientID. Both notifications and questions arriwe from same
+// channel which is Question type.
+func (conn Conn) Listen(
+	ctx context.Context,
+	client *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.Question,
+	err error,
+) {
 	defer err2.Return(&err)
 
 	listenStatusCh, err := conn.ListenStatus(ctx, client, cOpts...)
@@ -215,15 +271,24 @@ func (conn Conn) Listen(ctx context.Context, client *agency.ClientID, cOpts ...g
 	return ch, nil
 }
 
-func (conn Conn) ListenStatus(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.AgentStatus, err error) {
+// ListenStatus listens agent notification statuses. Client connection is
+// identifed by ClientID. NOTE! The function filters KEEPALIVE messages.
+func (conn Conn) ListenStatus(
+	ctx context.Context,
+	client *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.AgentStatus,
+	err error,
+) {
 	defer err2.Return(&err)
 
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.AgentStatus)
 
-	stream, err := c.Listen(ctx, protocol, cOpts...)
+	stream, err := c.Listen(ctx, client, cOpts...)
 	err2.Check(err)
-	glog.V(3).Infoln("successful start of ListenStatus id:", protocol.ID)
+	glog.V(3).Infoln("successful start of ListenStatus id:", client.ID)
 	go func() {
 		defer err2.CatchTrace(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)
@@ -247,28 +312,33 @@ func (conn Conn) ListenStatus(ctx context.Context, protocol *agency.ClientID, cO
 	return statusCh, nil
 }
 
-func (conn Conn) ListenAndRetry(
+// ListenStatusAndRetry listens agent notification statuses. Client connection
+// is identifed by ClientID. NOTE! This function handles connection errors by
+// itself i.e. it tries to reopen error connnections until its terminated by
+// ctx.Cancel. NOTE! The function filters KEEPALIVE messages.
+func (conn Conn) ListenStatusAndRetry( // nolint:dupl
 	ctx context.Context,
-	protocol *agency.ClientID,
+	client *agency.ClientID,
 	cOpts ...grpc.CallOption,
 ) (
-	ch chan *agency.AgentStatus,
-	err error,
+	sch chan *agency.AgentStatus,
 ) {
-	ch = make(chan *agency.AgentStatus)
+	sch = make(chan *agency.AgentStatus)
 	go func() {
+		// catch all because worker
 		defer err2.CatchTrace(func(err error) {
 			glog.Warning(err)
 		})
 
 		var statusCh chan *agency.AgentStatus
 		var errCh chan error
+		var err error
 
 	loop:
-		statusCh, errCh, err = conn.ListenStatusErr(ctx, protocol, cOpts...)
+		statusCh, errCh, err = conn.ListenStatusErr(ctx, client, cOpts...)
 		if err != nil {
 			glog.V(1).Infoln("error:", err, "waiting...")
-			time.Sleep(10 * time.Second)
+			time.Sleep(retryTimeout)
 			glog.V(1).Infoln("retry")
 			goto loop
 		}
@@ -276,30 +346,34 @@ func (conn Conn) ListenAndRetry(
 		for {
 			select {
 			case <-ctx.Done():
-				glog.V(1).Infoln("DONE called")
-				close(ch)
+				glog.V(1).Infoln("DONE called closing channel")
+				close(sch)
 				return
 			case chErr := <-errCh:
-				glog.V(1).Infoln("error:", chErr, "waiting...")
-				time.Sleep(10 * time.Second)
-				glog.V(1).Infoln("retry")
+				glog.V(1).Infoln("error:", chErr, "waiting ..")
+				time.Sleep(retryTimeout)
+				glog.V(1).Infoln(".. retry")
 				goto loop
 			case status, ok := <-statusCh:
 				if !ok {
-					glog.V(1).Infoln("closed from other end")
-					close(ch)
+					glog.V(1).Infoln("channel closed from other end")
+					close(sch)
 					return
 				}
-				ch <- status
+				sch <- status
 			}
 		}
 	}()
-	return ch, err
+	return sch
 }
 
+// ListenStatusErr listens agent notification statuses. It terminates on an
+// error and transports it to the caller thru the error channel. Client
+// connection is identifed by ClientID. NOTE! The function filters KEEPALIVE
+// messages.
 func (conn Conn) ListenStatusErr(
 	ctx context.Context,
-	protocol *agency.ClientID,
+	client *agency.ClientID,
 	cOpts ...grpc.CallOption,
 ) (
 	ch chan *agency.AgentStatus,
@@ -312,15 +386,13 @@ func (conn Conn) ListenStatusErr(
 	statusCh := make(chan *agency.AgentStatus)
 	errCh = make(chan error)
 
-	stream, err := c.Listen(ctx, protocol, cOpts...)
+	stream, err := c.Listen(ctx, client, cOpts...)
 	err2.Check(err)
-	glog.V(3).Infoln("successful start of listenStatusErr id:", protocol.ID)
+	glog.V(3).Infoln("successful start of listenStatusErr id:", client.ID)
 	go func() {
 		defer err2.CatchTrace(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)
-			//close(statusCh)
 			errCh <- err
-			//close(errCh)
 		})
 		for {
 			status, err := stream.Recv()
@@ -330,21 +402,134 @@ func (conn Conn) ListenStatusErr(
 				break
 			}
 			err2.Check(err)
+			if status.Notification.TypeID == agency.Notification_KEEPALIVE {
+				glog.V(5).Infoln("keepalive, no forward to client")
+				continue
+			}
 			statusCh <- status
 		}
 	}()
 	return statusCh, errCh, nil
 }
 
-func (conn Conn) Wait(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.Question, err error) {
+// WaitAndRetry listens agent notification questions. Client connection is
+// identifed by ClientID. NOTE! This function handles connection errors by
+// itself i.e. it tries to reopen error connnections until its terminated by
+// ctx.Cancel. NOTE! The function filters KEEPALIVE messages.
+func (conn Conn) WaitAndRetry( // nolint:dupl
+	ctx context.Context,
+	client *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.Question,
+) {
+	ch = make(chan *agency.Question)
+	go func() {
+		// Catch all, panics as well because this is worker
+		defer err2.CatchTrace(func(err error) {
+			glog.Warning(err)
+		})
+
+		var questionCh chan *agency.Question
+		var errCh chan error
+		var err error
+
+	loop:
+		questionCh, errCh, err = conn.WaitErr(ctx, client, cOpts...)
+		if err != nil {
+			glog.V(1).Infoln("error:", err, "waiting...")
+			time.Sleep(retryTimeout)
+			glog.V(1).Infoln("retry")
+			goto loop
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				glog.V(1).Infoln("DONE called")
+				close(ch)
+				return
+			case chErr := <-errCh:
+				glog.V(1).Infoln("error:", chErr, "waiting...")
+				time.Sleep(retryTimeout)
+				glog.V(1).Infoln("retry")
+				goto loop
+			case question, ok := <-questionCh:
+				if !ok {
+					glog.V(1).Infoln("closed from other end")
+					close(ch)
+					return
+				}
+				ch <- question
+			}
+		}
+	}()
+	return ch
+}
+
+// WaitErr listens agent notification questions. It terminates on an error and
+// transports it to the caller thru an error channel. Client connection is
+// identifed by ClientID. NOTE! The function filters KEEPALIVE messages.
+func (conn Conn) WaitErr(
+	ctx context.Context,
+	client *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.Question,
+	errCh chan error,
+	err error,
+) {
+	defer err2.Return(&err)
+
+	c := agency.NewAgentServiceClient(conn)
+	statusCh := make(chan *agency.Question)
+	errCh = make(chan error)
+
+	stream, err := c.Wait(ctx, client, cOpts...)
+	err2.Check(err)
+	glog.V(3).Infoln("successful start of waitErr id:", client.ID)
+	go func() {
+		defer err2.CatchTrace(func(err error) {
+			glog.V(1).Infoln("WARNING: error when reading response:", err)
+			errCh <- err
+		})
+		for {
+			status, err := stream.Recv()
+			if err == io.EOF {
+				glog.V(1).Infoln("status stream end")
+				close(statusCh)
+				break
+			}
+			err2.Check(err)
+			if status.TypeID == agency.Question_KEEPALIVE {
+				glog.V(5).Infoln("keepalive, no forward to client")
+				continue
+			}
+			statusCh <- status
+		}
+	}()
+	return statusCh, errCh, nil
+}
+
+// Wait listens agent notification questions. It terminates on error and closes
+// the returned listening channel. Client connection is identifed by ClientID.
+// NOTE! The function filters KEEPALIVE messages.
+func (conn Conn) Wait(
+	ctx context.Context,
+	client *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.Question,
+	err error,
+) {
 	defer err2.Return(&err)
 
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.Question)
 
-	stream, err := c.Wait(ctx, protocol, cOpts...)
+	stream, err := c.Wait(ctx, client, cOpts...)
 	err2.Check(err)
-	glog.V(3).Infoln("successful start of Wait id:", protocol.ID)
+	glog.V(3).Infoln("successful start of Wait id:", client.ID)
 	go func() {
 		defer err2.CatchTrace(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)
