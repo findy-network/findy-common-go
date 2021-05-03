@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	ops "github.com/findy-network/findy-common-go/grpc/ops/v1"
@@ -244,6 +245,95 @@ func (conn Conn) ListenStatus(ctx context.Context, protocol *agency.ClientID, cO
 		}
 	}()
 	return statusCh, nil
+}
+
+func (conn Conn) ListenAndRetry(
+	ctx context.Context,
+	protocol *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.AgentStatus,
+	err error,
+) {
+	ch = make(chan *agency.AgentStatus)
+	go func() {
+		defer err2.CatchTrace(func(err error) {
+			glog.Warning(err)
+		})
+
+		var statusCh chan *agency.AgentStatus
+		var errCh chan error
+
+	loop:
+		statusCh, errCh, err = conn.ListenStatusErr(ctx, protocol, cOpts...)
+		if err != nil {
+			glog.V(1).Infoln("error:", err, "waiting...")
+			time.Sleep(10 * time.Second)
+			glog.V(1).Infoln("retry")
+			goto loop
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				glog.V(1).Infoln("DONE called")
+				close(ch)
+				return
+			case chErr := <-errCh:
+				glog.V(1).Infoln("error:", chErr, "waiting...")
+				time.Sleep(10 * time.Second)
+				glog.V(1).Infoln("retry")
+				goto loop
+			case status, ok := <-statusCh:
+				if !ok {
+					glog.V(1).Infoln("closed from other end")
+					close(ch)
+					return
+				}
+				ch <- status
+			}
+		}
+	}()
+	return ch, err
+}
+
+func (conn Conn) ListenStatusErr(
+	ctx context.Context,
+	protocol *agency.ClientID,
+	cOpts ...grpc.CallOption,
+) (
+	ch chan *agency.AgentStatus,
+	errCh chan error,
+	err error,
+) {
+	defer err2.Return(&err)
+
+	c := agency.NewAgentServiceClient(conn)
+	statusCh := make(chan *agency.AgentStatus)
+	errCh = make(chan error)
+
+	stream, err := c.Listen(ctx, protocol, cOpts...)
+	err2.Check(err)
+	glog.V(3).Infoln("successful start of listenStatusErr id:", protocol.ID)
+	go func() {
+		defer err2.CatchTrace(func(err error) {
+			glog.V(1).Infoln("WARNING: error when reading response:", err)
+			//close(statusCh)
+			errCh <- err
+			//close(errCh)
+		})
+		for {
+			status, err := stream.Recv()
+			if err == io.EOF {
+				glog.V(1).Infoln("status stream end")
+				close(statusCh)
+				break
+			}
+			err2.Check(err)
+			statusCh <- status
+		}
+	}()
+	return statusCh, errCh, nil
 }
 
 func (conn Conn) Wait(ctx context.Context, protocol *agency.ClientID, cOpts ...grpc.CallOption) (ch chan *agency.Question, err error) {
