@@ -201,28 +201,8 @@ func (conn Conn) ListenAndRetry(
 	glog.V(3).Infoln("successful start of general listen id:", client.ID)
 	ch = make(chan *agency.Question)
 
-	go func() {
-		defer close(ch)
-	loop:
-		for {
-			select {
-			case status, ok := <-listenStatusCh:
-				if !ok {
-					break loop
-				}
-				q := &agency.Question{
-					Status: status,
-				}
-				ch <- q
-			case question, ok := <-waitQuestionCh:
-				if !ok {
-					break loop
-				}
-				ch <- question
-			}
-		}
-		glog.V(3).Infoln("general listen return")
-	}()
+	go merge(listenStatusCh, waitQuestionCh, ch)
+
 	return ch
 }
 
@@ -246,29 +226,47 @@ func (conn Conn) Listen(
 	glog.V(3).Infoln("successful start of general listen id:", client.ID)
 	ch = make(chan *agency.Question)
 
-	go func() {
-		defer close(ch)
-	loop:
-		for {
-			select {
-			case status, ok := <-listenStatusCh:
-				if !ok {
-					break loop
-				}
-				q := &agency.Question{
-					Status: status,
-				}
-				ch <- q
-			case question, ok := <-waitQuestionCh:
-				if !ok {
-					break loop
-				}
-				ch <- question
-			}
-		}
-		glog.V(3).Infoln("general listen return")
-	}()
+	go merge(listenStatusCh, waitQuestionCh, ch)
+
 	return ch, nil
+}
+
+func merge(
+	listenStatusCh <-chan *agency.AgentStatus,
+	waitQuestionCh <-chan *agency.Question,
+	ch chan<- *agency.Question,
+) {
+	defer close(ch)
+	exitCount := 0
+loop:
+	for {
+		select {
+		case status, ok := <-listenStatusCh:
+			if !ok {
+				if exitCount == 1 {
+					break loop
+				} else {
+					exitCount++
+					continue loop
+				}
+			}
+			q := &agency.Question{
+				Status: status,
+			}
+			ch <- q
+		case question, ok := <-waitQuestionCh:
+			if !ok {
+				if exitCount == 1 {
+					break loop
+				} else {
+					exitCount++
+					continue loop
+				}
+			}
+			ch <- question
+		}
+	}
+	glog.V(3).Infoln("general listen return")
 }
 
 // ListenStatus listens agent notification statuses. Client connection is
@@ -289,26 +287,7 @@ func (conn Conn) ListenStatus(
 	stream, err := c.Listen(ctx, client, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of ListenStatus id:", client.ID)
-	go func() {
-		defer err2.CatchTrace(func(err error) {
-			glog.V(1).Infoln("WARNING: error when reading response:", err)
-			close(statusCh)
-		})
-		for {
-			status, err := stream.Recv()
-			if err == io.EOF {
-				glog.V(3).Infoln("status stream end")
-				close(statusCh)
-				break
-			}
-			err2.Check(err)
-			if status.Notification.TypeID == agency.Notification_KEEPALIVE {
-				glog.V(5).Infoln("keepalive, no forward to client")
-				continue
-			}
-			statusCh <- status
-		}
-	}()
+	go transportStatus(stream, statusCh, nil)
 	return statusCh, nil
 }
 
@@ -389,26 +368,8 @@ func (conn Conn) ListenStatusErr(
 	stream, err := c.Listen(ctx, client, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of listenStatusErr id:", client.ID)
-	go func() {
-		defer err2.CatchTrace(func(err error) {
-			glog.V(1).Infoln("WARNING: error when reading response:", err)
-			errCh <- err
-		})
-		for {
-			status, err := stream.Recv()
-			if err == io.EOF {
-				glog.V(1).Infoln("status stream end")
-				close(statusCh)
-				break
-			}
-			err2.Check(err)
-			if status.Notification.TypeID == agency.Notification_KEEPALIVE {
-				glog.V(5).Infoln("keepalive, no forward to client")
-				continue
-			}
-			statusCh <- status
-		}
-	}()
+
+	go transportStatus(stream, statusCh, nil)
 	return statusCh, errCh, nil
 }
 
@@ -488,26 +449,8 @@ func (conn Conn) WaitErr(
 	stream, err := c.Wait(ctx, client, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of waitErr id:", client.ID)
-	go func() {
-		defer err2.CatchTrace(func(err error) {
-			glog.V(1).Infoln("WARNING: error when reading response:", err)
-			errCh <- err
-		})
-		for {
-			status, err := stream.Recv()
-			if err == io.EOF {
-				glog.V(1).Infoln("status stream end")
-				close(statusCh)
-				break
-			}
-			err2.Check(err)
-			if status.TypeID == agency.Question_KEEPALIVE {
-				glog.V(5).Infoln("keepalive, no forward to client")
-				continue
-			}
-			statusCh <- status
-		}
-	}()
+
+	go transportWait(stream, statusCh, errCh)
 	return statusCh, errCh, nil
 }
 
@@ -530,27 +473,67 @@ func (conn Conn) Wait(
 	stream, err := c.Wait(ctx, client, cOpts...)
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of Wait id:", client.ID)
-	go func() {
-		defer err2.CatchTrace(func(err error) {
-			glog.V(1).Infoln("WARNING: error when reading response:", err)
-			close(statusCh)
-		})
-		for {
-			status, err := stream.Recv()
-			if err == io.EOF {
-				glog.V(3).Infoln("status stream end")
-				close(statusCh)
-				break
-			}
-			err2.Check(err)
-			if status.TypeID == agency.Question_KEEPALIVE {
-				glog.V(5).Infoln("keepalive, no forward to client")
-				continue
-			}
-			statusCh <- status
-		}
-	}()
+
+	go transportWait(stream, statusCh, nil /* errCh */)
 	return statusCh, nil
+}
+
+func transportStatus(
+	stream agency.AgentService_ListenClient,
+	statusCh chan<- *agency.AgentStatus,
+	errCh chan<- error,
+) {
+	defer err2.CatchTrace(func(err error) {
+		glog.V(1).Infoln("WARNING: error when reading response:", err)
+		if errCh != nil {
+			errCh <- err
+		} else {
+			close(statusCh)
+		}
+	})
+	for {
+		status, err := stream.Recv()
+		if err == io.EOF {
+			glog.V(3).Infoln("status stream end")
+			close(statusCh)
+			break
+		}
+		err2.Check(err)
+		if status.Notification.TypeID == agency.Notification_KEEPALIVE {
+			glog.V(5).Infoln("keepalive, no forward to client")
+			continue
+		}
+		statusCh <- status
+	}
+}
+
+func transportWait(
+	stream agency.AgentService_WaitClient,
+	statusCh chan<- *agency.Question,
+	errCh chan<- error,
+) {
+	defer err2.CatchTrace(func(err error) {
+		glog.V(1).Infoln("WARNING: error when reading response:", err)
+		if errCh != nil {
+			errCh <- err
+		} else {
+			close(statusCh)
+		}
+	})
+	for {
+		status, err := stream.Recv()
+		if err == io.EOF {
+			glog.V(3).Infoln("status stream end")
+			close(statusCh)
+			break
+		}
+		err2.Check(err)
+		if status.TypeID == agency.Question_KEEPALIVE {
+			glog.V(5).Infoln("keepalive, no forward to client")
+			continue
+		}
+		statusCh <- status
+	}
 }
 
 func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan *ops.AgencyStatus, err error) {
