@@ -35,11 +35,6 @@ type AgentServiceClient interface {
 	Give(ctx context.Context, in *Answer, opts ...grpc.CallOption) (*ClientID, error)
 	// CreateInvitation returns an invitation according to InvitationBase.
 	CreateInvitation(ctx context.Context, in *InvitationBase, opts ...grpc.CallOption) (*Invitation, error)
-	// SetImplId sets implementation ID for the clould agent. It should be "grpc".
-	// TODO: REMOVE!! Check Agency implementation first. We still need something
-	// for this. At least the autoaccept mode for now.
-	// TODO: Rename? Rethink logic: SetSAMode(), etc.?
-	SetImplId(ctx context.Context, in *SAImplementation, opts ...grpc.CallOption) (*SAImplementation, error)
 	// Ping pings the cloud agent.
 	Ping(ctx context.Context, in *PingMsg, opts ...grpc.CallOption) (*PingMsg, error)
 	// CreateSchema creates a new schema and writes it to ledger.
@@ -52,6 +47,9 @@ type AgentServiceClient interface {
 	GetSchema(ctx context.Context, in *Schema, opts ...grpc.CallOption) (*SchemaData, error)
 	// GetCredDef returns a credential definition.
 	GetCredDef(ctx context.Context, in *CredDef, opts ...grpc.CallOption) (*CredDefData, error)
+	// Enter enters the running mode command to the CA. CA executes the cmd and
+	// returns the result. Command pattern is selected to allow easy extensions.
+	Enter(ctx context.Context, in *ModeCmd, opts ...grpc.CallOption) (*ModeCmd, error)
 }
 
 type agentServiceClient struct {
@@ -144,15 +142,6 @@ func (c *agentServiceClient) CreateInvitation(ctx context.Context, in *Invitatio
 	return out, nil
 }
 
-func (c *agentServiceClient) SetImplId(ctx context.Context, in *SAImplementation, opts ...grpc.CallOption) (*SAImplementation, error) {
-	out := new(SAImplementation)
-	err := c.cc.Invoke(ctx, "/agency.v1.AgentService/SetImplId", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *agentServiceClient) Ping(ctx context.Context, in *PingMsg, opts ...grpc.CallOption) (*PingMsg, error) {
 	out := new(PingMsg)
 	err := c.cc.Invoke(ctx, "/agency.v1.AgentService/Ping", in, out, opts...)
@@ -198,6 +187,15 @@ func (c *agentServiceClient) GetCredDef(ctx context.Context, in *CredDef, opts .
 	return out, nil
 }
 
+func (c *agentServiceClient) Enter(ctx context.Context, in *ModeCmd, opts ...grpc.CallOption) (*ModeCmd, error) {
+	out := new(ModeCmd)
+	err := c.cc.Invoke(ctx, "/agency.v1.AgentService/Enter", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AgentServiceServer is the server API for AgentService service.
 // All implementations must embed UnimplementedAgentServiceServer
 // for forward compatibility
@@ -220,11 +218,6 @@ type AgentServiceServer interface {
 	Give(context.Context, *Answer) (*ClientID, error)
 	// CreateInvitation returns an invitation according to InvitationBase.
 	CreateInvitation(context.Context, *InvitationBase) (*Invitation, error)
-	// SetImplId sets implementation ID for the clould agent. It should be "grpc".
-	// TODO: REMOVE!! Check Agency implementation first. We still need something
-	// for this. At least the autoaccept mode for now.
-	// TODO: Rename? Rethink logic: SetSAMode(), etc.?
-	SetImplId(context.Context, *SAImplementation) (*SAImplementation, error)
 	// Ping pings the cloud agent.
 	Ping(context.Context, *PingMsg) (*PingMsg, error)
 	// CreateSchema creates a new schema and writes it to ledger.
@@ -237,6 +230,9 @@ type AgentServiceServer interface {
 	GetSchema(context.Context, *Schema) (*SchemaData, error)
 	// GetCredDef returns a credential definition.
 	GetCredDef(context.Context, *CredDef) (*CredDefData, error)
+	// Enter enters the running mode command to the CA. CA executes the cmd and
+	// returns the result. Command pattern is selected to allow easy extensions.
+	Enter(context.Context, *ModeCmd) (*ModeCmd, error)
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
@@ -256,9 +252,6 @@ func (UnimplementedAgentServiceServer) Give(context.Context, *Answer) (*ClientID
 func (UnimplementedAgentServiceServer) CreateInvitation(context.Context, *InvitationBase) (*Invitation, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateInvitation not implemented")
 }
-func (UnimplementedAgentServiceServer) SetImplId(context.Context, *SAImplementation) (*SAImplementation, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetImplId not implemented")
-}
 func (UnimplementedAgentServiceServer) Ping(context.Context, *PingMsg) (*PingMsg, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
@@ -273,6 +266,9 @@ func (UnimplementedAgentServiceServer) GetSchema(context.Context, *Schema) (*Sch
 }
 func (UnimplementedAgentServiceServer) GetCredDef(context.Context, *CredDef) (*CredDefData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCredDef not implemented")
+}
+func (UnimplementedAgentServiceServer) Enter(context.Context, *ModeCmd) (*ModeCmd, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Enter not implemented")
 }
 func (UnimplementedAgentServiceServer) mustEmbedUnimplementedAgentServiceServer() {}
 
@@ -361,24 +357,6 @@ func _AgentService_CreateInvitation_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentServiceServer).CreateInvitation(ctx, req.(*InvitationBase))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AgentService_SetImplId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SAImplementation)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AgentServiceServer).SetImplId(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agency.v1.AgentService/SetImplId",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServiceServer).SetImplId(ctx, req.(*SAImplementation))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -473,6 +451,24 @@ func _AgentService_GetCredDef_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_Enter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModeCmd)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).Enter(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/agency.v1.AgentService/Enter",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).Enter(ctx, req.(*ModeCmd))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _AgentService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "agency.v1.AgentService",
 	HandlerType: (*AgentServiceServer)(nil),
@@ -484,10 +480,6 @@ var _AgentService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateInvitation",
 			Handler:    _AgentService_CreateInvitation_Handler,
-		},
-		{
-			MethodName: "SetImplId",
-			Handler:    _AgentService_SetImplId_Handler,
 		},
 		{
 			MethodName: "Ping",
@@ -508,6 +500,10 @@ var _AgentService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCredDef",
 			Handler:    _AgentService_GetCredDef_Handler,
+		},
+		{
+			MethodName: "Enter",
+			Handler:    _AgentService_Enter_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
