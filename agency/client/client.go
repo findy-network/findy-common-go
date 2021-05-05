@@ -13,14 +13,14 @@ import (
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/findy-network/findy-common-go/rpc"
 	didexchange "github.com/findy-network/findy-common-go/std/didexchange/invitation"
+	"github.com/findy-network/findy-common-go/tools/sleeper"
 	"github.com/findy-network/findy-common-go/utils"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"google.golang.org/grpc"
 )
 
-// TODO: for now we have linear retry interval. Let's see how it works first.
-const retryTimeout = 20 * time.Second
+const sleeperFloor = 10 * time.Second
 
 type Conn struct {
 	*grpc.ClientConn
@@ -45,7 +45,12 @@ func BuildConnBase(tlsPath, fullAddr string, opts []grpc.DialOption) *rpc.Client
 	return cfg
 }
 
-func BuildClientConnBase(tlsPath, addr string, port int, opts []grpc.DialOption) *rpc.ClientCfg {
+func BuildClientConnBase(
+	tlsPath, addr string,
+	port int,
+	opts []grpc.DialOption,
+) *rpc.ClientCfg {
+
 	cfg := &rpc.ClientCfg{
 		PKI:  rpc.LoadPKI(tlsPath),
 		JWT:  "",
@@ -74,7 +79,13 @@ func OkStatus(s *agency.ProtocolState) bool {
 	return s.State == agency.ProtocolState_OK
 }
 
-func (pw Pairwise) Issue(ctx context.Context, credDefID, attrsJSON string) (ch chan *agency.ProtocolState, err error) {
+func (pw Pairwise) Issue(
+	ctx context.Context,
+	credDefID, attrsJSON string,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
 	protocol := &agency.Protocol{
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_ISSUE_CREDENTIAL,
@@ -101,17 +112,26 @@ func (pw Pairwise) IssueWithAttrs(
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_ISSUE_CREDENTIAL,
 		Role:         agency.Protocol_INITIATOR,
-		StartMsg: &agency.Protocol_IssueCredential{IssueCredential: &agency.Protocol_IssueCredentialMsg{
-			CredDefID: credDefID,
-			AttrFmt: &agency.Protocol_IssueCredentialMsg_Attributes{
-				Attributes: attrs,
+		StartMsg: &agency.Protocol_IssueCredential{
+			IssueCredential: &agency.Protocol_IssueCredentialMsg{
+				CredDefID: credDefID,
+				AttrFmt: &agency.Protocol_IssueCredentialMsg_Attributes{
+					Attributes: attrs,
+				},
 			},
-		}},
+		},
 	}
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (connID string, ch chan *agency.ProtocolState, err error) {
+func (pw *Pairwise) Connection(
+	ctx context.Context,
+	invitationJSON string,
+) (
+	connID string,
+	ch chan *agency.ProtocolState,
+	err error,
+) {
 	defer err2.Return(&err)
 
 	// assert that invitation is OK, and we need to return the connection ID
@@ -122,10 +142,12 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (conn
 	protocol := &agency.Protocol{
 		TypeID: agency.Protocol_DIDEXCHANGE,
 		Role:   agency.Protocol_INITIATOR,
-		StartMsg: &agency.Protocol_DIDExchange{DIDExchange: &agency.Protocol_DIDExchangeMsg{
-			Label:          pw.Label,
-			InvitationJSON: invitationJSON,
-		}},
+		StartMsg: &agency.Protocol_DIDExchange{
+			DIDExchange: &agency.Protocol_DIDExchangeMsg{
+				Label:          pw.Label,
+				InvitationJSON: invitationJSON,
+			},
+		},
 	}
 	ch, err = pw.Conn.doRun(ctx, protocol)
 	err2.Check(err)
@@ -134,7 +156,12 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (conn
 	return connID, ch, err
 }
 
-func (pw Pairwise) Ping(ctx context.Context) (ch chan *agency.ProtocolState, err error) {
+func (pw Pairwise) Ping(
+	ctx context.Context,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
 	protocol := &agency.Protocol{
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_TRUST_PING,
@@ -143,7 +170,13 @@ func (pw Pairwise) Ping(ctx context.Context) (ch chan *agency.ProtocolState, err
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (pw Pairwise) BasicMessage(ctx context.Context, content string) (ch chan *agency.ProtocolState, err error) {
+func (pw Pairwise) BasicMessage(
+	ctx context.Context,
+	content string,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
 	protocol := &agency.Protocol{
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_BASIC_MESSAGE,
@@ -157,7 +190,13 @@ func (pw Pairwise) BasicMessage(ctx context.Context, content string) (ch chan *a
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (ch chan *agency.ProtocolState, err error) {
+func (pw Pairwise) ReqProof(
+	ctx context.Context,
+	proofAttrs string,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
 	protocol := &agency.Protocol{
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_PRESENT_PROOF,
@@ -170,7 +209,13 @@ func (pw Pairwise) ReqProof(ctx context.Context, proofAttrs string) (ch chan *ag
 	return pw.Conn.doRun(ctx, protocol)
 }
 
-func (pw Pairwise) ReqProofWithAttrs(ctx context.Context, proofAttrs *agency.Protocol_Proof) (ch chan *agency.ProtocolState, err error) {
+func (pw Pairwise) ReqProofWithAttrs(
+	ctx context.Context,
+	proofAttrs *agency.Protocol_Proof,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
 	protocol := &agency.Protocol{
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_PRESENT_PROOF,
@@ -309,6 +354,7 @@ func (conn Conn) ListenStatusAndRetry( // nolint:dupl
 			glog.Warning(err)
 		})
 
+		sleeper := sleeper.New(sleeperFloor)
 		var statusCh chan *agency.AgentStatus
 		var errCh chan error
 		var err error
@@ -317,7 +363,7 @@ func (conn Conn) ListenStatusAndRetry( // nolint:dupl
 		statusCh, errCh, err = conn.ListenStatusErr(ctx, client, cOpts...)
 		if err != nil {
 			glog.V(1).Infoln("error:", err, "waiting...")
-			time.Sleep(retryTimeout)
+			sleeper.Sleep(time.Sleep)
 			glog.V(1).Infoln("retry")
 			goto loop
 		}
@@ -330,7 +376,7 @@ func (conn Conn) ListenStatusAndRetry( // nolint:dupl
 				return
 			case chErr := <-errCh:
 				glog.V(1).Infoln("error:", chErr, "waiting ..")
-				time.Sleep(retryTimeout)
+				sleeper.Sleep(time.Sleep)
 				glog.V(1).Infoln(".. retry")
 				goto loop
 			case status, ok := <-statusCh:
@@ -391,6 +437,7 @@ func (conn Conn) WaitAndRetry( // nolint:dupl
 			glog.Warning(err)
 		})
 
+		sleeper := sleeper.New(sleeperFloor)
 		var questionCh chan *agency.Question
 		var errCh chan error
 		var err error
@@ -399,7 +446,7 @@ func (conn Conn) WaitAndRetry( // nolint:dupl
 		questionCh, errCh, err = conn.WaitErr(ctx, client, cOpts...)
 		if err != nil {
 			glog.V(1).Infoln("error:", err, "waiting...")
-			time.Sleep(retryTimeout)
+			sleeper.Sleep(time.Sleep)
 			glog.V(1).Infoln("retry")
 			goto loop
 		}
@@ -412,7 +459,7 @@ func (conn Conn) WaitAndRetry( // nolint:dupl
 				return
 			case chErr := <-errCh:
 				glog.V(1).Infoln("error:", chErr, "waiting...")
-				time.Sleep(retryTimeout)
+				sleeper.Sleep(time.Sleep)
 				glog.V(1).Infoln("retry")
 				goto loop
 			case question, ok := <-questionCh:
