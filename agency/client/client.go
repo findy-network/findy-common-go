@@ -415,7 +415,7 @@ func (conn Conn) ListenStatusErr(
 	err2.Check(err)
 	glog.V(3).Infoln("successful start of listenStatusErr id:", client.ID)
 
-	go transportStatus(stream, statusCh, nil)
+	go transportStatus(stream, statusCh, errCh)
 	return statusCh, errCh, nil
 }
 
