@@ -17,6 +17,9 @@ type Sleeper struct {
 }
 
 func New(f time.Duration) *Sleeper {
+	if f == 0 {
+		f = floor
+	}
 	return &Sleeper{count: 0, floor: f, maxCount: maxCount}
 }
 
