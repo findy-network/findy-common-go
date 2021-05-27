@@ -19,13 +19,10 @@ type PKI struct {
 	Client     CertFiles
 }
 
-func LoadPKI(tlsPath, serverName string) *PKI {
+func LoadPKIWithServerName(tlsPath, serverName string) *PKI {
 	if tlsPath == "" {
 		p := os.Getenv("GOPATH")
 		tlsPath = path.Join(p, "src/github.com/findy-network/findy-common-go/cert")
-	}
-	if serverName == "" {
-		serverName = "localhost"
 	}
 	if strings.Contains(serverName, ":") {
 		serverName = strings.Split(serverName, ":")[0]
@@ -41,4 +38,8 @@ func LoadPKI(tlsPath, serverName string) *PKI {
 			KeyFile:  path.Join(tlsPath, "client/client.key"),
 		},
 	}
+}
+
+func LoadPKI(tlsPath string) *PKI {
+	return LoadPKIWithServerName(tlsPath, "localhost")
 }
