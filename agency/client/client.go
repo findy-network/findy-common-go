@@ -37,7 +37,7 @@ type Pairwise struct {
 // including the port e.g. localhost:50051.
 func BuildConnBase(tlsPath, fullAddr string, opts []grpc.DialOption) *rpc.ClientCfg {
 	cfg := &rpc.ClientCfg{
-		PKI:  rpc.LoadPKI(tlsPath),
+		PKI:  rpc.LoadPKIWithServerName(tlsPath, fullAddr),
 		JWT:  "",
 		Addr: fullAddr,
 		Opts: opts,
@@ -52,7 +52,7 @@ func BuildClientConnBase(
 ) *rpc.ClientCfg {
 
 	cfg := &rpc.ClientCfg{
-		PKI:  rpc.LoadPKI(tlsPath),
+		PKI:  rpc.LoadPKIWithServerName(tlsPath, addr),
 		JWT:  "",
 		Addr: fmt.Sprintf("%s:%d", addr, port),
 		Opts: opts,
