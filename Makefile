@@ -1,4 +1,4 @@
-API_BRANCH=$(shell ./branch.sh ../findy-agent-api/)
+API_BRANCH=$(shell ./scripts/branch.sh ../findy-agent-api/)
 SRC_ROOT=$(GOPATH)/src
 IDL_PATH=../findy-agent-api/idl/v1
 
@@ -25,7 +25,7 @@ repl_api:
 repl_all: repl_api
 
 modules:
-	@echo Syncing modules for work brances ...
+	@echo Syncing modules for work branches ...
 	go get github.com/findy-network/findy-agent-api@$(API_BRANCH)
 
 deps:
