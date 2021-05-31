@@ -62,9 +62,3 @@ test_cov:
 	go test -v -p 1 -failfast -coverprofile=c.out ./... && go tool cover -html=c.out
 
 check: check_fmt vet shadow
-
-dbuild:
-	docker build \
-		--build-arg HTTPS_PREFIX=$(HTTPS_PREFIX) \
-		-t findy-agent-auth \
-		.
