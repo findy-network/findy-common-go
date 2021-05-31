@@ -26,7 +26,7 @@ func main() {
 	})
 	flag.Parse()
 
-	// whe want this for glog, this is just a tester, not a real world service
+	// we want this for glog, this is just a tester, not a real world service
 	err2.Check(flag.Set("logtostderr", "true"))
 
 	conn, err := newClient(*user, fmt.Sprintf("%s:%d", *serverAddr, *port))
