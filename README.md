@@ -41,7 +41,7 @@ func TryCreateInvitation(ctx context.Context, jwtToken, label string) {
 	if invitation, err := sc.CreateInvitation(
 		ctx,
 		&agency.InvitationBase{Label: label, ID: id},
-	); err != nil {
+	); err == nil {
 		fmt.Printf("Created invitation\n %s\n", invitation.JSON)
 	}
 }
