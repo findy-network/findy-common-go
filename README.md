@@ -14,15 +14,17 @@ Main purpose of this package is to provide helpers and utility functionality for
 
 ```go
 import (
-	...
+	"context"
+	"os"
 
 	"github.com/findy-network/findy-common-go/agency/client"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
-	didexchange "github.com/findy-network/findy-common-go/std/didexchange/invitation"
-	...
+	"github.com/google/uuid"
+	"google.golang.org/grpc"
 )
 
-func CreateInvitation(ctx context.Context, jwtToken, label string) (string, error) {
+// Note: this may panic on incorrect configuration/authentication/etc.
+func TryCreateInvitation(ctx context.Context, jwtToken, label string) (*agency.Invitation, error) {
 	conf := client.BuildClientConnBase(
 		"/path/to/findy-common-go/cert",
 		"localhost",
@@ -32,18 +34,12 @@ func CreateInvitation(ctx context.Context, jwtToken, label string) (string, erro
 	conn := client.TryAuthOpen(jwtToken, conf)
 
 	sc := agency.NewAgentServiceClient(conn)
-	id = uuid.New().String()
+	id := uuid.New().String()
 
-	res, err := sc.CreateInvitation(
+	return sc.CreateInvitation(
 		ctx,
 		&agency.InvitationBase{Label: label, ID: id},
 	)
-
-	if err != nil {
-		return res.JSON, nil
-	}
-
-	return nil, err
 }
 ```
 
