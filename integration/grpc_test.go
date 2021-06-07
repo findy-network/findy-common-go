@@ -1,4 +1,4 @@
-package findy_grpc
+package findy_common_go
 
 import (
 	"context"
