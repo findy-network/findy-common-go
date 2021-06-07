@@ -23,8 +23,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Note: this may panic on incorrect configuration/authentication/etc.
-func TryCreateInvitation(ctx context.Context, jwtToken, label string) (*agency.Invitation, error) {
+// Generates new Aries invitation for agent and prints out the invitation JSON string.
+// JWT token should be acquired using authentication service before executing this call.
+// Note: this function panics on incorrect configuration.
+func TryCreateInvitation(ctx context.Context, jwtToken, label string) {
 	conf := client.BuildClientConnBase(
 		"/path/to/findy-common-go/cert",
 		"localhost",
@@ -36,10 +38,12 @@ func TryCreateInvitation(ctx context.Context, jwtToken, label string) (*agency.I
 	sc := agency.NewAgentServiceClient(conn)
 	id := uuid.New().String()
 
-	return sc.CreateInvitation(
+	if invitation, err := sc.CreateInvitation(
 		ctx,
 		&agency.InvitationBase{Label: label, ID: id},
-	)
+	); err != nil {
+		fmt.Printf("Created invitation\n %s\n", invitation.JSON)
+	}
 }
 ```
 
