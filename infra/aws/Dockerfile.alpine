@@ -8,3 +8,10 @@ RUN go mod download
 COPY . ./
 
 RUN go build -o /go/bin/s3-copy
+
+FROM alpine:3.13
+
+COPY --from=0 /go/bin/s3-copy /s3-copy
+
+RUN chmod a+x /s3-copy
+
