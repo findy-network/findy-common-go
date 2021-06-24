@@ -37,7 +37,9 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/findy-base:alpine-3.13
+          context: ./infra/aws
           file: ./infra/aws/Dockerfile.alpine
+
   push-indy-ubuntu:
     runs-on: ubuntu-latest
     permissions:
@@ -71,4 +73,5 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/findy-base:indy-1.16.ubuntu-18.04
+          context: ./infra/aws
           file: ./infra/aws/Dockerfile.indy.ubuntu
