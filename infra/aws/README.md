@@ -17,5 +17,6 @@ go run . <bucket_name> <subfolder_in_bucket> <local_target_folder>
 ## Docker images
 
 For building and pushing the docker base images:
-1. Define `CR_PAT` and `CR_USER` environment variables for GitHub container registry authentication.
-1. Run `make push`
+1. Checkout branch called `base-image`.
+1. Edit tags accordingly in [workflow file](../../.github/workflows/base-image.yml) 
+1. Push branch to remote, GitHub actions will take care of building.
