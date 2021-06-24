@@ -1,4 +1,4 @@
-FROM golang:1.16-buster
+FROM golang:1.16-buster AS s3-builder
 
 WORKDIR /work
 
@@ -9,24 +9,43 @@ COPY . ./
 
 RUN go build -o /go/bin/s3-copy
 
-FROM ubuntu:18.04
+FROM ubuntu:18.04 AS indy-builder
 
-### lib-indy
+ARG INDY_LIB_VERSION="1.16.0"
 
-ENV INDY_LIB_VERSION="1.16.0"
-ENV UBUNTU_VERSION="bionic"
+WORKDIR /
 
 RUN apt-get update && \
-    apt-get install -y software-properties-common apt-transport-https && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 68DB5E88 && \
-    add-apt-repository "deb https://repo.sovrin.org/sdk/deb $UBUNTU_VERSION stable" && \
-    add-apt-repository "deb https://repo.sovrin.org/sdk/deb xenial stable" && \
-    apt-get update
+    apt-get install -y \
+    build-essential \
+    pkg-config \
+    cmake \
+    libssl-dev \
+    libsqlite3-dev \
+    libzmq5-dev \
+    libncursesw5-dev \
+    libsodium-dev \
+    curl
 
-RUN apt-get install -y libindy-dev="$INDY_LIB_VERSION-xenial" \
-    libindy="$INDY_LIB_VERSION-$UBUNTU_VERSION"
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.46.0
+ENV PATH=/root/.cargo/bin:$PATH
+ENV RUST_BACKTRACE=1
 
-COPY --from=0 /go/bin/s3-copy /s3-copy
+RUN curl -sOL https://github.com/hyperledger/indy-sdk/archive/v${INDY_LIB_VERSION}.tar.gz && \
+    tar -xvf v${INDY_LIB_VERSION}.tar.gz
 
+RUN cd ./indy-sdk-${INDY_LIB_VERSION}/libindy && \
+    cargo build --release --features "fatal_warnings sodium_static"
+
+FROM ubuntu:18.04
+
+ARG INDY_LIB_VERSION="1.16.0"
+
+COPY --from=s3-builder /go/bin/s3-copy /s3-copy
 RUN chmod a+x /s3-copy
 
+# install indy deps and files from build phase
+RUN apt-get update && apt-get install -y libsodium23 libssl1.1 libzmq5
+COPY --from=indy-builder /indy-sdk-${INDY_LIB_VERSION}/libindy/include /usr/include/indy
+COPY --from=indy-builder /indy-sdk-${INDY_LIB_VERSION}/libindy/target/release/libindy.a /usr/lib/libindy.a
+COPY --from=indy-builder /indy-sdk-${INDY_LIB_VERSION}/libindy/target/release/libindy.so /usr/lib/libindy.so
