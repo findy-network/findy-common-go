@@ -124,6 +124,51 @@ func (pw Pairwise) IssueWithAttrs(
 	return pw.Conn.doRun(ctx, protocol)
 }
 
+func (pw Pairwise) ProposeIssue(
+	ctx context.Context,
+	credDefID, attrsJSON string,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
+	protocol := &agency.Protocol{
+		ConnectionID: pw.ID,
+		TypeID:       agency.Protocol_ISSUE_CREDENTIAL,
+		Role:         agency.Protocol_ADDRESSEE,
+		StartMsg: &agency.Protocol_IssueCredential{
+			IssueCredential: &agency.Protocol_IssueCredentialMsg{
+				CredDefID: credDefID,
+				AttrFmt: &agency.Protocol_IssueCredentialMsg_AttributesJSON{
+					AttributesJSON: attrsJSON,
+				},
+			},
+		},
+	}
+	return pw.Conn.doRun(ctx, protocol)
+}
+
+func (pw Pairwise) ProposeIssueWithAttrs(
+	ctx context.Context,
+	credDefID string,
+	attrs *agency.Protocol_IssuingAttributes,
+) (
+	ch chan *agency.ProtocolState, err error) {
+	protocol := &agency.Protocol{
+		ConnectionID: pw.ID,
+		TypeID:       agency.Protocol_ISSUE_CREDENTIAL,
+		Role:         agency.Protocol_ADDRESSEE,
+		StartMsg: &agency.Protocol_IssueCredential{
+			IssueCredential: &agency.Protocol_IssueCredentialMsg{
+				CredDefID: credDefID,
+				AttrFmt: &agency.Protocol_IssueCredentialMsg_Attributes{
+					Attributes: attrs,
+				},
+			},
+		},
+	}
+	return pw.Conn.doRun(ctx, protocol)
+}
+
 func (pw *Pairwise) Connection(
 	ctx context.Context,
 	invitationJSON string,
@@ -220,6 +265,44 @@ func (pw Pairwise) ReqProofWithAttrs(
 		ConnectionID: pw.ID,
 		TypeID:       agency.Protocol_PRESENT_PROOF,
 		Role:         agency.Protocol_INITIATOR,
+		StartMsg: &agency.Protocol_PresentProof{
+			PresentProof: &agency.Protocol_PresentProofMsg{
+				AttrFmt: &agency.Protocol_PresentProofMsg_Attributes{
+					Attributes: proofAttrs}}},
+	}
+	return pw.Conn.doRun(ctx, protocol)
+}
+
+func (pw Pairwise) ProposeProof(
+	ctx context.Context,
+	proofAttrs string,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
+	protocol := &agency.Protocol{
+		ConnectionID: pw.ID,
+		TypeID:       agency.Protocol_PRESENT_PROOF,
+		Role:         agency.Protocol_ADDRESSEE,
+		StartMsg: &agency.Protocol_PresentProof{
+			PresentProof: &agency.Protocol_PresentProofMsg{
+				AttrFmt: &agency.Protocol_PresentProofMsg_AttributesJSON{
+					AttributesJSON: proofAttrs}}},
+	}
+	return pw.Conn.doRun(ctx, protocol)
+}
+
+func (pw Pairwise) ProposeProofWithAttrs(
+	ctx context.Context,
+	proofAttrs *agency.Protocol_Proof,
+) (
+	ch chan *agency.ProtocolState,
+	err error,
+) {
+	protocol := &agency.Protocol{
+		ConnectionID: pw.ID,
+		TypeID:       agency.Protocol_PRESENT_PROOF,
+		Role:         agency.Protocol_ADDRESSEE,
 		StartMsg: &agency.Protocol_PresentProof{
 			PresentProof: &agency.Protocol_PresentProofMsg{
 				AttrFmt: &agency.Protocol_PresentProofMsg_Attributes{
