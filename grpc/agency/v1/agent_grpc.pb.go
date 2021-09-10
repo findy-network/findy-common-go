@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // AgentServiceClient is the client API for AgentService service.
@@ -61,7 +62,7 @@ func NewAgentServiceClient(cc grpc.ClientConnInterface) AgentServiceClient {
 }
 
 func (c *agentServiceClient) Listen(ctx context.Context, in *ClientID, opts ...grpc.CallOption) (AgentService_ListenClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_AgentService_serviceDesc.Streams[0], "/agency.v1.AgentService/Listen", opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentService_ServiceDesc.Streams[0], "/agency.v1.AgentService/Listen", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func (x *agentServiceListenClient) Recv() (*AgentStatus, error) {
 }
 
 func (c *agentServiceClient) Wait(ctx context.Context, in *ClientID, opts ...grpc.CallOption) (AgentService_WaitClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_AgentService_serviceDesc.Streams[1], "/agency.v1.AgentService/Wait", opts...)
+	stream, err := c.cc.NewStream(ctx, &AgentService_ServiceDesc.Streams[1], "/agency.v1.AgentService/Wait", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -279,8 +280,8 @@ type UnsafeAgentServiceServer interface {
 	mustEmbedUnimplementedAgentServiceServer()
 }
 
-func RegisterAgentServiceServer(s *grpc.Server, srv AgentServiceServer) {
-	s.RegisterService(&_AgentService_serviceDesc, srv)
+func RegisterAgentServiceServer(s grpc.ServiceRegistrar, srv AgentServiceServer) {
+	s.RegisterService(&AgentService_ServiceDesc, srv)
 }
 
 func _AgentService_Listen_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -469,7 +470,10 @@ func _AgentService_Enter_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-var _AgentService_serviceDesc = grpc.ServiceDesc{
+// AgentService_ServiceDesc is the grpc.ServiceDesc for AgentService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AgentService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "agency.v1.AgentService",
 	HandlerType: (*AgentServiceServer)(nil),
 	Methods: []grpc.MethodDesc{

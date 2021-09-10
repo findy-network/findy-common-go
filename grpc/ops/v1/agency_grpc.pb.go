@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // AgencyServiceClient is the client API for AgencyService service.
@@ -32,7 +33,7 @@ func NewAgencyServiceClient(cc grpc.ClientConnInterface) AgencyServiceClient {
 }
 
 func (c *agencyServiceClient) PSMHook(ctx context.Context, in *DataHook, opts ...grpc.CallOption) (AgencyService_PSMHookClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_AgencyService_serviceDesc.Streams[0], "/ops.v1.AgencyService/PSMHook", opts...)
+	stream, err := c.cc.NewStream(ctx, &AgencyService_ServiceDesc.Streams[0], "/ops.v1.AgencyService/PSMHook", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +103,8 @@ type UnsafeAgencyServiceServer interface {
 	mustEmbedUnimplementedAgencyServiceServer()
 }
 
-func RegisterAgencyServiceServer(s *grpc.Server, srv AgencyServiceServer) {
-	s.RegisterService(&_AgencyService_serviceDesc, srv)
+func RegisterAgencyServiceServer(s grpc.ServiceRegistrar, srv AgencyServiceServer) {
+	s.RegisterService(&AgencyService_ServiceDesc, srv)
 }
 
 func _AgencyService_PSMHook_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -145,7 +146,10 @@ func _AgencyService_Onboard_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-var _AgencyService_serviceDesc = grpc.ServiceDesc{
+// AgencyService_ServiceDesc is the grpc.ServiceDesc for AgencyService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AgencyService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ops.v1.AgencyService",
 	HandlerType: (*AgencyServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -214,8 +218,8 @@ type UnsafeDevOpsServiceServer interface {
 	mustEmbedUnimplementedDevOpsServiceServer()
 }
 
-func RegisterDevOpsServiceServer(s *grpc.Server, srv DevOpsServiceServer) {
-	s.RegisterService(&_DevOpsService_serviceDesc, srv)
+func RegisterDevOpsServiceServer(s grpc.ServiceRegistrar, srv DevOpsServiceServer) {
+	s.RegisterService(&DevOpsService_ServiceDesc, srv)
 }
 
 func _DevOpsService_Enter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -236,7 +240,10 @@ func _DevOpsService_Enter_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-var _DevOpsService_serviceDesc = grpc.ServiceDesc{
+// DevOpsService_ServiceDesc is the grpc.ServiceDesc for DevOpsService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var DevOpsService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "ops.v1.DevOpsService",
 	HandlerType: (*DevOpsServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
