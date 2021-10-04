@@ -64,10 +64,14 @@ func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
 	if conf == nil {
 		panic(errors.New("conf cannot be nil"))
 	}
-	conf.JWT = jwtToken
-	conn, err := rpc.ClientConn(*conf)
+
+	lc := *conf
+	lc.JWT = jwtToken
+
+	conn, err := rpc.ClientConn(lc)
 	err2.Check(err)
-	return Conn{ClientConn: conn, cfg: conf}
+
+	return Conn{ClientConn: conn, cfg: &lc}
 }
 
 func TryOpen(user string, conf *rpc.ClientCfg) (c Conn) {
