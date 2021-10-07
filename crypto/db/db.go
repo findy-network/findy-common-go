@@ -119,7 +119,7 @@ func (m *Mgd) backupName() string {
 }
 
 // AddKeyValueToBucket add value to bucket pointed by the index. keyValue and
-// index use Data types operators to encrypt and hash data on the fly.
+// index use Data type's operators to encrypt and hash data on the fly.
 func AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
 	return mgedDB.operate(func(DB *bolt.DB) error {
 		defer err2.Annotate("add key", &err)
@@ -129,6 +129,23 @@ func AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
 
 			b := tx.Bucket(bucket)
 			err2.Check(b.Put(index.get(), keyValue.get()))
+			return nil
+		}))
+		return nil
+	})
+}
+
+// RmKeyValueToBucket removes value pointed by the index from the bucket.
+// The index uses Data type's operators to encrypt and hash data on the fly.
+func RmKeyValueToBucket(bucket []byte, index *Data) (err error) {
+	return mgedDB.operate(func(DB *bolt.DB) error {
+		defer err2.Annotate("rm key", &err)
+
+		err2.Check(DB.Update(func(tx *bolt.Tx) (err error) {
+			defer err2.Return(&err)
+
+			b := tx.Bucket(bucket)
+			err2.Check(b.Delete(index.get()))
 			return nil
 		}))
 		return nil
