@@ -135,9 +135,9 @@ func AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
 	})
 }
 
-// RmKeyValueToBucket removes value pointed by the index from the bucket.
+// RmKeyValueFromBucket removes value pointed by the index from the bucket.
 // The index uses Data type's operators to encrypt and hash data on the fly.
-func RmKeyValueToBucket(bucket []byte, index *Data) (err error) {
+func RmKeyValueFromBucket(bucket []byte, index *Data) (err error) {
 	return mgedDB.operate(func(DB *bolt.DB) error {
 		defer err2.Annotate("rm key", &err)
 

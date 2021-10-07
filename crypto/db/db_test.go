@@ -94,7 +94,7 @@ func TestRm(t *testing.T) {
 		},
 	)
 	assert.NoError(t, err)
-	err = RmKeyValueToBucket(buckets[0],
+	err = RmKeyValueFromBucket(buckets[0],
 		&Data{
 			Data: []byte{1, 0, 1, 1, 1, 1},
 			Read: encrypt,
