@@ -12,8 +12,11 @@ import (
 )
 
 const dbFilename = "fido-enclave.bolt"
+const dbFilename2 = "fido-enclave2.bolt"
 
 var buckets = [][]byte{{01, 01}}
+
+var db2 *Mgd
 
 func TestMain(m *testing.M) {
 	err2.Check(flag.Set("logtostderr", "true"))
@@ -27,6 +30,7 @@ func TestMain(m *testing.M) {
 
 func setUp() {
 	_ = os.RemoveAll(dbFilename)
+	_ = os.RemoveAll(dbFilename2)
 	glog.V(1).Infoln("init enclave", dbFilename)
 	sealedBoxFilename := dbFilename
 	backupName := "backup-" + sealedBoxFilename
@@ -48,11 +52,21 @@ func setUp() {
 		},
 	))
 
+	glog.V(1).Infoln("init second enclave", dbFilename2)
+	sealedBoxFilename = dbFilename2
+	backupName = "backup-" + sealedBoxFilename
+	db2 = New(Cfg{
+		Filename:   sealedBoxFilename,
+		BackupName: backupName,
+		Buckets:    buckets,
+	})
+
 }
 
 func tearDown() {
 	err2.Check(Wipe())
 	removeFiles(".", "*"+dbFilename)
+	removeFiles(".", "*"+dbFilename2)
 }
 
 func removeFiles(home, nameFilter string) {
@@ -79,7 +93,77 @@ func TestGetKeyValueFromBucket(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.True(t, already)
-	assert.Equal(t, value.Data, []byte{0, 0, 1, 1, 1, 1})
+	assert.Equal(t, []byte{0, 0, 1, 1, 1, 1}, value.Data)
+}
+
+func TestRmDB2(t *testing.T) {
+	err := db2.AddKeyValueToBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: encrypt,
+		},
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+	)
+	assert.NoError(t, err)
+	err = db2.RmKeyValueFromBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: encrypt,
+		},
+	)
+	assert.NoError(t, err)
+
+	// let's check that we actually removed the key/value pair
+	value := &Data{
+		Write: decrypt,
+	}
+	already, err := db2.GetKeyValueFromBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+		value,
+	)
+	assert.NoError(t, err)
+	assert.False(t, already)
+}
+
+func TestRm(t *testing.T) {
+	err := AddKeyValueToBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: encrypt,
+		},
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+	)
+	assert.NoError(t, err)
+	err = RmKeyValueFromBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: encrypt,
+		},
+	)
+	assert.NoError(t, err)
+
+	// let's check that we actually removed the key/value pair
+	value := &Data{
+		Write: decrypt,
+	}
+	already, err := GetKeyValueFromBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+		value,
+	)
+	assert.NoError(t, err)
+	assert.False(t, already)
 }
 
 func TestBackup(t *testing.T) {
