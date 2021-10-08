@@ -11,7 +11,6 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ProtocolServiceClient is the client API for ProtocolService service.
@@ -47,7 +46,7 @@ func NewProtocolServiceClient(cc grpc.ClientConnInterface) ProtocolServiceClient
 }
 
 func (c *protocolServiceClient) Run(ctx context.Context, in *Protocol, opts ...grpc.CallOption) (ProtocolService_RunClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ProtocolService_ServiceDesc.Streams[0], "/agency.v1.ProtocolService/Run", opts...)
+	stream, err := c.cc.NewStream(ctx, &_ProtocolService_serviceDesc.Streams[0], "/agency.v1.ProtocolService/Run", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -167,8 +166,8 @@ type UnsafeProtocolServiceServer interface {
 	mustEmbedUnimplementedProtocolServiceServer()
 }
 
-func RegisterProtocolServiceServer(s grpc.ServiceRegistrar, srv ProtocolServiceServer) {
-	s.RegisterService(&ProtocolService_ServiceDesc, srv)
+func RegisterProtocolServiceServer(s *grpc.Server, srv ProtocolServiceServer) {
+	s.RegisterService(&_ProtocolService_serviceDesc, srv)
 }
 
 func _ProtocolService_Run_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -264,10 +263,7 @@ func _ProtocolService_Release_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-// ProtocolService_ServiceDesc is the grpc.ServiceDesc for ProtocolService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var ProtocolService_ServiceDesc = grpc.ServiceDesc{
+var _ProtocolService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "agency.v1.ProtocolService",
 	HandlerType: (*ProtocolServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
