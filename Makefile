@@ -1,5 +1,5 @@
 API_BRANCH=$(shell ./scripts/branch.sh ../findy-agent-api/)
-SRC_ROOT=$(GOPATH)/src
+SRC_ROOT=$(PWD)/../../..
 IDL_PATH=../findy-agent-api/idl/v1
 
 protoc_protocol:
