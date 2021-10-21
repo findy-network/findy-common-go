@@ -181,6 +181,29 @@ func (pw *Pairwise) Connection(
 	ch chan *agency.ProtocolState,
 	err error,
 ) {
+	return pw.doConnection(ctx, invitationJSON, agency.Protocol_INITIATOR)
+}
+
+func (pw *Pairwise) WaitConnection(
+	ctx context.Context,
+	invitationJSON string,
+) (
+	connID string,
+	ch chan *agency.ProtocolState,
+	err error,
+) {
+	return pw.doConnection(ctx, invitationJSON, agency.Protocol_ADDRESSEE)
+}
+
+func (pw *Pairwise) doConnection(
+	ctx context.Context,
+	invitationJSON string,
+	role agency.Protocol_Role,
+) (
+	connID string,
+	ch chan *agency.ProtocolState,
+	err error,
+) {
 	defer err2.Return(&err)
 
 	// assert that invitation is OK, and we need to return the connection ID
@@ -190,7 +213,7 @@ func (pw *Pairwise) Connection(
 
 	protocol := &agency.Protocol{
 		TypeID: agency.Protocol_DIDEXCHANGE,
-		Role:   agency.Protocol_INITIATOR,
+		Role:   role,
 		StartMsg: &agency.Protocol_DIDExchange{
 			DIDExchange: &agency.Protocol_DIDExchangeMsg{
 				Label:          pw.Label,
