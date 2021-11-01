@@ -1,14 +1,15 @@
 # findy-common-go
 
+[![test](https://github.com/findy-network/findy-common-go/actions/workflows/test.yml/badge.svg?branch=dev)](https://github.com/findy-network/findy-common-go/actions/workflows/test.yml)
 
 Main purpose of this package is to provide helpers and utility functionality for connecting to [findy-agent core](https://github.com/findy-network/findy-agent) through [findy-agent-api](https://github.com/findy-network/findy-agent-api) GRPC interface.
 
 ## Main features
 
-* [Code](./grpc) generated from API IDL.
-* Helpers for opening secure GRPC connection to core agency.
-* Helpers for API protocol starters and event listeners.
-* Test [TLS certificates](./cert) for local development setup.
+- [Code](./grpc) generated from API IDL.
+- Helpers for opening secure GRPC connection to core agency.
+- Helpers for API protocol starters and event listeners.
+- Test [TLS certificates](./cert) for local development setup.
 
 ## Example
 
@@ -49,11 +50,11 @@ func TryCreateInvitation(ctx context.Context, jwtToken, label string) {
 
 ## Reference implementations
 
-* [findy-agent-cli](https://github.com/findy-network/findy-agent-cli): *GRPC client*, agent CLI tool providing most API functionality through a handy command-line-interface.
+- [findy-agent-cli](https://github.com/findy-network/findy-agent-cli): _GRPC client_, agent CLI tool providing most API functionality through a handy command-line-interface.
 
-* [findy-agent](https://github.com/findy-network/findy-agent): *GRPC server* (agency internal). Implements core agency services.
-* [findy-agent-vault](https://github.com/findy-network/findy-agent-vault): *GRPC client* (agency internal). Provides agency data storage service.
-* [findy-agent-auth](https://github.com/findy-network/findy-agent-auth): *GRPC client* (agency internal). Provides agency authentication service
+- [findy-agent](https://github.com/findy-network/findy-agent): _GRPC server_ (agency internal). Implements core agency services.
+- [findy-agent-vault](https://github.com/findy-network/findy-agent-vault): _GRPC client_ (agency internal). Provides agency data storage service.
+- [findy-agent-auth](https://github.com/findy-network/findy-agent-auth): _GRPC client_ (agency internal). Provides agency authentication service
 
 ## Development
 
