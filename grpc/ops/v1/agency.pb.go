@@ -92,7 +92,7 @@ type Onboarding struct {
 	unknownFields protoimpl.UnknownFields
 
 	Email         string `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`                 // email is then name or handle used for pointing the CA.
-	PublicDIDSeed string `protobuf:"bytes,2,opt,name=publicDIDSeed,proto3" json:"publicDIDSeed,omitempty"` // public DID seed is used to generate CA's DID.
+	PublicDIDSeed string `protobuf:"bytes,2,opt,name=publicDIDSeed,proto3" json:"publicDIDSeed,omitempty"` // public DID seed is used to generate CA's DID (optional)
 }
 
 func (x *Onboarding) Reset() {
