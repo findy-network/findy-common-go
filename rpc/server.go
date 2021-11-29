@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -43,11 +44,20 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 		opts = append(opts, grpc.Creds(creds))
 	}
 
+	errHandler := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		resp, err := handler(ctx, req)
+		if err != nil {
+			glog.Errorf("method %q failed: %s", info.FullMethod, err)
+		}
+		return resp, err
+	}
+
 	opts = append(opts,
 		//grpc.UnaryInterceptor(jwt.EnsureValidToken),
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
 			grpc_recovery.UnaryServerInterceptor(),
+			errHandler,
 		)),
 		//grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
