@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
@@ -655,12 +654,11 @@ func transportStatus(
 	})
 	for {
 		status, err := stream.Recv()
-		if err == io.EOF {
+		if err2.TryEOF(err) {
 			glog.V(3).Infoln("status stream end")
 			close(statusCh)
 			break
 		}
-		err2.Check(err)
 		if status.Notification.TypeID == agency.Notification_KEEPALIVE {
 			glog.V(5).Infoln("keepalive, no forward to client")
 			continue
@@ -684,12 +682,11 @@ func transportWait(
 	})
 	for {
 		status, err := stream.Recv()
-		if err == io.EOF {
+		if err2.TryEOF(err) {
 			glog.V(3).Infoln("status stream end")
 			close(statusCh)
 			break
 		}
-		err2.Check(err)
 		if status.TypeID == agency.Question_KEEPALIVE {
 			glog.V(5).Infoln("keepalive, no forward to client")
 			continue
@@ -714,12 +711,11 @@ func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan
 		})
 		for {
 			status, err := stream.Recv()
-			if err == io.EOF {
+			if err2.TryEOF(err) {
 				glog.V(3).Infoln("status stream end")
 				close(statusCh)
 				break
 			}
-			err2.Check(err)
 			statusCh <- status
 		}
 	}()
@@ -742,12 +738,11 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 		})
 		for {
 			status, err := stream.Recv()
-			if err == io.EOF {
+			if err2.TryEOF(err) {
 				glog.V(3).Infoln("status stream end")
 				close(statusCh)
 				break
 			}
-			err2.Check(err)
 			statusCh <- status
 		}
 	}()
