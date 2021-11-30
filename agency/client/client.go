@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -173,31 +172,37 @@ func (pw Pairwise) ProposeIssueWithAttrs(
 	return pw.Conn.doRun(ctx, protocol)
 }
 
+// Connection is a helper wrapper to start a connection protocol in the agency.
+// The invitationStr accepts both JSON and URL formated invitations. The agency
+// does the same.
 func (pw *Pairwise) Connection(
 	ctx context.Context,
-	invitationJSON string,
+	invitationStr string,
 ) (
 	connID string,
 	ch chan *agency.ProtocolState,
 	err error,
 ) {
-	return pw.doConnection(ctx, invitationJSON, agency.Protocol_INITIATOR)
+	return pw.doConnection(ctx, invitationStr, agency.Protocol_INITIATOR)
 }
 
 func (pw *Pairwise) WaitConnection(
 	ctx context.Context,
-	invitationJSON string,
+	invitationStr string,
 ) (
 	connID string,
 	ch chan *agency.ProtocolState,
 	err error,
 ) {
-	return pw.doConnection(ctx, invitationJSON, agency.Protocol_ADDRESSEE)
+	return pw.doConnection(ctx, invitationStr, agency.Protocol_ADDRESSEE)
 }
 
+// doConnection is a helper wrapper to start a connection protocol in the
+// agency. The invitationStr accepts both JSON and URL formated invitations. The
+// agency does the same.
 func (pw *Pairwise) doConnection(
 	ctx context.Context,
-	invitationJSON string,
+	invitationStr string,
 	role agency.Protocol_Role,
 ) (
 	connID string,
@@ -208,8 +213,8 @@ func (pw *Pairwise) doConnection(
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well
-	var invitation didexchange.Invitation
-	err2.Check(json.Unmarshal([]byte(invitationJSON), &invitation))
+	invitation, err := didexchange.Translate(invitationStr)
+	err2.Check(err)
 
 	protocol := &agency.Protocol{
 		TypeID: agency.Protocol_DIDEXCHANGE,
@@ -217,7 +222,7 @@ func (pw *Pairwise) doConnection(
 		StartMsg: &agency.Protocol_DIDExchange{
 			DIDExchange: &agency.Protocol_DIDExchangeMsg{
 				Label:          pw.Label,
-				InvitationJSON: invitationJSON,
+				InvitationJSON: invitationStr,
 			},
 		},
 	}
