@@ -2,10 +2,8 @@ package client
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"time"
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
@@ -173,31 +171,37 @@ func (pw Pairwise) ProposeIssueWithAttrs(
 	return pw.Conn.doRun(ctx, protocol)
 }
 
+// Connection is a helper wrapper to start a connection protocol in the agency.
+// The invitationStr accepts both JSON and URL formated invitations. The agency
+// does the same.
 func (pw *Pairwise) Connection(
 	ctx context.Context,
-	invitationJSON string,
+	invitationStr string,
 ) (
 	connID string,
 	ch chan *agency.ProtocolState,
 	err error,
 ) {
-	return pw.doConnection(ctx, invitationJSON, agency.Protocol_INITIATOR)
+	return pw.doConnection(ctx, invitationStr, agency.Protocol_INITIATOR)
 }
 
 func (pw *Pairwise) WaitConnection(
 	ctx context.Context,
-	invitationJSON string,
+	invitationStr string,
 ) (
 	connID string,
 	ch chan *agency.ProtocolState,
 	err error,
 ) {
-	return pw.doConnection(ctx, invitationJSON, agency.Protocol_ADDRESSEE)
+	return pw.doConnection(ctx, invitationStr, agency.Protocol_ADDRESSEE)
 }
 
+// doConnection is a helper wrapper to start a connection protocol in the
+// agency. The invitationStr accepts both JSON and URL formated invitations. The
+// agency does the same.
 func (pw *Pairwise) doConnection(
 	ctx context.Context,
-	invitationJSON string,
+	invitationStr string,
 	role agency.Protocol_Role,
 ) (
 	connID string,
@@ -208,8 +212,8 @@ func (pw *Pairwise) doConnection(
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well
-	var invitation didexchange.Invitation
-	err2.Check(json.Unmarshal([]byte(invitationJSON), &invitation))
+	invitation, err := didexchange.Translate(invitationStr)
+	err2.Check(err)
 
 	protocol := &agency.Protocol{
 		TypeID: agency.Protocol_DIDEXCHANGE,
@@ -217,7 +221,7 @@ func (pw *Pairwise) doConnection(
 		StartMsg: &agency.Protocol_DIDExchange{
 			DIDExchange: &agency.Protocol_DIDExchangeMsg{
 				Label:          pw.Label,
-				InvitationJSON: invitationJSON,
+				InvitationJSON: invitationStr,
 			},
 		},
 	}
@@ -650,12 +654,11 @@ func transportStatus(
 	})
 	for {
 		status, err := stream.Recv()
-		if err == io.EOF {
+		if err2.TryEOF(err) {
 			glog.V(3).Infoln("status stream end")
 			close(statusCh)
 			break
 		}
-		err2.Check(err)
 		if status.Notification.TypeID == agency.Notification_KEEPALIVE {
 			glog.V(5).Infoln("keepalive, no forward to client")
 			continue
@@ -679,12 +682,11 @@ func transportWait(
 	})
 	for {
 		status, err := stream.Recv()
-		if err == io.EOF {
+		if err2.TryEOF(err) {
 			glog.V(3).Infoln("status stream end")
 			close(statusCh)
 			break
 		}
-		err2.Check(err)
 		if status.TypeID == agency.Question_KEEPALIVE {
 			glog.V(5).Infoln("keepalive, no forward to client")
 			continue
@@ -709,12 +711,11 @@ func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan
 		})
 		for {
 			status, err := stream.Recv()
-			if err == io.EOF {
+			if err2.TryEOF(err) {
 				glog.V(3).Infoln("status stream end")
 				close(statusCh)
 				break
 			}
-			err2.Check(err)
 			statusCh <- status
 		}
 	}()
@@ -737,12 +738,11 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 		})
 		for {
 			status, err := stream.Recv()
-			if err == io.EOF {
+			if err2.TryEOF(err) {
 				glog.V(3).Infoln("status stream end")
 				close(statusCh)
 				break
 			}
-			err2.Check(err)
 			statusCh <- status
 		}
 	}()

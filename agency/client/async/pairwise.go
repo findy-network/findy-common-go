@@ -2,7 +2,6 @@ package async
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/findy-network/findy-common-go/agency/client"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
@@ -164,20 +163,23 @@ func (pw Pairwise) ProposeProofWithAttrs(ctx context.Context, proofAttrs *agency
 	return pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
 }
 
-func (pw *Pairwise) Connection(ctx context.Context, invitationJSON string) (pid *agency.ProtocolID, err error) {
+// Connection is a helper wrapper to start a connection protocol in the agency.
+// The invitationStr accepts both JSON and URL formated invitations. The agency
+// does the same.
+func (pw *Pairwise) Connection(ctx context.Context, invitationStr string) (pid *agency.ProtocolID, err error) {
 	defer err2.Return(&err)
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well
-	var invitation didexchange.Invitation
-	err2.Check(json.Unmarshal([]byte(invitationJSON), &invitation))
+	invitation, err := didexchange.Translate(invitationStr)
+	err2.Check(err)
 
 	protocol := &agency.Protocol{
 		TypeID: agency.Protocol_DIDEXCHANGE,
 		Role:   agency.Protocol_INITIATOR,
 		StartMsg: &agency.Protocol_DIDExchange{DIDExchange: &agency.Protocol_DIDExchangeMsg{
 			Label:          pw.Label,
-			InvitationJSON: invitationJSON,
+			InvitationJSON: invitationStr,
 		}},
 	}
 	pid, err = pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
