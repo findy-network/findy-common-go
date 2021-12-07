@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/findy-network/findy-common-go/utils"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"google.golang.org/grpc"
 )
 
@@ -22,7 +22,8 @@ const sleeperFloor = 10 * time.Second
 
 type Conn struct {
 	*grpc.ClientConn
-	cfg *rpc.ClientCfg
+	cfg   *rpc.ClientCfg
+	sleep func(d time.Duration)
 }
 
 type Pairwise struct {
@@ -59,8 +60,20 @@ func BuildClientConnBase(
 }
 
 func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
-	if conf == nil {
-		panic(errors.New("conf cannot be nil"))
+	return TryAuthOpenWithSleep(jwtToken, conf, nil)
+}
+
+func TryAuthOpenWithSleep(
+	jwtToken string,
+	conf *rpc.ClientCfg,
+	s func(d time.Duration),
+) (
+	c Conn,
+) {
+	assert.D.True(conf != nil, "conf cannot be nil")
+
+	if s == nil {
+		s = time.Sleep
 	}
 
 	lc := *conf
@@ -69,7 +82,7 @@ func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
 	conn, err := rpc.ClientConn(lc)
 	err2.Check(err)
 
-	return Conn{ClientConn: conn, cfg: &lc}
+	return Conn{ClientConn: conn, cfg: &lc, sleep: s}
 }
 
 func TryOpen(user string, conf *rpc.ClientCfg) (c Conn) {
@@ -477,7 +490,7 @@ func (conn Conn) ListenStatusAndRetry( // nolint:dupl
 		statusCh, errCh, err = conn.ListenStatusErr(ctx, client, cOpts...)
 		if err != nil {
 			glog.V(1).Infoln("error:", err, "waiting...")
-			sleeper.Sleep(time.Sleep)
+			sleeper.Sleep(conn.sleep)
 			glog.V(1).Infoln("retry")
 			goto loop
 		}
@@ -490,7 +503,7 @@ func (conn Conn) ListenStatusAndRetry( // nolint:dupl
 				return
 			case chErr := <-errCh:
 				glog.V(1).Infoln("error:", chErr, "waiting ..")
-				sleeper.Sleep(time.Sleep)
+				sleeper.Sleep(conn.sleep)
 				glog.V(1).Infoln(".. retry")
 				goto loop
 			case status, ok := <-statusCh:
@@ -560,7 +573,7 @@ func (conn Conn) WaitAndRetry( // nolint:dupl
 		questionCh, errCh, err = conn.WaitErr(ctx, client, cOpts...)
 		if err != nil {
 			glog.V(1).Infoln("error:", err, "waiting...")
-			sleeper.Sleep(time.Sleep)
+			sleeper.Sleep(conn.sleep)
 			glog.V(1).Infoln("retry")
 			goto loop
 		}
@@ -573,7 +586,7 @@ func (conn Conn) WaitAndRetry( // nolint:dupl
 				return
 			case chErr := <-errCh:
 				glog.V(1).Infoln("error:", chErr, "waiting...")
-				sleeper.Sleep(time.Sleep)
+				sleeper.Sleep(conn.sleep)
 				glog.V(1).Infoln("retry")
 				goto loop
 			case question, ok := <-questionCh:
