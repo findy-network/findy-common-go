@@ -77,7 +77,7 @@ func TryAuthOpenWithSleep(
 		s = time.Sleep
 	}
 
-	lc := *conf 
+	lc := *conf
 	lc.JWT = jwtToken
 
 	conn, err := rpc.ClientConn(lc)
