@@ -20,4 +20,9 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
       - name: test
-        run: make test_cov_upload
+        run: make test_cov_out
+      - name: upload
+        uses: codecov/codecov-action@v2
+        with:
+          files:
+            - "./coverage.txt"
