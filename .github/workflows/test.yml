@@ -20,4 +20,4 @@ jobs:
       - name: checkout
         uses: actions/checkout@v2
       - name: test
-        run: go test ./...
+        run: make test_cov_upload
