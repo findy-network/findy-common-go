@@ -1,6 +1,7 @@
 # findy-common-go
 
 [![test](https://github.com/findy-network/findy-common-go/actions/workflows/test.yml/badge.svg?branch=dev)](https://github.com/findy-network/findy-common-go/actions/workflows/test.yml)
+[![codecov](https://codecov.io/gh/findy-network/findy-common-go/branch/master/graph/badge.svg?token=76WUVL6IPS)](https://codecov.io/gh/findy-network/findy-common-go)
 
 Main purpose of this package is to provide helpers and utility functionality for connecting to [findy-agent core](https://github.com/findy-network/findy-agent) through [findy-agent-api](https://github.com/findy-network/findy-agent-api) GRPC interface.
 
