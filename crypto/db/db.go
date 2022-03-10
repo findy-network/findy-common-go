@@ -229,6 +229,49 @@ func (db *Mgd) GetKeyValueFromBucket(
 	return found, nil
 }
 
+// GetAllValuesFromBucket returns all entries from the bucket.
+// Read function can be used to decrypt the data.
+// Errors will return only if it cannot perform the transaction successfully.
+func GetAllValuesFromBucket(
+	bucket []byte,
+	read Filter,
+) (
+	values [][]byte,
+	err error,
+) {
+	return mgedDB.GetAllValuesFromBucket(bucket, read)
+}
+
+// GetAllValuesFromBucket returns all entries from the bucket.
+// Read function can be used to decrypt the data.
+// Errors will return only if it cannot perform the transaction successfully.
+func (db *Mgd) GetAllValuesFromBucket(
+	bucket []byte,
+	read Filter,
+) (
+	values [][]byte,
+	err error,
+) {
+	defer err2.Annotate("get all values", &err)
+
+	values = make([][]byte, 0)
+
+	err2.Check(db.operate(func(DB *bolt.DB) error {
+		err2.Check(DB.View(func(tx *bolt.Tx) (err error) {
+			defer err2.Return(&err)
+
+			b := tx.Bucket(bucket)
+			b.ForEach(func(k, v []byte) error {
+				values = append(values, read(v))
+				return nil
+			})
+			return nil
+		}))
+		return nil
+	}))
+	return values, nil
+}
+
 // BackupTicker creates a backup ticker which takes backup copy of the database
 // file specified by the interval. Ticker can be stopped with returned done
 // channel.

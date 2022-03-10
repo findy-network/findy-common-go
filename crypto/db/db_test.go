@@ -96,6 +96,38 @@ func TestGetKeyValueFromBucket(t *testing.T) {
 	assert.Equal(t, []byte{0, 0, 1, 1, 1, 1}, value.Data)
 }
 
+func TestGetAllValuesFromBucket(t *testing.T) {
+	firstValue := []byte{0, 0, 1, 1, 1, 1}
+	res, err := GetAllValuesFromBucket(buckets[0], decrypt)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(res))
+	assert.Equal(t, firstValue, res[0])
+
+	anotherKey := &Data{
+		Data: []byte{0, 0, 2, 2, 2, 2},
+		Read: hash,
+	}
+	anotherValue := []byte{0, 0, 2, 2, 2, 2}
+	err2.Check(AddKeyValueToBucket(buckets[0],
+		&Data{
+			Data: anotherValue,
+			Read: encrypt,
+		},
+		anotherKey,
+	))
+
+	res, err = GetAllValuesFromBucket(buckets[0], decrypt)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(res))
+	assert.Equal(t, firstValue, res[0])
+	assert.Equal(t, anotherValue, res[1])
+
+	// Remove the extra value
+	err = RmKeyValueFromBucket(buckets[0], anotherKey)
+	assert.NoError(t, err)
+
+}
+
 func TestRmDB2(t *testing.T) {
 	err := db2.AddKeyValueToBucket(buckets[0],
 		&Data{
