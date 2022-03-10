@@ -261,10 +261,10 @@ func (db *Mgd) GetAllValuesFromBucket(
 			defer err2.Return(&err)
 
 			b := tx.Bucket(bucket)
-			b.ForEach(func(k, v []byte) error {
+			err2.Check(b.ForEach(func(k, v []byte) error {
 				values = append(values, read(v))
 				return nil
-			})
+			}))
 			return nil
 		}))
 		return nil
