@@ -230,24 +230,30 @@ func (db *Mgd) GetKeyValueFromBucket(
 }
 
 // GetAllValuesFromBucket returns all entries from the bucket.
-// Read function can be used to decrypt the data.
+// Note:
+// - Order is not guaranteed.
+// - The returned slice contains only the values as byte arrays. Keys are excluded.
+// Transform functions can be used e.g. to decrypt the data. They are applied in the provided order.
 // Errors will return only if it cannot perform the transaction successfully.
 func GetAllValuesFromBucket(
 	bucket []byte,
-	read Filter,
+	transforms ...Filter,
 ) (
 	values [][]byte,
 	err error,
 ) {
-	return mgedDB.GetAllValuesFromBucket(bucket, read)
+	return mgedDB.GetAllValuesFromBucket(bucket, transforms...)
 }
 
 // GetAllValuesFromBucket returns all entries from the bucket.
-// Read function can be used to decrypt the data.
+// Note:
+// - Order is not guaranteed.
+// - The returned slice contains only the values as byte arrays. Keys are excluded.
+// Transform functions can be used e.g. to decrypt the data. They are applied in the provided order.
 // Errors will return only if it cannot perform the transaction successfully.
 func (db *Mgd) GetAllValuesFromBucket(
 	bucket []byte,
-	read Filter,
+	transforms ...Filter,
 ) (
 	values [][]byte,
 	err error,
@@ -261,8 +267,12 @@ func (db *Mgd) GetAllValuesFromBucket(
 			defer err2.Return(&err)
 
 			b := tx.Bucket(bucket)
-			err2.Check(b.ForEach(func(k, v []byte) error {
-				values = append(values, read(v))
+			err2.Check(b.ForEach(func(_, v []byte) error {
+				res := v
+				for _, transform := range transforms {
+					res = transform(res)
+				}
+				values = append(values, res)
 				return nil
 			}))
 			return nil

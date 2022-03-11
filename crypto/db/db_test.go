@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"flag"
 	"os"
 	"path/filepath"
@@ -116,11 +117,25 @@ func TestGetAllValuesFromBucket(t *testing.T) {
 		anotherKey,
 	))
 
-	res, err = GetAllValuesFromBucket(buckets[0], decrypt)
+	// extra transform function
+	counter := 0
+	counterTransform := func(value []byte) []byte {
+		counter++
+		return value
+	}
+
+	res, err = GetAllValuesFromBucket(buckets[0], decrypt, counterTransform)
 	assert.NoError(t, err)
 	assert.Equal(t, 2, len(res))
-	assert.Equal(t, firstValue, res[0])
-	assert.Equal(t, anotherValue, res[1])
+	assert.Equal(t, 2, counter)
+
+	// order not guaranteed
+	if bytes.Equal(anotherValue, res[0]) {
+		assert.Equal(t, firstValue, res[1])
+	} else {
+		assert.Equal(t, firstValue, res[0])
+		assert.Equal(t, anotherValue, res[1])
+	}
 
 	// Remove the extra value
 	err = RmKeyValueFromBucket(buckets[0], anotherKey)
