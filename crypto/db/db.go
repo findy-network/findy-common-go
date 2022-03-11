@@ -229,6 +229,59 @@ func (db *Mgd) GetKeyValueFromBucket(
 	return found, nil
 }
 
+// GetAllValuesFromBucket returns all entries from the bucket.
+// Note:
+// - Order is not guaranteed.
+// - The returned slice contains only the values as byte arrays. Keys are excluded.
+// Transform functions can be used e.g. to decrypt the data. They are applied in the provided order.
+// Errors will return only if it cannot perform the transaction successfully.
+func GetAllValuesFromBucket(
+	bucket []byte,
+	transforms ...Filter,
+) (
+	values [][]byte,
+	err error,
+) {
+	return mgedDB.GetAllValuesFromBucket(bucket, transforms...)
+}
+
+// GetAllValuesFromBucket returns all entries from the bucket.
+// Note:
+// - Order is not guaranteed.
+// - The returned slice contains only the values as byte arrays. Keys are excluded.
+// Transform functions can be used e.g. to decrypt the data. They are applied in the provided order.
+// Errors will return only if it cannot perform the transaction successfully.
+func (db *Mgd) GetAllValuesFromBucket(
+	bucket []byte,
+	transforms ...Filter,
+) (
+	values [][]byte,
+	err error,
+) {
+	defer err2.Annotate("get all values", &err)
+
+	values = make([][]byte, 0)
+
+	err2.Check(db.operate(func(DB *bolt.DB) error {
+		err2.Check(DB.View(func(tx *bolt.Tx) (err error) {
+			defer err2.Return(&err)
+
+			b := tx.Bucket(bucket)
+			err2.Check(b.ForEach(func(_, v []byte) error {
+				res := v
+				for _, transform := range transforms {
+					res = transform(res)
+				}
+				values = append(values, res)
+				return nil
+			}))
+			return nil
+		}))
+		return nil
+	}))
+	return values, nil
+}
+
 // BackupTicker creates a backup ticker which takes backup copy of the database
 // file specified by the interval. Ticker can be stopped with returned done
 // channel.

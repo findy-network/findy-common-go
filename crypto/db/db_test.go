@@ -1,6 +1,7 @@
 package db
 
 import (
+	"bytes"
 	"flag"
 	"os"
 	"path/filepath"
@@ -94,6 +95,52 @@ func TestGetKeyValueFromBucket(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, already)
 	assert.Equal(t, []byte{0, 0, 1, 1, 1, 1}, value.Data)
+}
+
+func TestGetAllValuesFromBucket(t *testing.T) {
+	firstValue := []byte{0, 0, 1, 1, 1, 1}
+	res, err := GetAllValuesFromBucket(buckets[0], decrypt)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(res))
+	assert.Equal(t, firstValue, res[0])
+
+	anotherKey := &Data{
+		Data: []byte{0, 0, 2, 2, 2, 2},
+		Read: hash,
+	}
+	anotherValue := []byte{0, 0, 2, 2, 2, 2}
+	err2.Check(AddKeyValueToBucket(buckets[0],
+		&Data{
+			Data: anotherValue,
+			Read: encrypt,
+		},
+		anotherKey,
+	))
+
+	// extra transform function
+	counter := 0
+	counterTransform := func(value []byte) []byte {
+		counter++
+		return value
+	}
+
+	res, err = GetAllValuesFromBucket(buckets[0], decrypt, counterTransform)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, len(res))
+	assert.Equal(t, 2, counter)
+
+	// order not guaranteed
+	if bytes.Equal(anotherValue, res[0]) {
+		assert.Equal(t, firstValue, res[1])
+	} else {
+		assert.Equal(t, firstValue, res[0])
+		assert.Equal(t, anotherValue, res[1])
+	}
+
+	// Remove the extra value
+	err = RmKeyValueFromBucket(buckets[0], anotherKey)
+	assert.NoError(t, err)
+
 }
 
 func TestRmDB2(t *testing.T) {
