@@ -63,7 +63,7 @@ func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
 	return TryAuthOpenWithSleep(jwtToken, conf, nil)
 }
 
-//nolint
+//nolintlint
 func TryAuthOpenWithSleep(
 	jwtToken string,
 	conf *rpc.ClientCfg,

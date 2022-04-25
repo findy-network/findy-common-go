@@ -369,7 +369,7 @@ func (db *Mgd) Wipe() (err error) {
 // Close closes the database. It can be used after that if wanted. Transactions
 // opens the database when needed.
 func Close() (err error) {
-	return mgedDB.close()
+	return mgedDB.Close()
 }
 
 // Close closes the database. It can be used after that if wanted. Transactions
