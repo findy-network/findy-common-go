@@ -1,4 +1,4 @@
-package findy_common_go
+package integration
 
 import (
 	"context"
