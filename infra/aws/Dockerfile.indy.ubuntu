@@ -1,4 +1,4 @@
-FROM golang:1.16-buster AS s3-builder
+FROM golang:1.18-buster AS s3-builder
 
 WORKDIR /work
 
