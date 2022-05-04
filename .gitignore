@@ -25,3 +25,4 @@ cli
 .envrc
 
 .DS_Store
+coverage.txt
