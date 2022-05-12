@@ -14,13 +14,13 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c
 	google.golang.org/grpc v1.35.0
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/protobuf v1.28.0
 )
 
 require (
 	cloud.google.com/go v0.65.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/golang/protobuf v1.4.2 // indirect
+	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
