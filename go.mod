@@ -3,7 +3,7 @@ module github.com/findy-network/findy-common-go
 go 1.18
 
 require (
-	github.com/auth0/go-jwt-middleware v1.0.0
+	github.com/auth0/go-jwt-middleware v1.0.1
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
