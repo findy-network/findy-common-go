@@ -42,6 +42,12 @@ func TestMain(m *testing.M) {
 }
 
 func setUp() {
+	err2.StackTraceWriter = os.Stderr
+	defer err2.CatchTrace(func(err error) {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	})
+
 	runServer()
 	conn = try.To1(newClient("findy-root", "localhost:50051")) // just dump error info out, we are inside a test
 }
