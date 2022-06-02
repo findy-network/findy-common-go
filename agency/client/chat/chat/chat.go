@@ -191,13 +191,12 @@ func (c *Conversation) getStatus(status ConnStatus) *agency.ProtocolStatus {
 func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
 	ctx := context.Background()
 	agentClient := agency.NewAgentServiceClient(c.Conn)
-	cid, err := agentClient.Give(ctx, &agency.Answer{
+	cid := try.To1(agentClient.Give(ctx, &agency.Answer{
 		ID:       status.Notification.ID,
 		ClientID: status.ClientID,
 		Ack:      ack,
 		Info:     "testing says hello!",
-	})
-	try.To(err)
+	}))
 	glog.V(3).Infof("Sending the answer (%s) send to client:%s\n",
 		status.Notification.ID, cid.ID)
 }
