@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 type S3Client struct {
@@ -22,8 +23,7 @@ type S3Client struct {
 
 func NewS3Client() *S3Client {
 	ctx := context.TODO()
-	cfg, err := config.LoadDefaultConfig(ctx)
-	err2.Check(err)
+	cfg := try.To1(config.LoadDefaultConfig(ctx))
 
 	svc := s3.NewFromConfig(cfg)
 	return &S3Client{
@@ -34,19 +34,20 @@ func NewS3Client() *S3Client {
 }
 
 func (c *S3Client) S3ListBucketFiles(bucketName string) (*s3.ListObjectsV2Output, error) {
-	resp, err := c.ListObjectsV2(
+	return c.ListObjectsV2(
 		c.ctx,
 		&s3.ListObjectsV2Input{Bucket: aws.String(bucketName)},
 	)
-	err2.Check(err)
-
-	return resp, err
 }
 
 func (c *S3Client) S3DownloadBucketFiles(
 	bucketName, subfolder, targetFolder string,
 	input *s3.ListObjectsV2Output,
-) error {
+) (
+	err error,
+) {
+	defer err2.Return(&err)
+
 	for _, item := range input.Contents {
 		if subfolder == "" || strings.HasPrefix(*item.Key, subfolder) {
 			fmt.Println("Name:          ", *item.Key)
@@ -54,19 +55,17 @@ func (c *S3Client) S3DownloadBucketFiles(
 			// Create a file to write the S3 Object contents to.
 			filename := targetFolder + "/" + *item.Key
 			if _, err := os.Stat(filename); err == nil {
-				panic(fmt.Errorf("File (%s) already exists, cleanup target first!", filename))
+				return fmt.Errorf("File (%s) already exists, cleanup target first!", filename)
 			}
 
-			os.MkdirAll(filepath.Dir(filename), os.ModePerm)
-			f, err := os.Create(filename)
-			err2.Check(err)
+			try.To(os.MkdirAll(filepath.Dir(filename), os.ModePerm))
+			f := try.To1(os.Create(filename))
 
 			// Write the contents of S3 Object to the file
-			n, err := c.Download(c.ctx, f, &s3.GetObjectInput{
+			n := try.To1(c.Download(c.ctx, f, &s3.GetObjectInput{
 				Bucket: aws.String(bucketName),
 				Key:    aws.String(*item.Key),
-			})
-			err2.Check(err)
+			}))
 			fmt.Printf("file downloaded, %d bytes\n", n)
 
 			f.Close()
