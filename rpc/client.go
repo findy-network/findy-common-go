@@ -12,6 +12,7 @@ import (
 	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/credentials/oauth"
 )
 
@@ -27,14 +28,14 @@ type ClientCfg struct {
 func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
-	// for now we use only server side TLS, if we go mTLS use NewTLS()
+	// for now, we use only server side TLS, if we go mTLS use NewTLS()
 	creds := try.To1(loadClientTLSFromFile(cfg.PKI))
 
 	glog.V(5).Infoln("new tls client ready")
 
 	opts := []grpc.DialOption{
 		grpc.WithBlock(),
-		grpc.WithTransportCredentials(creds),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
 	if cfg.PKI != nil {
 		opts = make([]grpc.DialOption, 0)
@@ -44,6 +45,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 			glog.V(10).Infoln("grpc oauth wrap for JWT done")
 			opts = append(opts, grpc.WithPerRPCCredentials(perRPC))
 		}
+		opts = append(opts, grpc.WithTransportCredentials(creds))
 		// dont use grpc.WithBlock()!! you don't get immediate error messages
 	}
 	if cfg.Opts != nil {
