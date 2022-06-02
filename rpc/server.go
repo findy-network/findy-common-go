@@ -103,7 +103,7 @@ func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) 
 func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
-	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Client.CertFile))
+	caCert := try.To1(ioutil.ReadFile(pw.Client.CertFile))
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caCert)
 

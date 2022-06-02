@@ -26,13 +26,13 @@ type Bot struct {
 
 func LoadFSMMachineData(fName string, r io.Reader) (m fsm.MachineData, err error) {
 	defer err2.Return(&err)
-	data := err2.Bytes.Try(ioutil.ReadAll(r))
+	data := try.To1(ioutil.ReadAll(r))
 	return fsm.MachineData{FType: fName, Data: data}, nil
 }
 
 func LoadFSM(fName string, r io.Reader) (m *fsm.Machine, err error) {
 	defer err2.Return(&err)
-	data := err2.Bytes.Try(ioutil.ReadAll(r))
+	data := try.To1(ioutil.ReadAll(r))
 	m = loadFSMData(fName, data)
 	try.To(m.Initialize())
 	return m, nil
@@ -58,9 +58,9 @@ func SaveFSM(m *fsm.Machine, fName string) (err error) {
 func marshalFSM(fName string, fsm *fsm.Machine) []byte {
 	var data []byte
 	if filepath.Ext(fName) == ".json" {
-		data = err2.Bytes.Try(json.MarshalIndent(fsm, "", "\t"))
+		data = try.To1(json.MarshalIndent(fsm, "", "\t"))
 	} else {
-		data = err2.Bytes.Try(yaml.Marshal(fsm))
+		data = try.To1(yaml.Marshal(fsm))
 	}
 	return data
 }

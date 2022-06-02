@@ -43,7 +43,7 @@ func (c *Cipher) _(in []byte) (out []byte, err error) {
 
 func (c *Cipher) TryEncrypt(in []byte) (out []byte) {
 	nonce := make([]byte, c.aesGCM.NonceSize())
-	err2.Empty.Try(io.ReadFull(rand.Reader, nonce))
+	try.To1(io.ReadFull(rand.Reader, nonce))
 
 	// We add it as a prefix to the encrypted data. The first nonce argument in
 	// Seal is the prefix.
@@ -61,5 +61,5 @@ func (c *Cipher) TryDecrypt(in []byte) (out []byte) {
 
 	nonce, ciphertext := in[:nonceSize], in[nonceSize:]
 
-	return err2.Bytes.Try(c.aesGCM.Open(nil, nonce, ciphertext, nil))
+	return try.To1(c.aesGCM.Open(nil, nonce, ciphertext, nil))
 }

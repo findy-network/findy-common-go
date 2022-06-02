@@ -33,7 +33,7 @@ func Translate(s string) (i Invitation, err error) {
 	m := try.To1(url.ParseQuery(u.RawQuery))
 
 	raw := m["c_i"][0]
-	d := err2.Bytes.Try(decodeB64(raw))
+	d := try.To1(decodeB64(raw))
 	try.To(json.Unmarshal(d, &i))
 
 	return i, nil
@@ -42,6 +42,6 @@ func Translate(s string) (i Invitation, err error) {
 func Build(inv Invitation) (s string, err error) {
 	defer err2.Annotate("invitation build", &err)
 
-	b := err2.Bytes.Try(json.Marshal(inv))
+	b := try.To1(json.Marshal(inv))
 	return prefix + base64.RawURLEncoding.EncodeToString(b), nil
 }

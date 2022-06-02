@@ -58,7 +58,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 func loadClientTLSFromFile(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
-	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Server.CertFile))
+	caCert := try.To1(ioutil.ReadFile(pw.Server.CertFile))
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caCert)
 
