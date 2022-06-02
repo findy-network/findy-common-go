@@ -15,6 +15,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
+	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 )
 
@@ -80,8 +81,7 @@ func TryAuthOpenWithSleep(
 	lc := *conf
 	lc.JWT = jwtToken
 
-	conn, err := rpc.ClientConn(lc)
-	err2.Check(err)
+	conn := try.To1(rpc.ClientConn(lc))
 
 	return Conn{ClientConn: conn, cfg: &lc, sleep: s}
 }
@@ -226,8 +226,7 @@ func (pw *Pairwise) doConnection(
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well
-	invitation, err := didexchange.Translate(invitationStr)
-	err2.Check(err)
+	invitation := try.To1(didexchange.Translate(invitationStr))
 
 	protocol := &agency.Protocol{
 		TypeID: agency.Protocol_DIDEXCHANGE,
@@ -239,8 +238,7 @@ func (pw *Pairwise) doConnection(
 			},
 		},
 	}
-	ch, err = pw.Conn.doRun(ctx, protocol)
-	err2.Check(err)
+	ch = try.To1(pw.Conn.doRun(ctx, protocol))
 	connID = invitation.ID
 	pw.ID = connID
 	return connID, ch, err
@@ -392,10 +390,8 @@ func (conn Conn) Listen(
 ) {
 	defer err2.Return(&err)
 
-	listenStatusCh, err := conn.ListenStatus(ctx, client, cOpts...)
-	err2.Check(err)
-	waitQuestionCh, err := conn.Wait(ctx, client, cOpts...)
-	err2.Check(err)
+	listenStatusCh := try.To1(conn.ListenStatus(ctx, client, cOpts...))
+	waitQuestionCh := try.To1(conn.Wait(ctx, client, cOpts...))
 	glog.V(3).Infoln("successful start of general listen id:", client.ID)
 	ch = make(chan *agency.Question)
 
@@ -457,8 +453,7 @@ func (conn Conn) ListenStatus(
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.AgentStatus)
 
-	stream, err := c.Listen(ctx, client, cOpts...)
-	err2.Check(err)
+	stream := try.To1(c.Listen(ctx, client, cOpts...))
 	glog.V(3).Infoln("successful start of ListenStatus id:", client.ID)
 	go transportStatus(stream, statusCh, nil)
 	return statusCh, nil
@@ -539,8 +534,7 @@ func (conn Conn) ListenStatusErr(
 	statusCh := make(chan *agency.AgentStatus)
 	errCh = make(chan error)
 
-	stream, err := c.Listen(ctx, client, cOpts...)
-	err2.Check(err)
+	stream := try.To1(c.Listen(ctx, client, cOpts...))
 	glog.V(3).Infoln("successful start of listenStatusErr id:", client.ID)
 
 	go transportStatus(stream, statusCh, errCh)
@@ -621,8 +615,7 @@ func (conn Conn) WaitErr(
 	statusCh := make(chan *agency.Question)
 	errCh = make(chan error)
 
-	stream, err := c.Wait(ctx, client, cOpts...)
-	err2.Check(err)
+	stream := try.To1(c.Wait(ctx, client, cOpts...))
 	glog.V(3).Infoln("successful start of waitErr id:", client.ID)
 
 	go transportWait(stream, statusCh, errCh)
@@ -645,8 +638,7 @@ func (conn Conn) Wait(
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.Question)
 
-	stream, err := c.Wait(ctx, client, cOpts...)
-	err2.Check(err)
+	stream := try.To1(c.Wait(ctx, client, cOpts...))
 	glog.V(3).Infoln("successful start of Wait id:", client.ID)
 
 	go transportWait(stream, statusCh, nil /* errCh */)
@@ -668,7 +660,7 @@ func transportStatus(
 	})
 	for {
 		status, err := stream.Recv()
-		if err2.TryEOF(err) {
+		if try.IsEOF(err) {
 			glog.V(3).Infoln("status stream end")
 			close(statusCh)
 			break
@@ -696,7 +688,7 @@ func transportWait(
 	})
 	for {
 		status, err := stream.Recv()
-		if err2.TryEOF(err) {
+		if try.IsEOF(err) {
 			glog.V(3).Infoln("status stream end")
 			close(statusCh)
 			break
@@ -715,8 +707,7 @@ func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan
 	opsClient := ops.NewAgencyServiceClient(conn)
 	statusCh := make(chan *ops.AgencyStatus)
 
-	stream, err := opsClient.PSMHook(ctx, &ops.DataHook{ID: utils.UUID()}, cOpts...)
-	err2.Check(err)
+	stream := try.To1(opsClient.PSMHook(ctx, &ops.DataHook{ID: utils.UUID()}, cOpts...))
 	glog.V(3).Infoln("successful start of listen PSM hook id:")
 	go func() {
 		defer err2.CatchTrace(func(err error) {
@@ -725,7 +716,7 @@ func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan
 		})
 		for {
 			status, err := stream.Recv()
-			if err2.TryEOF(err) {
+			if try.IsEOF(err) {
 				glog.V(3).Infoln("status stream end")
 				close(statusCh)
 				break
@@ -742,8 +733,7 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 	c := agency.NewProtocolServiceClient(conn)
 	statusCh := make(chan *agency.ProtocolState)
 
-	stream, err := c.Run(ctx, protocol)
-	err2.Check(err)
+	stream := try.To1(c.Run(ctx, protocol))
 	glog.V(3).Infoln("successful start of:", protocol.TypeID)
 	go func() {
 		defer err2.CatchTrace(func(err error) {
@@ -752,7 +742,7 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 		})
 		for {
 			status, err := stream.Recv()
-			if err2.TryEOF(err) {
+			if try.IsEOF(err) {
 				glog.V(3).Infoln("status stream end")
 				close(statusCh)
 				break
@@ -767,8 +757,7 @@ func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol, cOpts .
 	defer err2.Return(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
-	pid, err = c.Start(ctx, protocol, cOpts...)
-	err2.Check(err)
+	pid = try.To1(c.Start(ctx, protocol, cOpts...))
 
 	glog.V(3).Infoln("successful start of:", protocol.TypeID)
 	return pid, nil
@@ -778,8 +767,7 @@ func (conn Conn) DoResume(ctx context.Context, state *agency.ProtocolState, cOpt
 	defer err2.Return(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
-	pid, err = c.Resume(ctx, state, cOpts...)
-	err2.Check(err)
+	pid = try.To1(c.Resume(ctx, state, cOpts...))
 
 	glog.V(3).Infoln("successful resume of:", state.ProtocolID.TypeID)
 	return pid, nil
@@ -789,8 +777,7 @@ func (conn Conn) DoRelease(ctx context.Context, id *agency.ProtocolID, cOpts ...
 	defer err2.Return(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
-	pid, err = c.Release(ctx, id, cOpts...)
-	err2.Check(err)
+	pid = try.To1(c.Release(ctx, id, cOpts...))
 
 	glog.V(3).Infoln("successful release of:", id.TypeID)
 	return pid, nil
@@ -800,8 +787,7 @@ func (conn Conn) DoStatus(ctx context.Context, id *agency.ProtocolID, cOpts ...g
 	defer err2.Return(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
-	status, err = c.Status(ctx, id, cOpts...)
-	err2.Check(err)
+	status = try.To1(c.Status(ctx, id, cOpts...))
 
 	glog.V(3).Infoln("successful status of:", id.TypeID)
 	return status, nil

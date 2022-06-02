@@ -8,7 +8,7 @@ import (
 	"github.com/findy-network/findy-common-go/agency/fsm"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/golang/glog"
-	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 type HookFn func(data map[string]string)
@@ -103,7 +103,7 @@ func Multiplexer(conn client.Conn) {
 
 func (c *Conversation) RunConversation(data fsm.MachineData) {
 	c.machine = fsm.NewMachine(data)
-	err2.Check(c.machine.Initialize())
+	try.To(c.machine.Initialize())
 
 	c.send(c.machine.Start(), nil)
 
@@ -180,12 +180,11 @@ func (c *Conversation) statusReceived(as *agency.AgentStatus) {
 func (c *Conversation) getStatus(status ConnStatus) *agency.ProtocolStatus {
 	ctx := context.Background()
 	didComm := agency.NewProtocolServiceClient(c.Conn)
-	statusResult, err := didComm.Status(ctx, &agency.ProtocolID{
+	statusResult := try.To1(didComm.Status(ctx, &agency.ProtocolID{
 		TypeID:           status.Notification.ProtocolType,
 		ID:               status.Notification.ProtocolID,
 		NotificationTime: status.Notification.Timestamp,
-	})
-	err2.Check(err)
+	}))
 	return statusResult
 }
 
@@ -198,18 +197,17 @@ func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
 		Ack:      ack,
 		Info:     "testing says hello!",
 	})
-	err2.Check(err)
+	try.To(err)
 	glog.V(3).Infof("Sending the answer (%s) send to client:%s\n",
 		status.Notification.ID, cid.ID)
 }
 
 func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
-	r, err := async.NewPairwise(
+	r := try.To1(async.NewPairwise(
 		c.Conn,
 		c.id,
 	).BasicMessage(context.Background(),
-		message.Content)
-	err2.Check(err)
+		message.Content))
 	glog.V(10).Infoln("protocol id:", r.ID)
 	if noAck {
 		c.SetLastProtocolID(r)
@@ -217,12 +215,11 @@ func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
 }
 
 func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
-	r, err := async.NewPairwise(
+	r := try.To1(async.NewPairwise(
 		c.Conn,
 		c.id,
 	).Issue(context.Background(),
-		message.CredDefID, message.AttrsJSON)
-	err2.Check(err)
+		message.CredDefID, message.AttrsJSON))
 	glog.V(10).Infoln("protocol id:", r.ID)
 	if noAck {
 		c.SetLastProtocolID(r)
@@ -230,12 +227,11 @@ func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
 }
 
 func (c *Conversation) sendReqProof(message *fsm.Proof, noAck bool) {
-	r, err := async.NewPairwise(
+	r := try.To1(async.NewPairwise(
 		c.Conn,
 		c.id,
 	).ReqProof(context.Background(),
-		message.ProofJSON)
-	err2.Check(err)
+		message.ProofJSON))
 	glog.V(10).Infoln("protocol id:", r.ID)
 	if noAck {
 		c.SetLastProtocolID(r)

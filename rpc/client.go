@@ -9,6 +9,7 @@ import (
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/oauth"
@@ -27,12 +28,14 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
 	// for now we use only server side TLS, if we go mTLS use NewTLS()
-	creds, err := loadClientTLSFromFile(cfg.PKI)
-	err2.Check(err)
+	creds := try.To1(loadClientTLSFromFile(cfg.PKI))
 
 	glog.V(5).Infoln("new tls client ready")
 
-	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
+	opts := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithTransportCredentials(creds),
+	}
 	if cfg.PKI != nil {
 		opts = make([]grpc.DialOption, 0)
 		if cfg.JWT != "" {
@@ -41,7 +44,6 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 			glog.V(10).Infoln("grpc oauth wrap for JWT done")
 			opts = append(opts, grpc.WithPerRPCCredentials(perRPC))
 		}
-		opts = append(opts, grpc.WithTransportCredentials(creds))
 		// dont use grpc.WithBlock()!! you don't get immediate error messages
 	}
 	if cfg.Opts != nil {

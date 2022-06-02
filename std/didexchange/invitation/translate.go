@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 const prefix = "didcomm://aries_connection_invitation?c_i="
@@ -25,16 +26,15 @@ func Translate(s string) (i Invitation, err error) {
 
 	// this is not URL formated invitation, it must be JSON then
 	if err != nil {
-		err2.Check(json.Unmarshal([]byte(s), &i))
+		try.To(json.Unmarshal([]byte(s), &i))
 		return i, nil
 	}
 
-	m, err := url.ParseQuery(u.RawQuery)
-	err2.Check(err)
+	m := try.To1(url.ParseQuery(u.RawQuery))
 
 	raw := m["c_i"][0]
 	d := err2.Bytes.Try(decodeB64(raw))
-	err2.Check(json.Unmarshal(d, &i))
+	try.To(json.Unmarshal(d, &i))
 
 	return i, nil
 }

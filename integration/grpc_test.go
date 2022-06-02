@@ -16,6 +16,7 @@ import (
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
@@ -32,8 +33,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	err2.Check(flag.Set("logtostderr", "true"))
-	err2.Check(flag.Set("v", "0"))
+	try.To(flag.Set("logtostderr", "true"))
+	try.To(flag.Set("v", "0"))
 	setUp()
 	code := m.Run()
 	tearDown()
@@ -42,14 +43,12 @@ func TestMain(m *testing.M) {
 
 func setUp() {
 	runServer()
-	var err error
-	conn, err = newClient("findy-root", "localhost:50051")
-	err2.Check(err) // just dump error info out, we are inside a test
+	conn = try.To1(newClient("findy-root", "localhost:50051")) // just dump error info out, we are inside a test
 }
 
 func tearDown() {
 	err := conn.Close()
-	err2.Check(err) // just dump information out, we are inside a test
+	try.To(err) // just dump information out, we are inside a test
 	server.GracefulStop()
 }
 
@@ -78,13 +77,12 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	pki := rpc.LoadPKI("../cert")
 
 	glog.V(5).Infoln("client with user:", user)
-	conn, err = rpc.ClientConn(rpc.ClientCfg{
+	conn = try.To1(rpc.ClientConn(rpc.ClientCfg{
 		PKI:  pki,
 		JWT:  jwt.BuildJWT(user),
 		Addr: addr,
 		Opts: []grpc.DialOption{grpc.WithContextDialer(bufDialer)},
-	})
-	err2.Check(err)
+	}))
 	return
 }
 
@@ -97,7 +95,7 @@ func runServer() {
 		defer err2.Catch(func(err error) {
 			log.Fatal(err)
 		})
-		s, lis, err := rpc.PrepareServe(&rpc.ServerCfg{
+		s, lis := try.To2(rpc.PrepareServe(&rpc.ServerCfg{
 			Port:    50051,
 			PKI:     pki,
 			TestLis: lis,
@@ -106,10 +104,9 @@ func runServer() {
 				glog.V(10).Infoln("GRPC registration all done")
 				return nil
 			},
-		})
-		err2.Check(err)
+		}))
 		server = s
-		err2.Check(s.Serve(lis))
+		try.To(s.Serve(lis))
 	}()
 }
 

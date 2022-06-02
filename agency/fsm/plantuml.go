@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 func GenerateURL(subPath string, m *Machine) (URL *url.URL, err error) {
@@ -50,7 +51,7 @@ func translate(b64 string) string {
 func tryDeflate(d []byte) []byte {
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)
-	err2.Try(w.Write(d))
-	err2.Check(w.Close())
+	try.To1(w.Write(d))
+	try.To(w.Close())
 	return b.Bytes()
 }

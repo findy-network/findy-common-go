@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -20,8 +21,8 @@ var buckets = [][]byte{{01, 01}}
 var db2 *Mgd
 
 func TestMain(m *testing.M) {
-	err2.Check(flag.Set("logtostderr", "true"))
-	err2.Check(flag.Set("v", "3"))
+	try.To(flag.Set("logtostderr", "true"))
+	try.To(flag.Set("v", "3"))
 
 	setUp()
 	code := m.Run()
@@ -65,7 +66,7 @@ func setUp() {
 }
 
 func tearDown() {
-	err2.Check(Wipe())
+	try.To(Wipe())
 	removeFiles(".", "*"+dbFilename)
 	removeFiles(".", "*"+dbFilename2)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
+	"github.com/lainio/err2/try"
 )
 
 // Cipher is type for our block AES cipher
@@ -25,13 +26,11 @@ func NewCipher(k []byte) *Cipher {
 		glog.Error(err)
 	})
 
-	newBlock, err := aes.NewCipher(k)
-	err2.Check(err)
+	newBlock := try.To1(aes.NewCipher(k))
 
 	// Create a new GCM - https://en.wikipedia.org/wiki/Galois/Counter_Mode
 	// https://golang.org/pkg/crypto/cipher/#NewGCM
-	newAesGCM, err := cipher.NewGCM(newBlock)
-	err2.Check(err)
+	newAesGCM := try.To1(cipher.NewGCM(newBlock))
 
 	return &Cipher{block: newBlock, aesGCM: newAesGCM}
 }

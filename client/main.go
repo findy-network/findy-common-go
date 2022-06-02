@@ -11,6 +11,7 @@ import (
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 )
 
@@ -27,19 +28,17 @@ func main() {
 	flag.Parse()
 
 	// we want this for glog, this is just a tester, not a real world service
-	err2.Check(flag.Set("logtostderr", "true"))
+	try.To(flag.Set("logtostderr", "true"))
 
-	conn, err := newClient(*user, fmt.Sprintf("%s:%d", *serverAddr, *port))
-	err2.Check(err)
+	conn := try.To1(newClient(*user, fmt.Sprintf("%s:%d", *serverAddr, *port)))
 	defer conn.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	c := ops.NewDevOpsServiceClient(conn)
-	r, err := c.Enter(ctx, &ops.Cmd{
+	r := try.To1(c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
-	})
-	err2.Check(err)
+	}))
 	fmt.Println("result:", r.GetPing())
 	defer cancel()
 
@@ -50,11 +49,10 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 
 	pki := rpc.LoadPKIWithServerName("../cert", addr)
 	glog.V(5).Infoln("client with user:", user)
-	conn, err = rpc.ClientConn(rpc.ClientCfg{
+	conn = try.To1(rpc.ClientConn(rpc.ClientCfg{
 		PKI:  pki,
 		JWT:  jwt.BuildJWT(user),
 		Addr: addr,
-	})
-	err2.Check(err)
+	}))
 	return
 }

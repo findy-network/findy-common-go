@@ -16,6 +16,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 const (
@@ -85,9 +86,9 @@ type MachineData struct {
 func NewMachine(data MachineData) *Machine {
 	var machine Machine
 	if filepath.Ext(data.FType) == ".json" {
-		err2.Check(json.Unmarshal(data.Data, &machine))
+		try.To(json.Unmarshal(data.Data, &machine))
 	} else {
-		err2.Check(yaml.Unmarshal(data.Data, &machine))
+		try.To(yaml.Unmarshal(data.Data, &machine))
 	}
 	return &machine
 }
@@ -184,7 +185,7 @@ func (e Event) Answers(status *agency.Question) bool {
 			panic("programming error")
 		}
 		var attrValues []ProofAttr
-		err2.Check(json.Unmarshal([]byte(e.Data), &attrValues))
+		try.To(json.Unmarshal([]byte(e.Data), &attrValues))
 
 		switch e.Rule {
 		case TriggerTypeNotAcceptValues:
@@ -574,7 +575,7 @@ func (t *Transition) FmtFromMem(send *Event) string {
 	})
 	tmpl := template.Must(template.New("template").Parse(send.Data))
 	var buf bytes.Buffer
-	err2.Check(tmpl.Execute(&buf, t.Machine.Memory))
+	try.To(tmpl.Execute(&buf, t.Machine.Memory))
 	return buf.String()
 }
 
