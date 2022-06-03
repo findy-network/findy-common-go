@@ -14,6 +14,7 @@ import (
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/test/bufconn"
@@ -39,8 +40,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 
 	opts := make([]grpc.ServerOption, 0, 4)
 	if cfg.PKI != nil {
-		creds, err := loadTLSCredentials(cfg.PKI)
-		err2.Check(err)
+		creds := try.To1(loadTLSCredentials(cfg.PKI))
 		opts = append(opts, grpc.Creds(creds))
 	}
 
@@ -78,11 +78,10 @@ func Serve(cfg *ServerCfg) {
 		glog.Error(err)
 	})
 
-	s, lis, err := PrepareServe(cfg)
-	err2.Check(err)
+	s, lis := try.To2(PrepareServe(cfg))
 
 	glog.V(5).Infoln("start to serve..")
-	err2.Check(s.Serve(lis))
+	try.To(s.Serve(lis))
 }
 
 func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
@@ -92,13 +91,11 @@ func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) 
 	if cfg.TestLis != nil {
 		lis = cfg.TestLis
 	} else {
-		lis, err = net.Listen("tcp", addr)
-		err2.Check(err)
+		lis = try.To1(net.Listen("tcp", addr))
 		glog.V(5).Infoln("listen to:", addr)
 	}
-	s, err = Server(cfg)
-	err2.Check(err)
-	err2.Check(cfg.Register(s))
+	s = try.To1(Server(cfg))
+	try.To(cfg.Register(s))
 
 	return s, lis, nil
 }
@@ -106,13 +103,12 @@ func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) 
 func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
-	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Client.CertFile))
+	caCert := try.To1(ioutil.ReadFile(pw.Client.CertFile))
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caCert)
 
 	// Load server's certificate and private key
-	serverCert, err := tls.LoadX509KeyPair(pw.Server.CertFile, pw.Server.KeyFile)
-	err2.Check(err)
+	serverCert := try.To1(tls.LoadX509KeyPair(pw.Server.CertFile, pw.Server.KeyFile))
 
 	// Create the credentials and return it
 	config := &tls.Config{

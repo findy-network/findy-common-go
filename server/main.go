@@ -11,6 +11,7 @@ import (
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 )
 
@@ -18,7 +19,7 @@ func main() {
 	flag.Parse()
 
 	// whe want this for glog, this is just a tester, not a real world service
-	err2.Check(flag.Set("logtostderr", "true"))
+	try.To(flag.Set("logtostderr", "true"))
 
 	pki := rpc.LoadPKI("./cert")
 	glog.V(3).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",

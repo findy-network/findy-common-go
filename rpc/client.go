@@ -9,8 +9,10 @@ import (
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/credentials/oauth"
 )
 
@@ -26,13 +28,15 @@ type ClientCfg struct {
 func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
-	// for now we use only server side TLS, if we go mTLS use NewTLS()
-	creds, err := loadClientTLSFromFile(cfg.PKI)
-	err2.Check(err)
+	// for now, we use only server side TLS, if we go mTLS use NewTLS()
+	creds := try.To1(loadClientTLSFromFile(cfg.PKI))
 
 	glog.V(5).Infoln("new tls client ready")
 
-	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
+	opts := []grpc.DialOption{
+		grpc.WithBlock(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
 	if cfg.PKI != nil {
 		opts = make([]grpc.DialOption, 0)
 		if cfg.JWT != "" {
@@ -54,7 +58,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 func loadClientTLSFromFile(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
-	caCert := err2.Bytes.Try(ioutil.ReadFile(pw.Server.CertFile))
+	caCert := try.To1(ioutil.ReadFile(pw.Server.CertFile))
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caCert)
 

@@ -7,6 +7,7 @@ import (
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	didexchange "github.com/findy-network/findy-common-go/std/didexchange/invitation"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 )
 
@@ -171,8 +172,7 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationStr string) (pid *
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well
-	invitation, err := didexchange.Translate(invitationStr)
-	err2.Check(err)
+	invitation := try.To1(didexchange.Translate(invitationStr))
 
 	protocol := &agency.Protocol{
 		TypeID: agency.Protocol_DIDEXCHANGE,
@@ -182,8 +182,7 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationStr string) (pid *
 			InvitationJSON: invitationStr,
 		}},
 	}
-	pid, err = pw.Conn.DoStart(ctx, protocol, pw.cOpts...)
-	err2.Check(err)
+	pid = try.To1(pw.Conn.DoStart(ctx, protocol, pw.cOpts...))
 	pw.ID = invitation.ID
 	return pid, err
 }

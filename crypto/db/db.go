@@ -12,6 +12,7 @@ import (
 	"github.com/findy-network/findy-common-go/backup"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -41,7 +42,7 @@ func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
 
 	m.dirty = true
 	if m.db == nil {
-		err2.Check(m.open())
+		try.To(m.open())
 	}
 	return f(m.db)
 }
@@ -75,14 +76,13 @@ func (m *Mgd) open() (err error) {
 	defer err2.Return(&err)
 
 	glog.V(1).Infoln("open DB", m.Filename)
-	m.db, err = bolt.Open(m.Filename, 0600, nil)
-	err2.Check(err)
+	m.db = try.To1(bolt.Open(m.Filename, 0600, nil))
 
-	err2.Check(m.db.Update(func(tx *bolt.Tx) (err error) {
+	try.To(m.db.Update(func(tx *bolt.Tx) (err error) {
 		defer err2.Annotate("create buckets", &err)
 
 		for _, bucket := range m.Buckets {
-			err2.Try(tx.CreateBucketIfNotExists(bucket))
+			try.To1(tx.CreateBucketIfNotExists(bucket))
 		}
 		return nil
 	}))
@@ -129,7 +129,7 @@ func (m *Mgd) close() (err error) {
 	defer err2.Return(&err)
 
 	glog.V(1).Infoln("close DB", m.Filename)
-	err2.Check(m.db.Close())
+	try.To(m.db.Close())
 	m.db = nil
 	return nil
 }
@@ -145,11 +145,11 @@ func (db *Mgd) AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err er
 	return db.operate(func(DB *bolt.DB) error {
 		defer err2.Annotate("add key", &err)
 
-		err2.Check(DB.Update(func(tx *bolt.Tx) (err error) {
+		try.To(DB.Update(func(tx *bolt.Tx) (err error) {
 			defer err2.Return(&err)
 
 			b := tx.Bucket(bucket)
-			err2.Check(b.Put(index.get(), keyValue.get()))
+			try.To(b.Put(index.get(), keyValue.get()))
 			return nil
 		}))
 		return nil
@@ -168,11 +168,11 @@ func (db *Mgd) RmKeyValueFromBucket(bucket []byte, index *Data) (err error) {
 	return db.operate(func(DB *bolt.DB) error {
 		defer err2.Annotate("rm key", &err)
 
-		err2.Check(DB.Update(func(tx *bolt.Tx) (err error) {
+		try.To(DB.Update(func(tx *bolt.Tx) (err error) {
 			defer err2.Return(&err)
 
 			b := tx.Bucket(bucket)
-			err2.Check(b.Delete(index.get()))
+			try.To(b.Delete(index.get()))
 			return nil
 		}))
 		return nil
@@ -210,8 +210,8 @@ func (db *Mgd) GetKeyValueFromBucket(
 ) {
 	defer err2.Annotate("get value", &err)
 
-	err2.Check(db.operate(func(DB *bolt.DB) error {
-		err2.Check(DB.View(func(tx *bolt.Tx) (err error) {
+	try.To(db.operate(func(DB *bolt.DB) error {
+		try.To(DB.View(func(tx *bolt.Tx) (err error) {
 			defer err2.Return(&err)
 
 			b := tx.Bucket(bucket)
@@ -262,12 +262,12 @@ func (db *Mgd) GetAllValuesFromBucket(
 
 	values = make([][]byte, 0)
 
-	err2.Check(db.operate(func(DB *bolt.DB) error {
-		err2.Check(DB.View(func(tx *bolt.Tx) (err error) {
+	try.To(db.operate(func(DB *bolt.DB) error {
+		try.To(DB.View(func(tx *bolt.Tx) (err error) {
 			defer err2.Return(&err)
 
 			b := tx.Bucket(bucket)
-			err2.Check(b.ForEach(func(_, v []byte) error {
+			try.To(b.ForEach(func(_, v []byte) error {
 				res := v
 				for _, transform := range transforms {
 					res = transform(res)
@@ -333,14 +333,14 @@ func (db *Mgd) Backup() (did bool, err error) {
 		return false, nil
 	}
 	if db.db != nil {
-		err2.Check(db.close())
+		try.To(db.close())
 	}
 
 	// we keep locks on during the whole copy, but try to do it as fast as
 	// possible. If this would be critical we could first read the source file
 	// when locks are on and then write the target file in a new gorountine.
 	backupName := db.backupName()
-	err2.Check(backup.FileCopy(db.Filename, backupName))
+	try.To(backup.FileCopy(db.Filename, backupName))
 	glog.V(1).Infoln("successful backup to file:", backupName)
 
 	db.dirty = false
@@ -360,7 +360,7 @@ func (db *Mgd) Wipe() (err error) {
 	defer db.l.Unlock()
 
 	if db.db != nil {
-		err2.Check(db.close())
+		try.To(db.close())
 	}
 
 	return os.RemoveAll(db.Filename)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 // PrefixName builds a new prefixed file name. The file name is in format:
@@ -27,14 +28,14 @@ func PrefixName(prefix, name string) string {
 func FileCopy(src, dst string) (err error) {
 	defer err2.Returnf(&err, "copy %s -> %s", src, dst)
 
-	r := err2.File.Try(os.Open(src))
+	r := try.To1(os.Open(src))
 	defer r.Close()
 
-	w := err2.File.Try(os.Create(dst))
+	w := try.To1(os.Create(dst))
 	defer err2.Handle(&err, func() {
 		os.Remove(dst)
 	})
 	defer w.Close()
-	err2.Empty.Try(io.Copy(w, r))
+	try.To1(io.Copy(w, r))
 	return nil
 }

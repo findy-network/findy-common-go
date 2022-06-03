@@ -16,6 +16,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 type Bot struct {
@@ -25,24 +26,24 @@ type Bot struct {
 
 func LoadFSMMachineData(fName string, r io.Reader) (m fsm.MachineData, err error) {
 	defer err2.Return(&err)
-	data := err2.Bytes.Try(ioutil.ReadAll(r))
+	data := try.To1(ioutil.ReadAll(r))
 	return fsm.MachineData{FType: fName, Data: data}, nil
 }
 
 func LoadFSM(fName string, r io.Reader) (m *fsm.Machine, err error) {
 	defer err2.Return(&err)
-	data := err2.Bytes.Try(ioutil.ReadAll(r))
+	data := try.To1(ioutil.ReadAll(r))
 	m = loadFSMData(fName, data)
-	err2.Check(m.Initialize())
+	try.To(m.Initialize())
 	return m, nil
 }
 
 func loadFSMData(fName string, data []byte) *fsm.Machine {
 	var machine fsm.Machine
 	if filepath.Ext(fName) == ".json" {
-		err2.Check(json.Unmarshal(data, &machine))
+		try.To(json.Unmarshal(data, &machine))
 	} else {
-		err2.Check(yaml.Unmarshal(data, &machine))
+		try.To(yaml.Unmarshal(data, &machine))
 	}
 	return &machine
 }
@@ -50,16 +51,16 @@ func loadFSMData(fName string, data []byte) *fsm.Machine {
 func SaveFSM(m *fsm.Machine, fName string) (err error) {
 	defer err2.Return(&err)
 	data := marshalFSM(fName, m)
-	err2.Check(ioutil.WriteFile(fName, data, 0644))
+	try.To(ioutil.WriteFile(fName, data, 0644))
 	return nil
 }
 
 func marshalFSM(fName string, fsm *fsm.Machine) []byte {
 	var data []byte
 	if filepath.Ext(fName) == ".json" {
-		data = err2.Bytes.Try(json.MarshalIndent(fsm, "", "\t"))
+		data = try.To1(json.MarshalIndent(fsm, "", "\t"))
 	} else {
-		data = err2.Bytes.Try(yaml.Marshal(fsm))
+		data = try.To1(yaml.Marshal(fsm))
 	}
 	return data
 }
@@ -69,10 +70,8 @@ func (b Bot) Run(intCh chan os.Signal) {
 	defer cancel() // for server side stops, for proper cleanup
 
 	client := &agency.ClientID{ID: utils.UUID()}
-	ch, err := b.Conn.ListenStatus(ctx, client)
-	err2.Check(err)
-	questionCh, err := b.Conn.Wait(ctx, client)
-	err2.Check(err)
+	ch := try.To1(b.Conn.ListenStatus(ctx, client))
+	questionCh := try.To1(b.Conn.Wait(ctx, client))
 
 	chat.Machine = b.MachineData
 
