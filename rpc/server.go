@@ -45,6 +45,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	}
 
 	errHandler := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+		glog.V(1).Infoln(jwt.User(ctx), "-agent gRPC call:", info.FullMethod)
 		resp, err := handler(ctx, req)
 		if err != nil {
 			glog.Errorf("method %q failed: %s", info.FullMethod, err)
