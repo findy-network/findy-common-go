@@ -44,11 +44,9 @@ func (c ClientCfg) RequireTransportSecurity() bool {
 func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	defer err2.Return(&err)
 
-	opts := []grpc.DialOption{
-		grpc.WithBlock(),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	if cfg.PKI != nil {
+	opts := make([]grpc.DialOption, 0)
+	switch {
+	case cfg.PKI != nil:
 		glog.V(5).Infoln("new tls client ready")
 		opts = make([]grpc.DialOption, 0)
 		if cfg.JWT != "" {
@@ -61,9 +59,14 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 		creds := try.To1(loadClientTLSFromFile(cfg.PKI))
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 		// dont use grpc.WithBlock()!! you don't get immediate error messages
-	} else if cfg.Insecure && cfg.JWT != "" {
-		glog.V(10).Infoln("sending token over insecure transport")
-		opts = append(opts, grpc.WithPerRPCCredentials(cfg))
+	case cfg.Insecure:
+		if cfg.JWT != "" {
+			glog.V(10).Infoln("sending token over insecure transport")
+			opts = append(opts, grpc.WithPerRPCCredentials(cfg))
+		}
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	default:
+		glog.Warning("PKI nor Insecure not set")
 	}
 
 	if cfg.Opts != nil {
