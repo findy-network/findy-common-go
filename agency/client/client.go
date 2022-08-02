@@ -60,6 +60,21 @@ func BuildClientConnBase(
 	return cfg
 }
 
+func BuildInsecureClientConnBase(
+	addr string,
+	port int,
+	opts []grpc.DialOption,
+) *rpc.ClientCfg {
+
+	cfg := &rpc.ClientCfg{
+		JWT:      "",
+		Addr:     fmt.Sprintf("%s:%d", addr, port),
+		Opts:     opts,
+		Insecure: true,
+	}
+	return cfg
+}
+
 func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
 	return TryAuthOpenWithSleep(jwtToken, conf, nil)
 }
