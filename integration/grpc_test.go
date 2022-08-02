@@ -26,10 +26,12 @@ const bufSize = 1024 * 1024
 const pingReturn = "This is a TEST"
 
 var (
-	lis     = bufconn.Listen(bufSize)
-	server  *grpc.Server
-	conn    *grpc.ClientConn
-	doPanic = false
+	lis          = bufconn.Listen(bufSize)
+	server       *grpc.Server
+	conn         *grpc.ClientConn
+	insecureConn *grpc.ClientConn
+	doPanic      = false
+	doServer     = &devOpsServer{Root: "findy-root"}
 )
 
 func TestMain(m *testing.M) {
@@ -50,6 +52,15 @@ func setUp() {
 
 	runServer()
 	conn = try.To1(newClient("findy-root", "localhost:50051")) // just dump error info out, we are inside a test
+
+	runInsecureServer()
+	insecureConn = try.To1(rpc.ClientConn(rpc.ClientCfg{
+		JWT:      jwt.BuildJWT("findy-root"),
+		Addr:     "localhost:50052",
+		Opts:     []grpc.DialOption{grpc.WithContextDialer(bufDialer)},
+		Insecure: true,
+	}))
+
 }
 
 func tearDown() {
@@ -73,6 +84,27 @@ func TestEnter(t *testing.T) {
 		Type: ops.Cmd_PING,
 	})
 	assert.Error(t, err)
+	doPanic = false
+
+	defer cancel()
+}
+
+func TestEnterInsecure(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+
+	c := ops.NewDevOpsServiceClient(insecureConn)
+	r, err := c.Enter(ctx, &ops.Cmd{
+		Type: ops.Cmd_PING,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, pingReturn, r.GetPing())
+
+	doPanic = true
+	_, err = c.Enter(ctx, &ops.Cmd{
+		Type: ops.Cmd_PING,
+	})
+	assert.Error(t, err)
+	doPanic = false
 
 	defer cancel()
 }
@@ -106,7 +138,26 @@ func runServer() {
 			PKI:     pki,
 			TestLis: lis,
 			Register: func(s *grpc.Server) error {
-				ops.RegisterDevOpsServiceServer(s, &devOpsServer{Root: "findy-root"})
+				ops.RegisterDevOpsServiceServer(s, doServer)
+				glog.V(10).Infoln("GRPC registration all done")
+				return nil
+			},
+		}))
+		server = s
+		try.To(s.Serve(lis))
+	}()
+}
+
+func runInsecureServer() {
+	go func() {
+		defer err2.Catch(func(err error) {
+			log.Fatal(err)
+		})
+		s, lis := try.To2(rpc.PrepareServe(&rpc.ServerCfg{
+			Port:    50052,
+			TestLis: lis,
+			Register: func(s *grpc.Server) error {
+				ops.RegisterDevOpsServiceServer(s, doServer)
 				glog.V(10).Infoln("GRPC registration all done")
 				return nil
 			},
