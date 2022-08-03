@@ -26,12 +26,14 @@ const bufSize = 1024 * 1024
 const pingReturn = "This is a TEST"
 
 var (
-	lis          = bufconn.Listen(bufSize)
-	server       *grpc.Server
-	conn         *grpc.ClientConn
-	insecureConn *grpc.ClientConn
-	doPanic      = false
-	doServer     = &devOpsServer{Root: "findy-root"}
+	lis            = bufconn.Listen(bufSize)
+	insecureLis    = bufconn.Listen(bufSize)
+	server         *grpc.Server
+	conn           *grpc.ClientConn
+	insecureServer *grpc.Server
+	insecureConn   *grpc.ClientConn
+	doPanic        = false
+	doServer       = &devOpsServer{Root: "findy-root"}
 )
 
 func TestMain(m *testing.M) {
@@ -57,7 +59,7 @@ func setUp() {
 	insecureConn = try.To1(rpc.ClientConn(rpc.ClientCfg{
 		JWT:      jwt.BuildJWT("findy-root"),
 		Addr:     "localhost:50052",
-		Opts:     []grpc.DialOption{grpc.WithContextDialer(bufDialer)},
+		Opts:     []grpc.DialOption{grpc.WithContextDialer(insecureBufDialer)},
 		Insecure: true,
 	}))
 
@@ -67,6 +69,10 @@ func tearDown() {
 	err := conn.Close()
 	try.To(err) // just dump information out, we are inside a test
 	server.GracefulStop()
+
+	err = insecureConn.Close()
+	try.To(err) // just dump information out, we are inside a test
+	insecureServer.GracefulStop()
 }
 
 func TestEnter(t *testing.T) {
@@ -153,22 +159,26 @@ func runInsecureServer() {
 		defer err2.Catch(func(err error) {
 			log.Fatal(err)
 		})
-		s, lis := try.To2(rpc.PrepareServe(&rpc.ServerCfg{
+		s, serverLis := try.To2(rpc.PrepareServe(&rpc.ServerCfg{
 			Port:    50052,
-			TestLis: lis,
+			TestLis: insecureLis,
 			Register: func(s *grpc.Server) error {
 				ops.RegisterDevOpsServiceServer(s, doServer)
 				glog.V(10).Infoln("GRPC registration all done")
 				return nil
 			},
 		}))
-		server = s
-		try.To(s.Serve(lis))
+		insecureServer = s
+		try.To(s.Serve(serverLis))
 	}()
 }
 
 func bufDialer(context.Context, string) (net.Conn, error) {
 	return lis.Dial()
+}
+
+func insecureBufDialer(context.Context, string) (net.Conn, error) {
+	return insecureLis.Dial()
 }
 
 type devOpsServer struct {
