@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/url"
+	"strings"
 
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
@@ -22,7 +23,7 @@ func decodeB64(str string) ([]byte, error) {
 func Translate(s string) (i Invitation, err error) {
 	defer err2.Annotate("invitation translate", &err)
 
-	u, err := url.Parse(s)
+	u, err := url.Parse(strings.TrimSpace(s))
 
 	// this is not URL formated invitation, it must be JSON then
 	if err != nil {
