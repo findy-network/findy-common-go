@@ -14,7 +14,9 @@ import (
 )
 
 // PrefixName builds a new prefixed file name. The file name is in format:
-//  prefix_file.name
+//
+//	prefix_file.name
+//
 // If prefix is empty the returned string starts with _.
 func PrefixName(prefix, name string) string {
 	dir, file := filepath.Split(name)

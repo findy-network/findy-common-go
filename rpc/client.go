@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/golang/glog"
@@ -79,7 +79,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 func loadClientTLSFromFile(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
-	caCert := try.To1(ioutil.ReadFile(pw.Server.CertFile))
+	caCert := try.To1(os.ReadFile(pw.Server.CertFile))
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caCert)
 

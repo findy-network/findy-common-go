@@ -21,10 +21,11 @@ func GenerateURL(subPath string, m *Machine) (URL *url.URL, err error) {
 }
 
 // translate translates standard base64 string to plantuml's version:
-//  normal base64:n
-//  ABCDEFGHIJ KLMNOPQRSTUVWXYZ abcdefghij klmnopqrstuvwxyz 0123456789 +/
-//  plant's 'close' to base64:
-//  0123456789 ABCDEFGHIJKLMNOP QRSTUVWXYZ abcdefghijklmnop qrstuvwxyz -_
+//
+//	normal base64:n
+//	ABCDEFGHIJ KLMNOPQRSTUVWXYZ abcdefghij klmnopqrstuvwxyz 0123456789 +/
+//	plant's 'close' to base64:
+//	0123456789 ABCDEFGHIJKLMNOP QRSTUVWXYZ abcdefghijklmnop qrstuvwxyz -_
 func translate(b64 string) string {
 	trans := func(r rune) rune {
 		switch {
