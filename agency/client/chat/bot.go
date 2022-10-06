@@ -1,10 +1,10 @@
+// Package chat implments state-machine based chat bots
 package chat
 
 import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -26,13 +26,13 @@ type Bot struct {
 
 func LoadFSMMachineData(fName string, r io.Reader) (m fsm.MachineData, err error) {
 	defer err2.Return(&err)
-	data := try.To1(ioutil.ReadAll(r))
+	data := try.To1(io.ReadAll(r))
 	return fsm.MachineData{FType: fName, Data: data}, nil
 }
 
 func LoadFSM(fName string, r io.Reader) (m *fsm.Machine, err error) {
 	defer err2.Return(&err)
-	data := try.To1(ioutil.ReadAll(r))
+	data := try.To1(io.ReadAll(r))
 	m = loadFSMData(fName, data)
 	try.To(m.Initialize())
 	return m, nil
@@ -51,7 +51,7 @@ func loadFSMData(fName string, data []byte) *fsm.Machine {
 func SaveFSM(m *fsm.Machine, fName string) (err error) {
 	defer err2.Return(&err)
 	data := marshalFSM(fName, m)
-	try.To(ioutil.WriteFile(fName, data, 0644))
+	try.To(os.WriteFile(fName, data, 0644))
 	return nil
 }
 
@@ -82,7 +82,7 @@ loop:
 		select {
 		case status, ok := <-ch:
 			if !ok {
-				glog.V(2).Infoln("closed from server")
+				glog.V(20).Infoln("closed from server")
 				break loop
 			}
 			glog.V(5).Infoln("listen status:",
@@ -92,7 +92,7 @@ loop:
 			chat.Status <- status
 		case question, ok := <-questionCh:
 			if !ok {
-				glog.V(2).Infoln("closed from server")
+				glog.V(20).Infoln("closed from server")
 				break loop
 			}
 			glog.V(5).Infoln("listen question status:",
@@ -102,7 +102,6 @@ loop:
 			chat.Question <- question
 		case <-intCh:
 			cancel()
-			glog.V(2).Infoln("interrupted by user, cancel() called")
 		}
 	}
 }
