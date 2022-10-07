@@ -21,7 +21,7 @@ func decodeB64(str string) ([]byte, error) {
 }
 
 func Translate(s string) (i Invitation, err error) {
-	defer err2.Annotate("invitation translate", &err)
+	defer err2.Returnf(&err, "invitation translate")
 
 	u, err := url.Parse(strings.TrimSpace(s))
 
@@ -41,7 +41,7 @@ func Translate(s string) (i Invitation, err error) {
 }
 
 func Build(inv Invitation) (s string, err error) {
-	defer err2.Annotate("invitation build", &err)
+	defer err2.Returnf(&err, "invitation build")
 
 	b := try.To1(json.Marshal(inv))
 	return prefix + base64.RawURLEncoding.EncodeToString(b), nil

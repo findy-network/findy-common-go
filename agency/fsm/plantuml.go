@@ -12,7 +12,7 @@ import (
 )
 
 func GenerateURL(subPath string, m *Machine) (URL *url.URL, err error) {
-	defer err2.Annotate("generate plantuml URL", &err)
+	defer err2.Returnf(&err, "generate plantuml URL")
 	rawPlantModel := m.String()
 	deflated := tryDeflate([]byte(rawPlantModel))
 	b64 := base64.RawStdEncoding.EncodeToString(deflated[2 : len(deflated)-4])
