@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/golang/glog"
@@ -104,7 +104,7 @@ func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) 
 func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Return(&err)
 
-	caCert := try.To1(ioutil.ReadFile(pw.Client.CertFile))
+	caCert := try.To1(os.ReadFile(pw.Client.CertFile))
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caCert)
 

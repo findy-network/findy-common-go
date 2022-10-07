@@ -1,3 +1,4 @@
+// Package client implements helpers for gRPC client connection to Agency
 package client
 
 import (
@@ -79,7 +80,8 @@ func TryAuthOpen(jwtToken string, conf *rpc.ClientCfg) (c Conn) {
 	return TryAuthOpenWithSleep(jwtToken, conf, nil)
 }
 
-//nolintlint
+// TryAuthOpenWithSleep opens authorized gRPC connection with sleep time.
+// nolintlint
 func TryAuthOpenWithSleep(
 	jwtToken string,
 	conf *rpc.ClientCfg,
@@ -478,7 +480,9 @@ func (conn Conn) ListenStatus(
 // is identifed by ClientID. NOTE! This function handles connection errors by
 // itself i.e. it tries to reopen error connnections until its terminated by
 // ctx.Cancel. NOTE! The function filters KEEPALIVE messages.
-func (conn Conn) ListenStatusAndRetry( // nolint:dupl
+//
+//nolint:dupl
+func (conn Conn) ListenStatusAndRetry(
 	ctx context.Context,
 	client *agency.ClientID,
 	cOpts ...grpc.CallOption,
@@ -560,7 +564,7 @@ func (conn Conn) ListenStatusErr(
 // identifed by ClientID. NOTE! This function handles connection errors by
 // itself i.e. it tries to reopen error connnections until its terminated by
 // ctx.Cancel. NOTE! The function filters KEEPALIVE messages.
-func (conn Conn) WaitAndRetry( // nolint:dupl
+func (conn Conn) WaitAndRetry( //nolint:dupl
 	ctx context.Context,
 	client *agency.ClientID,
 	cOpts ...grpc.CallOption,
