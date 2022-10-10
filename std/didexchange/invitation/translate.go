@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 )
 
@@ -20,6 +21,28 @@ func decodeB64(str string) ([]byte, error) {
 	return data, err
 }
 
+func convertFromOOB(invBytes []byte) (i Invitation, err error) {
+	defer err2.Returnf(&err, "oob conversion")
+
+	var oobInv OOBInvitation
+	try.To(json.Unmarshal(invBytes, &oobInv))
+
+	assert.D.True(len(oobInv.Services) > 0)
+
+	service := oobInv.Services[0]
+
+	i.ID = oobInv.ID
+	i.Type = oobInv.Type
+	i.Label = oobInv.Label
+	i.ServiceEndpoint = service.ServiceEndpoint
+	i.RecipientKeys = service.RecipientKeys
+	i.RoutingKeys = service.RoutingKeys
+	i.ImageURL = oobInv.ImageURL
+
+	return i, nil
+}
+
+// TODO: finalize and cleanup OOB parsing
 func Translate(s string) (i Invitation, err error) {
 	defer err2.Returnf(&err, "invitation translate")
 
@@ -27,17 +50,31 @@ func Translate(s string) (i Invitation, err error) {
 
 	// this is not URL formated invitation, it must be JSON then
 	if err != nil {
-		try.To(json.Unmarshal([]byte(s), &i))
+		invBytes := []byte(s)
+		if strings.Contains(s, "https://didcomm.org/out-of-band/1.0/invitation") {
+			i = try.To1(convertFromOOB(invBytes))
+		} else {
+			try.To(json.Unmarshal(invBytes, &i))
+		}
 		return i, nil
 	}
 
 	m := try.To1(url.ParseQuery(u.RawQuery))
 
-	raw := m["c_i"][0]
-	d := try.To1(decodeB64(raw))
-	try.To(json.Unmarshal(d, &i))
+	if param, ok := m["c_i"]; ok {
+		d := try.To1(decodeB64(param[0]))
+		try.To(json.Unmarshal(d, &i))
+		return i, nil
+	}
+
+	param := m["oob"]
+	assert.D.True(param != nil)
+
+	d := try.To1(decodeB64(param[0]))
+	i = try.To1(convertFromOOB(d))
 
 	return i, nil
+
 }
 
 func Build(inv Invitation) (s string, err error) {
