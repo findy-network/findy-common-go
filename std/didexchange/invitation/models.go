@@ -39,3 +39,29 @@ type Invitation struct {
 	Type   string            `json:"@type,omitempty"`
 	Thread *decorator.Thread `json:"~thread,omitempty"`
 }
+
+type OOBInvitation struct {
+	// the Type of the connection invitation
+	Type string `json:"@type,omitempty"`
+
+	// the ID of the connection invitation
+	ID string `json:"@id,omitempty"`
+
+	// the Label of the connection invitation
+	Label string `json:"label,omitempty"`
+
+	Accept []string `json:"accept,omitempty"`
+
+	HandshakeProtocols []string `json:"handshake_protocols,omitempty"`
+
+	Services []struct {
+		ID              string   `json:"id,omitempty"`
+		ServiceEndpoint string   `json:"serviceEndpoint,omitempty"`
+		Type            string   `json:"type,omitempty"`
+		RecipientKeys   []string `json:"recipientKeys,omitempty"`
+		RoutingKeys     []string `json:"routingKeys,omitempty"`
+	} `json:"services,omitempty"`
+
+	// the Image URL of the connection invitation
+	ImageURL string `json:"imageUrl,omitempty"`
+}
