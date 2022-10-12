@@ -25,7 +25,7 @@ func decodeB64(str string) ([]byte, error) {
 
 func didKeysToB58(keys []string) []string {
 	for index, key := range keys {
-		assert.That(strings.HasPrefix(key, "did:key"), true)
+		assert.That(strings.HasPrefix(key, "did:key"))
 
 		keyBytes := try.To1(fingerprint.PubKeyFromDIDKey(key))
 		keys[index] = base58.Encode(keyBytes)
