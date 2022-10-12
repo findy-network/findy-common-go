@@ -6,9 +6,11 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/hyperledger/aries-framework-go/pkg/vdr/fingerprint"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
+	"github.com/mr-tron/base58"
 )
 
 const prefix = "didcomm://aries_connection_invitation?c_i="
@@ -19,6 +21,16 @@ func decodeB64(str string) ([]byte, error) {
 		data, err = base64.RawURLEncoding.DecodeString(str)
 	}
 	return data, err
+}
+
+func didKeysToB58(keys []string) []string {
+	for index, key := range keys {
+		assert.That(strings.HasPrefix(key, "did:key"))
+
+		keyBytes := try.To1(fingerprint.PubKeyFromDIDKey(key))
+		keys[index] = base58.Encode(keyBytes)
+	}
+	return keys
 }
 
 func convertFromOOB(invBytes []byte) (i Invitation, err error) {
@@ -35,8 +47,8 @@ func convertFromOOB(invBytes []byte) (i Invitation, err error) {
 	i.Type = oobInv.Type
 	i.Label = oobInv.Label
 	i.ServiceEndpoint = service.ServiceEndpoint
-	i.RecipientKeys = service.RecipientKeys
-	i.RoutingKeys = service.RoutingKeys
+	i.RecipientKeys = didKeysToB58(service.RecipientKeys)
+	i.RoutingKeys = didKeysToB58(service.RoutingKeys)
 	i.ImageURL = oobInv.ImageURL
 
 	return i, nil

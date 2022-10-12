@@ -1,6 +1,7 @@
 package invitation
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,6 +78,7 @@ func TestTranslate(t *testing.T) {
 			assert.Equal(t, tc.readConnID, inv.ID)
 			assert.NotEmpty(t, inv.ServiceEndpoint)
 			assert.NotEmpty(t, inv.RecipientKeys)
+			assert.True(t, !strings.HasPrefix(inv.RecipientKeys[0], "did:key"))
 		})
 	}
 
