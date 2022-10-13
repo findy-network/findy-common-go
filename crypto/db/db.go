@@ -6,6 +6,7 @@ package db
 
 import (
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/lainio/err2/try"
 	bolt "go.etcd.io/bbolt"
 )
+
+const MEM_PREFIX = "MEMORY_"
 
 // Cfg is configuration needed to create and open managed database.
 type Cfg struct {
@@ -57,7 +60,10 @@ var (
 // only one managed database is needed per a process or an application. Database
 // is ready to use after this call. You don't need to open it and backup can be
 // taken during the run. See more information of Cfg struct.
-func New(cfg Cfg) *Mgd {
+func New(cfg Cfg) Handle {
+	if strings.HasPrefix(cfg.Filename, MEM_PREFIX) {
+		return NewDB(cfg.Buckets)
+	}
 	return &Mgd{
 		Cfg: cfg,
 	}
