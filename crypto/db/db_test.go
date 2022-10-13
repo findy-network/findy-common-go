@@ -8,17 +8,18 @@ import (
 	"testing"
 
 	"github.com/golang/glog"
-	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
-	"github.com/stretchr/testify/assert"
 )
 
 const dbFilename = "fido-enclave.bolt"
 const dbFilename2 = "fido-enclave2.bolt"
 
+const dbMem = "MEMORY_enclave"
+
 var buckets = [][]byte{{01, 01}}
 
-var db2 *Mgd
+var db2, dbMemory Handle
 
 func TestMain(m *testing.M) {
 	try.To(flag.Set("logtostderr", "true"))
@@ -36,14 +37,14 @@ func setUp() {
 	glog.V(1).Infoln("init enclave", dbFilename)
 	sealedBoxFilename := dbFilename
 	backupName := "backup-" + sealedBoxFilename
-	err2.Check(Init(Cfg{
+	try.To(Init(Cfg{
 		Filename:   sealedBoxFilename,
 		BackupName: backupName,
 		Buckets:    buckets,
 	}))
 
 	// insert data to DB to that it's open when first tests are started
-	err2.Check(AddKeyValueToBucket(buckets[0],
+	try.To(AddKeyValueToBucket(buckets[0],
 		&Data{
 			Data: []byte{0, 0, 1, 1, 1, 1},
 			Read: encrypt,
@@ -62,6 +63,24 @@ func setUp() {
 		BackupName: backupName,
 		Buckets:    buckets,
 	})
+
+	glog.V(1).Infoln("init third enclave", dbMem)
+	sealedBoxFilename = dbMem
+	dbMemory = New(Cfg{
+		Filename: sealedBoxFilename,
+		Buckets:  buckets,
+	})
+	// insert data to MEM DB to that it's open when first tests are started
+	try.To(dbMemory.AddKeyValueToBucket(buckets[0],
+		&Data{
+			Data: []byte{0, 0, 1, 1, 1, 1},
+			Read: encrypt,
+		},
+		&Data{
+			Data: []byte{0, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+	))
 
 }
 
@@ -82,6 +101,8 @@ func removeFiles(home, nameFilter string) {
 }
 
 func TestGetKeyValueFromBucket(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	value := &Data{
 		Write: decrypt,
 	}
@@ -93,24 +114,26 @@ func TestGetKeyValueFromBucket(t *testing.T) {
 		},
 		value,
 	)
-	assert.NoError(t, err)
-	assert.True(t, already)
-	assert.Equal(t, []byte{0, 0, 1, 1, 1, 1}, value.Data)
+	assert.NoError(err)
+	assert.That(already)
+	assert.DeepEqual([]byte{0, 0, 1, 1, 1, 1}, value.Data)
 }
 
 func TestGetAllValuesFromBucket(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	firstValue := []byte{0, 0, 1, 1, 1, 1}
 	res, err := GetAllValuesFromBucket(buckets[0], decrypt)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(res))
-	assert.Equal(t, firstValue, res[0])
+	assert.NoError(err)
+	assert.Equal(1, len(res))
+	assert.DeepEqual(firstValue, res[0])
 
 	anotherKey := &Data{
 		Data: []byte{0, 0, 2, 2, 2, 2},
 		Read: hash,
 	}
 	anotherValue := []byte{0, 0, 2, 2, 2, 2}
-	err2.Check(AddKeyValueToBucket(buckets[0],
+	try.To(AddKeyValueToBucket(buckets[0],
 		&Data{
 			Data: anotherValue,
 			Read: encrypt,
@@ -126,25 +149,72 @@ func TestGetAllValuesFromBucket(t *testing.T) {
 	}
 
 	res, err = GetAllValuesFromBucket(buckets[0], decrypt, counterTransform)
-	assert.NoError(t, err)
-	assert.Equal(t, 2, len(res))
-	assert.Equal(t, 2, counter)
+	assert.NoError(err)
+	assert.Equal(2, len(res))
+	assert.Equal(2, counter)
 
 	// order not guaranteed
 	if bytes.Equal(anotherValue, res[0]) {
-		assert.Equal(t, firstValue, res[1])
+		assert.DeepEqual(firstValue, res[1])
 	} else {
-		assert.Equal(t, firstValue, res[0])
-		assert.Equal(t, anotherValue, res[1])
+		assert.DeepEqual(firstValue, res[0])
+		assert.DeepEqual(anotherValue, res[1])
 	}
 
 	// Remove the extra value
 	err = RmKeyValueFromBucket(buckets[0], anotherKey)
-	assert.NoError(t, err)
+	assert.NoError(err)
+}
 
+func TestGetAllValuesFromBucketMemDB(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
+	firstValue := []byte{0, 0, 1, 1, 1, 1}
+	res, err := dbMemory.GetAllValuesFromBucket(buckets[0], decrypt)
+	assert.NoError(err)
+	assert.Equal(len(res), 1)
+	//assert.Equal( firstValue, res[0])
+
+	anotherKey := &Data{
+		Data: []byte{0, 0, 2, 2, 2, 2},
+		Read: hash,
+	}
+	anotherValue := []byte{0, 0, 2, 2, 2, 2}
+	try.To(dbMemory.AddKeyValueToBucket(buckets[0],
+		&Data{
+			Data: anotherValue,
+			Read: encrypt,
+		},
+		anotherKey,
+	))
+
+	// extra transform function
+	counter := 0
+	counterTransform := func(value []byte) []byte {
+		counter++
+		return value
+	}
+
+	res, err = dbMemory.GetAllValuesFromBucket(buckets[0], decrypt, counterTransform)
+	assert.NoError(err)
+	assert.Equal(len(res), 2)
+	assert.Equal(counter, 2)
+
+	// order not guaranteed
+	if bytes.Equal(anotherValue, res[0]) {
+		assert.DeepEqual(firstValue, res[1])
+	} else {
+		assert.DeepEqual(res[1], anotherValue)
+	}
+
+	// Remove the extra value
+	err = dbMemory.RmKeyValueFromBucket(buckets[0], anotherKey)
+	assert.NoError(err)
 }
 
 func TestRmDB2(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	err := db2.AddKeyValueToBucket(buckets[0],
 		&Data{
 			Data: []byte{1, 0, 1, 1, 1, 1},
@@ -155,14 +225,14 @@ func TestRmDB2(t *testing.T) {
 			Read: hash,
 		},
 	)
-	assert.NoError(t, err)
+	assert.NoError(err)
 	err = db2.RmKeyValueFromBucket(buckets[0],
 		&Data{
 			Data: []byte{1, 0, 1, 1, 1, 1},
 			Read: encrypt,
 		},
 	)
-	assert.NoError(t, err)
+	assert.NoError(err)
 
 	// let's check that we actually removed the key/value pair
 	value := &Data{
@@ -175,11 +245,62 @@ func TestRmDB2(t *testing.T) {
 		},
 		value,
 	)
-	assert.NoError(t, err)
-	assert.False(t, already)
+	assert.NoError(err)
+	assert.ThatNot(already)
+}
+
+func TestRmDbMem(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
+	err := dbMemory.AddKeyValueToBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: encrypt,
+		},
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+	)
+	assert.NoError(err)
+
+	// let's check that we actually ADDED the key/value pair
+	value := &Data{
+		Write: decrypt,
+	}
+	already, err := dbMemory.GetKeyValueFromBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+		value,
+	)
+	assert.NoError(err)
+	assert.That(already)
+
+	err = dbMemory.RmKeyValueFromBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: encrypt,
+		},
+	)
+	assert.NoError(err)
+
+	// let's check that we actually removed the key/value pair
+	already, err = dbMemory.GetKeyValueFromBucket(buckets[0],
+		&Data{
+			Data: []byte{1, 0, 1, 1, 1, 1},
+			Read: hash,
+		},
+		value,
+	)
+	assert.NoError(err)
+	assert.ThatNot(already)
 }
 
 func TestRm(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	err := AddKeyValueToBucket(buckets[0],
 		&Data{
 			Data: []byte{1, 0, 1, 1, 1, 1},
@@ -190,14 +311,14 @@ func TestRm(t *testing.T) {
 			Read: hash,
 		},
 	)
-	assert.NoError(t, err)
+	assert.NoError(err)
 	err = RmKeyValueFromBucket(buckets[0],
 		&Data{
 			Data: []byte{1, 0, 1, 1, 1, 1},
 			Read: encrypt,
 		},
 	)
-	assert.NoError(t, err)
+	assert.NoError(err)
 
 	// let's check that we actually removed the key/value pair
 	value := &Data{
@@ -210,11 +331,13 @@ func TestRm(t *testing.T) {
 		},
 		value,
 	)
-	assert.NoError(t, err)
-	assert.False(t, already)
+	assert.NoError(err)
+	assert.ThatNot(already)
 }
 
 func TestBackup(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	tests := []struct {
 		name       string
 		dirtyAfter bool
@@ -232,6 +355,8 @@ func TestBackup(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			assert.PushTester(t)
+			defer assert.PopTester()
 			did, err := Backup()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Backup() error = %v, wantErr %v", err, tt.wantErr)
@@ -241,7 +366,7 @@ func TestBackup(t *testing.T) {
 			}
 
 			if tt.dirtyAfter {
-				err2.Check(AddKeyValueToBucket(buckets[0],
+				try.To(AddKeyValueToBucket(buckets[0],
 					&Data{
 						Data: []byte{0, 0, 1, 1, 1, 1},
 						Read: encrypt,
