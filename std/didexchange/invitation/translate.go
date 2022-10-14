@@ -3,17 +3,19 @@ package invitation
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strings"
 
-	"github.com/hyperledger/aries-framework-go/pkg/vdr/fingerprint"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
-	"github.com/mr-tron/base58"
 )
 
-const prefix = "didcomm://aries_connection_invitation?c_i="
+type invitationHeader struct {
+	// the ID of the connection invitation
+	Type string `json:"@type,omitempty"`
+}
 
 func decodeB64(str string) ([]byte, error) {
 	data, err := base64.URLEncoding.DecodeString(str)
@@ -23,38 +25,32 @@ func decodeB64(str string) ([]byte, error) {
 	return data, err
 }
 
-func didKeysToB58(keys []string) []string {
-	for index, key := range keys {
-		assert.That(strings.HasPrefix(key, "did:key"))
+func parseInvitationJSON(jsonBytes []byte) (i Invitation, err error) {
+	defer err2.Return(&err)
 
-		keyBytes := try.To1(fingerprint.PubKeyFromDIDKey(key))
-		keys[index] = base58.Encode(keyBytes)
+	var header invitationHeader
+	err = json.Unmarshal(jsonBytes, &header)
+
+	switch {
+	case strings.HasSuffix(header.Type, "connections/1.0/invitation"):
+		{
+			var invV0 invitationDIDExchangeV0
+			try.To(json.Unmarshal(jsonBytes, &invV0))
+			i = &invV0
+		}
+	case strings.Contains(header.Type, "out-of-band"): // TODO: check versions
+		{
+			var invV1 invitationDIDExchangeV1
+			try.To(json.Unmarshal(jsonBytes, &invV1))
+			i = &invV1
+		}
+	default:
+		return nil, errors.New("unknown invitation type")
 	}
-	return keys
-}
-
-func convertFromOOB(invBytes []byte) (i Invitation, err error) {
-	defer err2.Returnf(&err, "oob conversion")
-
-	var oobInv OOBInvitation
-	try.To(json.Unmarshal(invBytes, &oobInv))
-
-	assert.D.True(len(oobInv.Services) > 0)
-
-	service := oobInv.Services[0]
-
-	i.ID = oobInv.ID
-	i.Type = oobInv.Type
-	i.Label = oobInv.Label
-	i.ServiceEndpoint = service.ServiceEndpoint
-	i.RecipientKeys = didKeysToB58(service.RecipientKeys)
-	i.RoutingKeys = didKeysToB58(service.RoutingKeys)
-	i.ImageURL = oobInv.ImageURL
 
 	return i, nil
 }
 
-// TODO: finalize and cleanup OOB parsing
 func Translate(s string) (i Invitation, err error) {
 	defer err2.Returnf(&err, "invitation translate")
 
@@ -62,36 +58,24 @@ func Translate(s string) (i Invitation, err error) {
 
 	// this is not URL formated invitation, it must be JSON then
 	if err != nil {
-		invBytes := []byte(s)
-		if strings.Contains(s, "https://didcomm.org/out-of-band/1.0/invitation") {
-			i = try.To1(convertFromOOB(invBytes))
-		} else {
-			try.To(json.Unmarshal(invBytes, &i))
-		}
-		return i, nil
+		return parseInvitationJSON([]byte(s))
 	}
 
 	m := try.To1(url.ParseQuery(u.RawQuery))
 
-	if param, ok := m["c_i"]; ok {
-		d := try.To1(decodeB64(param[0]))
-		try.To(json.Unmarshal(d, &i))
-		return i, nil
+	var (
+		invB64Str []string
+		ok        bool
+	)
+	if invB64Str, ok = m["c_i"]; !ok {
+		invB64Str = m["oob"]
 	}
+	assert.SNotEmpty(invB64Str, "invalid invitation url format")
 
-	param := m["oob"]
-	assert.D.True(param != nil)
-
-	d := try.To1(decodeB64(param[0]))
-	i = try.To1(convertFromOOB(d))
-
-	return i, nil
-
+	bytes := try.To1(decodeB64(invB64Str[0]))
+	return parseInvitationJSON(bytes)
 }
 
 func Build(inv Invitation) (s string, err error) {
-	defer err2.Returnf(&err, "invitation build")
-
-	b := try.To1(json.Marshal(inv))
-	return prefix + base64.RawURLEncoding.EncodeToString(b), nil
+	return inv.Build()
 }

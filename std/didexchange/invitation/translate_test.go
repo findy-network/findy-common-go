@@ -1,10 +1,9 @@
 package invitation
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/lainio/err2/assert"
 )
 
 var (
@@ -35,20 +34,20 @@ var (
 )
 
 func TestBuild(t *testing.T) {
-	var inv Invitation
-	var err error
+	assert.PushTester(t)
+	defer assert.PopTester()
 
-	inv, err = Translate(invJSON)
-	assert.NoError(t, err)
-	assert.NotNil(t, inv)
+	inv, err := Translate(invJSON)
+	assert.NoError(err)
+	assert.INotNil(inv)
 
 	s, err := Build(inv)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, s)
+	assert.NoError(err)
+	assert.NotEmpty(s)
 
 	inv, err = Translate(s)
-	assert.NoError(t, err)
-	assert.NotNil(t, inv)
+	assert.NoError(err)
+	assert.INotNil(inv)
 }
 
 func TestTranslate(t *testing.T) {
@@ -71,14 +70,16 @@ func TestTranslate(t *testing.T) {
 	for _, testCase := range tests {
 		tc := testCase
 		t.Run(tc.name, func(t *testing.T) {
+			assert.PushTester(t)
+			defer assert.PopTester()
+
 			inv, err := Translate(tc.input)
 			if err != nil {
 				t.Errorf("%s = err (%v)", tc.name, err)
 			}
-			assert.Equal(t, tc.readConnID, inv.ID)
-			assert.NotEmpty(t, inv.ServiceEndpoint)
-			assert.NotEmpty(t, inv.RecipientKeys)
-			assert.True(t, !strings.HasPrefix(inv.RecipientKeys[0], "did:key"))
+			assert.Equal(tc.readConnID, inv.ID())
+			assert.SNotEmpty(inv.ServiceEndpoint())
+			assert.SNotEmpty(inv.ServiceEndpoint()[0].RecipientKeys)
 		})
 	}
 

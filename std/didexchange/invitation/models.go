@@ -1,60 +1,124 @@
-// Taken from aries-framework-go, and heavily modified. The idea is to replace
-// these with the aries-framework-go when it's ready. Until now we use our own
-// minimalistic solution.
-
-// Package invitation is for invitation data model. It includes the JSON struct.
 package invitation
 
 import (
-	"github.com/findy-network/findy-common-go/std/decorator"
+	"encoding/base64"
+	"encoding/json"
+
+	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
-// Invitation model
-//
-// Invitation defines DID exchange invitation message
-// https://github.com/hyperledger/aries-rfcs/tree/master/features/0023-did-exchange#0-invitation-to-exchange
-type Invitation struct {
-	// the Image URL of the connection invitation
-	ImageURL string `json:"imageUrl,omitempty"`
+type DIDExchangeVersion int
 
-	// the Service endpoint of the connection invitation
-	ServiceEndpoint string `json:"serviceEndpoint,omitempty"`
+const (
+	DIDExchangeVersionV0 DIDExchangeVersion = iota
+	DIDExchangeVersionV1
+	DIDExchangeVersionV2
+)
 
-	// the RecipientKeys for the connection invitation
-	RecipientKeys []string `json:"recipientKeys,omitempty"`
-
-	// the ID of the connection invitation
-	ID string `json:"@id,omitempty"`
-
-	// the Label of the connection invitation
-	Label string `json:"label,omitempty"`
-
-	// the DID of the connection invitation
-	DID string `json:"did,omitempty"`
-
-	// the RoutingKeys of the connection invitation
-	RoutingKeys []string `json:"routingKeys,omitempty"`
-
-	// the Type of the connection invitation
-	Type   string            `json:"@type,omitempty"`
-	Thread *decorator.Thread `json:"~thread,omitempty"`
+type ServiceEndpoint struct {
+	ID              string
+	ServiceEndpoint string
+	Type            string
+	RecipientKeys   []string
+	RoutingKeys     []string
 }
 
-type OOBInvitation struct {
-	// the Type of the connection invitation
-	Type string `json:"@type,omitempty"`
+type Invitation interface {
+	Build() (string, error)
+	Version() DIDExchangeVersion
+	Type() string
+	ID() string
+	Label() string
+	ServiceEndpoint() []ServiceEndpoint
+	ImageURL() string
+	Accept() []string
+	HandshakeProtocols() []string
+}
+
+type invitationDIDExchangeV0 struct {
+	// the Image URL of the connection invitation
+	InvImageURL string `json:"imageUrl,omitempty"`
+
+	// the Service endpoint of the connection invitation
+	InvServiceEndpoint string `json:"serviceEndpoint,omitempty"`
+
+	// the RecipientKeys for the connection invitation
+	InvRecipientKeys []string `json:"recipientKeys,omitempty"`
 
 	// the ID of the connection invitation
-	ID string `json:"@id,omitempty"`
+	InvID string `json:"@id,omitempty"`
 
 	// the Label of the connection invitation
-	Label string `json:"label,omitempty"`
+	InvLabel string `json:"label,omitempty"`
 
-	Accept []string `json:"accept,omitempty"`
+	// the RoutingKeys of the connection invitation
+	InvRoutingKeys []string `json:"routingKeys,omitempty"`
 
-	HandshakeProtocols []string `json:"handshake_protocols,omitempty"`
+	// the Type of the connection invitation
+	InvType string `json:"@type,omitempty"`
+}
 
-	Services []struct {
+func (inv *invitationDIDExchangeV0) Build() (s string, err error) {
+	defer err2.Returnf(&err, "build invitation V0")
+
+	const prefix = "didcomm://aries_connection_invitation?c_i="
+	b := try.To1(json.Marshal(inv))
+	return prefix + base64.RawURLEncoding.EncodeToString(b), nil
+
+}
+
+func (inv *invitationDIDExchangeV0) Version() DIDExchangeVersion {
+	return DIDExchangeVersionV0
+}
+
+func (inv *invitationDIDExchangeV0) Type() string {
+	return inv.InvType
+}
+
+func (inv *invitationDIDExchangeV0) ID() string {
+	return inv.InvID
+}
+
+func (inv *invitationDIDExchangeV0) Label() string {
+	return inv.InvLabel
+}
+
+func (inv *invitationDIDExchangeV0) ServiceEndpoint() []ServiceEndpoint {
+	return []ServiceEndpoint{{
+		ServiceEndpoint: inv.InvServiceEndpoint,
+		RecipientKeys:   inv.InvRecipientKeys,
+		RoutingKeys:     inv.InvRoutingKeys,
+	}}
+}
+
+func (inv *invitationDIDExchangeV0) ImageURL() string {
+	return inv.InvImageURL
+}
+
+func (inv *invitationDIDExchangeV0) Accept() []string {
+	panic("not implemented")
+}
+
+func (inv *invitationDIDExchangeV0) HandshakeProtocols() []string {
+	panic("not implemented")
+}
+
+type invitationDIDExchangeV1 struct {
+	// the Type of the connection invitation
+	InvType string `json:"@type,omitempty"`
+
+	// the ID of the connection invitation
+	InvID string `json:"@id,omitempty"`
+
+	// the Label of the connection invitation
+	InvLabel string `json:"label,omitempty"`
+
+	InvAccept []string `json:"accept,omitempty"`
+
+	InvHandshakeProtocols []string `json:"handshake_protocols,omitempty"`
+
+	InvServices []struct {
 		ID              string   `json:"id,omitempty"`
 		ServiceEndpoint string   `json:"serviceEndpoint,omitempty"`
 		Type            string   `json:"type,omitempty"`
@@ -63,5 +127,54 @@ type OOBInvitation struct {
 	} `json:"services,omitempty"`
 
 	// the Image URL of the connection invitation
-	ImageURL string `json:"imageUrl,omitempty"`
+	InvImageURL string `json:"imageUrl,omitempty"`
+}
+
+func (inv *invitationDIDExchangeV1) Build() (s string, err error) {
+	defer err2.Returnf(&err, "build invitation V1")
+
+	const prefix = "didcomm://aries_connection_invitation?oob="
+	b := try.To1(json.Marshal(inv))
+	return prefix + base64.RawURLEncoding.EncodeToString(b), nil
+}
+
+func (inv *invitationDIDExchangeV1) Version() DIDExchangeVersion {
+	return DIDExchangeVersionV1
+}
+
+func (inv *invitationDIDExchangeV1) Type() string {
+	return inv.InvType
+}
+
+func (inv *invitationDIDExchangeV1) ID() string {
+	return inv.InvID
+}
+
+func (inv *invitationDIDExchangeV1) Label() string {
+	return inv.InvLabel
+}
+
+func (inv *invitationDIDExchangeV1) ServiceEndpoint() []ServiceEndpoint {
+	endpoints := make([]ServiceEndpoint, 0)
+	for _, ep := range inv.InvServices {
+		endpoints = append(endpoints, ServiceEndpoint{
+			ServiceEndpoint: ep.ServiceEndpoint,
+			RecipientKeys:   ep.RecipientKeys,
+			RoutingKeys:     ep.RoutingKeys,
+			Type:            ep.Type,
+			ID:              ep.ID,
+		})
+	}
+	return endpoints
+}
+func (inv *invitationDIDExchangeV1) ImageURL() string {
+	return inv.InvImageURL
+}
+
+func (inv *invitationDIDExchangeV1) Accept() []string {
+	return inv.InvAccept
+}
+
+func (inv *invitationDIDExchangeV1) HandshakeProtocols() []string {
+	return inv.InvHandshakeProtocols
 }
