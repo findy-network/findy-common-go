@@ -34,13 +34,13 @@ func parseInvitationJSON(jsonBytes []byte) (i Invitation, err error) {
 	switch {
 	case strings.HasSuffix(header.Type, "connections/1.0/invitation"):
 		{
-			var invV0 invitationDIDExchangeV0
+			var invV0 InvitationDIDExchangeV0
 			try.To(json.Unmarshal(jsonBytes, &invV0))
 			i = &invV0
 		}
 	case strings.Contains(header.Type, "out-of-band"): // TODO: check versions
 		{
-			var invV1 invitationDIDExchangeV1
+			var invV1 InvitationDIDExchangeV1
 			try.To(json.Unmarshal(jsonBytes, &invV1))
 			i = &invV1
 		}

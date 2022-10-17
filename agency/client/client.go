@@ -256,7 +256,7 @@ func (pw *Pairwise) doConnection(
 		},
 	}
 	ch = try.To1(pw.Conn.doRun(ctx, protocol))
-	connID = invitation.ID
+	connID = invitation.ID()
 	pw.ID = connID
 	return connID, ch, err
 }

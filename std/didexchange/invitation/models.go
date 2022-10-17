@@ -36,7 +36,7 @@ type Invitation interface {
 	HandshakeProtocols() []string
 }
 
-type invitationDIDExchangeV0 struct {
+type InvitationDIDExchangeV0 struct {
 	// the Image URL of the connection invitation
 	InvImageURL string `json:"imageUrl,omitempty"`
 
@@ -59,7 +59,7 @@ type invitationDIDExchangeV0 struct {
 	InvType string `json:"@type,omitempty"`
 }
 
-func (inv *invitationDIDExchangeV0) Build() (s string, err error) {
+func (inv *InvitationDIDExchangeV0) Build() (s string, err error) {
 	defer err2.Returnf(&err, "build invitation V0")
 
 	const prefix = "didcomm://aries_connection_invitation?c_i="
@@ -68,23 +68,23 @@ func (inv *invitationDIDExchangeV0) Build() (s string, err error) {
 
 }
 
-func (inv *invitationDIDExchangeV0) Version() DIDExchangeVersion {
+func (inv *InvitationDIDExchangeV0) Version() DIDExchangeVersion {
 	return DIDExchangeVersionV0
 }
 
-func (inv *invitationDIDExchangeV0) Type() string {
+func (inv *InvitationDIDExchangeV0) Type() string {
 	return inv.InvType
 }
 
-func (inv *invitationDIDExchangeV0) ID() string {
+func (inv *InvitationDIDExchangeV0) ID() string {
 	return inv.InvID
 }
 
-func (inv *invitationDIDExchangeV0) Label() string {
+func (inv *InvitationDIDExchangeV0) Label() string {
 	return inv.InvLabel
 }
 
-func (inv *invitationDIDExchangeV0) ServiceEndpoint() []ServiceEndpoint {
+func (inv *InvitationDIDExchangeV0) ServiceEndpoint() []ServiceEndpoint {
 	return []ServiceEndpoint{{
 		ServiceEndpoint: inv.InvServiceEndpoint,
 		RecipientKeys:   inv.InvRecipientKeys,
@@ -92,19 +92,19 @@ func (inv *invitationDIDExchangeV0) ServiceEndpoint() []ServiceEndpoint {
 	}}
 }
 
-func (inv *invitationDIDExchangeV0) ImageURL() string {
+func (inv *InvitationDIDExchangeV0) ImageURL() string {
 	return inv.InvImageURL
 }
 
-func (inv *invitationDIDExchangeV0) Accept() []string {
+func (inv *InvitationDIDExchangeV0) Accept() []string {
 	panic("not implemented")
 }
 
-func (inv *invitationDIDExchangeV0) HandshakeProtocols() []string {
+func (inv *InvitationDIDExchangeV0) HandshakeProtocols() []string {
 	panic("not implemented")
 }
 
-type invitationDIDExchangeV1 struct {
+type InvitationDIDExchangeV1 struct {
 	// the Type of the connection invitation
 	InvType string `json:"@type,omitempty"`
 
@@ -130,7 +130,7 @@ type invitationDIDExchangeV1 struct {
 	InvImageURL string `json:"imageUrl,omitempty"`
 }
 
-func (inv *invitationDIDExchangeV1) Build() (s string, err error) {
+func (inv *InvitationDIDExchangeV1) Build() (s string, err error) {
 	defer err2.Returnf(&err, "build invitation V1")
 
 	const prefix = "didcomm://aries_connection_invitation?oob="
@@ -138,23 +138,23 @@ func (inv *invitationDIDExchangeV1) Build() (s string, err error) {
 	return prefix + base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-func (inv *invitationDIDExchangeV1) Version() DIDExchangeVersion {
+func (inv *InvitationDIDExchangeV1) Version() DIDExchangeVersion {
 	return DIDExchangeVersionV1
 }
 
-func (inv *invitationDIDExchangeV1) Type() string {
+func (inv *InvitationDIDExchangeV1) Type() string {
 	return inv.InvType
 }
 
-func (inv *invitationDIDExchangeV1) ID() string {
+func (inv *InvitationDIDExchangeV1) ID() string {
 	return inv.InvID
 }
 
-func (inv *invitationDIDExchangeV1) Label() string {
+func (inv *InvitationDIDExchangeV1) Label() string {
 	return inv.InvLabel
 }
 
-func (inv *invitationDIDExchangeV1) ServiceEndpoint() []ServiceEndpoint {
+func (inv *InvitationDIDExchangeV1) ServiceEndpoint() []ServiceEndpoint {
 	endpoints := make([]ServiceEndpoint, 0)
 	for _, ep := range inv.InvServices {
 		endpoints = append(endpoints, ServiceEndpoint{
@@ -167,14 +167,14 @@ func (inv *invitationDIDExchangeV1) ServiceEndpoint() []ServiceEndpoint {
 	}
 	return endpoints
 }
-func (inv *invitationDIDExchangeV1) ImageURL() string {
+func (inv *InvitationDIDExchangeV1) ImageURL() string {
 	return inv.InvImageURL
 }
 
-func (inv *invitationDIDExchangeV1) Accept() []string {
+func (inv *InvitationDIDExchangeV1) Accept() []string {
 	return inv.InvAccept
 }
 
-func (inv *invitationDIDExchangeV1) HandshakeProtocols() []string {
+func (inv *InvitationDIDExchangeV1) HandshakeProtocols() []string {
 	return inv.InvHandshakeProtocols
 }
