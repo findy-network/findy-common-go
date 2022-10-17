@@ -15,10 +15,13 @@ type memDB struct {
 	buckets map[string]*bucket
 }
 
-func NewDB(names [][]byte) *memDB {
-	buckets := make(map[string]*bucket, len(names))
+// NewMemDB creates new memory database. The memory DB has same interface (Handle)
+// as the normal Bolt DB, but instead of writing data to file it leaves into the
+// memory. The DB is meant for the tests and performance measurements.
+func NewMemDB(bucketNames [][]byte) *memDB {
+	buckets := make(map[string]*bucket, len(bucketNames))
 
-	for _, id := range names {
+	for _, id := range bucketNames {
 		name := string(id)
 		b := &bucket{id: name, data: make(map[string][]byte, 12)}
 		buckets[name] = b
