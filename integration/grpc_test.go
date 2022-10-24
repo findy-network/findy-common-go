@@ -46,7 +46,7 @@ func TestMain(m *testing.M) {
 }
 
 func setUp() {
-	err2.StackTraceWriter = os.Stderr
+	err2.SetTracers(os.Stderr)
 	defer err2.CatchTrace(func(err error) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

@@ -6,6 +6,8 @@ package db
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,11 +18,22 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-// Cfg is configuration needed to create and open managed database.
+const MEM_PREFIX = "MEMORY_"
+
+// Cfg is configuration needed to create and open managed database that is
+// implemented with Bolt DB or by memory maps for testing and profiling. See
+// Filename for more information.
 type Cfg struct {
-	Filename   string   // Filename is full path file name of the DB file
-	BackupName string   // Base part of the backup file names. Date and time is added.
-	Buckets    [][]byte // Buckets is list of the buckets needed
+	// Filename is full path file name of the DB file. Note, if the base
+	// of the filename starts with MEM_PREFIX, the memory database is created.
+	// That's useful e.g. testing and profiling.
+	Filename string
+
+	// Base part of the backup file names. Date and time is added.
+	BackupName string
+
+	// Buckets is slice of the bucket names that are in byte slice.
+	Buckets [][]byte
 }
 
 // Mgd is a managed and encrypted (option, can be pre-procession as well) DB.
@@ -52,12 +65,17 @@ var (
 )
 
 // New creates a new managed and encrypted database. This is a preferred way to
-// use the managed database package. There is also the alternated Init function when you
-// don't need to store the Mgd instance by yourself. It's for the cases when
-// only one managed database is needed per a process or an application. Database
-// is ready to use after this call. You don't need to open it and backup can be
-// taken during the run. See more information of Cfg struct.
-func New(cfg Cfg) *Mgd {
+// use the managed database package. There is also the alternated Init function
+// when you don't need to store the Mgd instance by yourself. It's for the cases
+// when only one managed database is needed per a process or an application.
+// Database is ready to use after this call. You don't need to open it and
+// backup can be taken during the run. See more information of Cfg struct.
+func New(cfg Cfg) Handle {
+	base := filepath.Base(cfg.Filename)
+	if strings.HasPrefix(base, MEM_PREFIX) {
+		glog.V(1).Infoln("open", base)
+		return NewMemDB(cfg.Buckets)
+	}
 	return &Mgd{
 		Cfg: cfg,
 	}
