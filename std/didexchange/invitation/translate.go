@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -32,15 +33,15 @@ func parseInvitationJSON(jsonBytes []byte) (i Invitation, err error) {
 	err = json.Unmarshal(jsonBytes, &header)
 
 	switch {
-	case strings.HasSuffix(header.Type, "connections/1.0/invitation"):
+	case strings.Contains(header.Type, "connections"):
 		{
-			var invV0 InvitationDIDExchangeV0
+			var invV0 invitationDIDExchangeV0
 			try.To(json.Unmarshal(jsonBytes, &invV0))
 			i = &invV0
 		}
 	case strings.Contains(header.Type, "out-of-band"): // TODO: check versions
 		{
-			var invV1 InvitationDIDExchangeV1
+			var invV1 invitationDIDExchangeV1
 			try.To(json.Unmarshal(jsonBytes, &invV1))
 			i = &invV1
 		}
@@ -77,5 +78,20 @@ func Translate(s string) (i Invitation, err error) {
 }
 
 func Build(inv Invitation) (s string, err error) {
+	return inv.Build()
+}
+
+func Create(version DIDExchangeVersion, info AgentInfo) (s string, err error) {
+	var inv Invitation
+
+	switch version {
+	case DIDExchangeVersionV0:
+		inv = CreateInvitationV0(&info)
+	case DIDExchangeVersionV1:
+		inv = CreateInvitationV1(&info)
+	default:
+		return "", fmt.Errorf("unknown DIDExhange version %d", version)
+	}
+
 	return inv.Build()
 }
