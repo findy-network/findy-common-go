@@ -11,9 +11,9 @@ import (
 type DIDExchangeVersion int
 
 const (
-	DIDExchangeVersionV0 DIDExchangeVersion = iota
-	DIDExchangeVersionV1                    = 10
-	DIDExchangeVersionV2                    = 20
+	DIDExchangeVersionV0 DIDExchangeVersion = 0
+	DIDExchangeVersionV1 DIDExchangeVersion = 10
+	DIDExchangeVersionV2 DIDExchangeVersion = 20
 )
 
 type AgentInfo struct {

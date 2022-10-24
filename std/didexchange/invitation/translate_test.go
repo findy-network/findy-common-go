@@ -1,6 +1,7 @@
 package invitation_test
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -83,17 +84,33 @@ func TestCreate(t *testing.T) {
 			assert.PushTester(t)
 			defer assert.PopTester()
 
-			invStr, err := invitation.Create(tc.version, tc.params)
+			inv, err := invitation.Create(tc.version, tc.params)
 			if tc.fail {
 				assert.Error(err)
 				return
 			}
 			assert.NoError(err)
-			assert.NotEmpty(invStr)
 
-			inv, err := invitation.Translate(invStr)
+			// build URL
+			urlStr, err := invitation.Build(inv)
 			assert.NoError(err)
-			assert.INotNil(inv)
+			assert.NotEmpty(urlStr)
+
+			invFromURL, err := invitation.Translate(urlStr)
+			assert.NoError(err)
+			assert.INotNil(invFromURL)
+			assert.Equal(invFromURL.ID(), inv.ID())
+
+			// convert to JSON
+			jsonBytes, err := json.Marshal(inv)
+			assert.NoError(err)
+			jsonStr := string(jsonBytes)
+			assert.NotEmpty(jsonStr)
+
+			invFromJSON, err := invitation.Translate(jsonStr)
+			assert.NoError(err)
+			assert.INotNil(invFromJSON)
+			assert.Equal(invFromJSON.ID(), inv.ID())
 		})
 	}
 }

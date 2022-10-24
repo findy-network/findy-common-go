@@ -81,17 +81,14 @@ func Build(inv Invitation) (s string, err error) {
 	return inv.Build()
 }
 
-func Create(version DIDExchangeVersion, info AgentInfo) (s string, err error) {
-	var inv Invitation
-
+func Create(version DIDExchangeVersion, info AgentInfo) (inv Invitation, err error) {
 	switch version {
 	case DIDExchangeVersionV0:
 		inv = CreateInvitationV0(&info)
 	case DIDExchangeVersionV1:
 		inv = CreateInvitationV1(&info)
 	default:
-		return "", fmt.Errorf("unknown DIDExhange version %d", version)
+		return nil, fmt.Errorf("unknown DIDExhange version %d", version)
 	}
-
-	return inv.Build()
+	return
 }

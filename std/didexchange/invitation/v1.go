@@ -3,9 +3,12 @@ package invitation
 import (
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 
+	"github.com/hyperledger/aries-framework-go/pkg/vdr/fingerprint"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
+	"github.com/mr-tron/base58"
 )
 
 type V1Service struct {
@@ -40,6 +43,15 @@ type invitationDIDExchangeV1 struct {
 	V1
 }
 
+func b58ToDIDKey(key string) string {
+	if !strings.HasPrefix(key, DIDKeyPrefix) {
+		if keyBytes, err := base58.Decode(key); err == nil {
+			key, _ = fingerprint.CreateDIDKey(keyBytes)
+		}
+	}
+	return key
+}
+
 func CreateInvitationV1(info *AgentInfo) Invitation {
 	return &invitationDIDExchangeV1{
 		V1: V1{
@@ -48,7 +60,7 @@ func CreateInvitationV1(info *AgentInfo) Invitation {
 			Label: info.AgentLabel,
 			Services: []V1Service{{
 				ServiceEndpoint: info.EndpointURL,
-				RecipientKeys:   []string{info.RecipientKey},
+				RecipientKeys:   []string{b58ToDIDKey(info.RecipientKey)},
 			}},
 		},
 	}
@@ -81,13 +93,7 @@ func (inv *invitationDIDExchangeV1) Label() string {
 func (inv *invitationDIDExchangeV1) Services() []ServiceEndpoint {
 	endpoints := make([]ServiceEndpoint, 0)
 	for _, ep := range inv.V1.Services {
-		endpoints = append(endpoints, ServiceEndpoint{
-			ServiceEndpoint: ep.ServiceEndpoint,
-			RecipientKeys:   ep.RecipientKeys,
-			RoutingKeys:     ep.RoutingKeys,
-			Type:            ep.Type,
-			ID:              ep.ID,
-		})
+		endpoints = append(endpoints, ServiceEndpoint(ep))
 	}
 	return endpoints
 }
