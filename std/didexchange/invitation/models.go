@@ -1,6 +1,7 @@
 package invitation
 
 import (
+	"encoding/gob"
 	"strings"
 
 	"github.com/hyperledger/aries-framework-go/pkg/vdr/fingerprint"
@@ -45,6 +46,11 @@ type Invitation interface {
 }
 
 const DIDKeyPrefix = "did:key"
+
+func init() {
+	gob.Register(&invitationDIDExchangeV0{})
+	gob.Register(&invitationDIDExchangeV1{})
+}
 
 func didKeysToB58(keys []string) []string {
 	for index, key := range keys {
