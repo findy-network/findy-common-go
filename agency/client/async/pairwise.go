@@ -183,7 +183,7 @@ func (pw *Pairwise) Connection(ctx context.Context, invitationStr string) (pid *
 		}},
 	}
 	pid = try.To1(pw.Conn.DoStart(ctx, protocol, pw.cOpts...))
-	pw.ID = invitation.ID
+	pw.ID = invitation.ID()
 	return pid, err
 }
 

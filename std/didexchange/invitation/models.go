@@ -1,67 +1,73 @@
-// Taken from aries-framework-go, and heavily modified. The idea is to replace
-// these with the aries-framework-go when it's ready. Until now we use our own
-// minimalistic solution.
-
-// Package invitation is for invitation data model. It includes the JSON struct.
 package invitation
 
 import (
-	"github.com/findy-network/findy-common-go/std/decorator"
+	"encoding/gob"
+	"strings"
+
+	"github.com/hyperledger/aries-framework-go/pkg/vdr/fingerprint"
+	"github.com/lainio/err2/try"
+	"github.com/mr-tron/base58"
 )
 
-// Invitation model
-//
-// Invitation defines DID exchange invitation message
-// https://github.com/hyperledger/aries-rfcs/tree/master/features/0023-did-exchange#0-invitation-to-exchange
-type Invitation struct {
-	// the Image URL of the connection invitation
-	ImageURL string `json:"imageUrl,omitempty"`
+type DIDExchangeVersion int
 
-	// the Service endpoint of the connection invitation
-	ServiceEndpoint string `json:"serviceEndpoint,omitempty"`
+const (
+	DIDExchangeVersionV0 DIDExchangeVersion = 0
+	DIDExchangeVersionV1 DIDExchangeVersion = 10
+	DIDExchangeVersionV2 DIDExchangeVersion = 20
+)
 
-	// the RecipientKeys for the connection invitation
-	RecipientKeys []string `json:"recipientKeys,omitempty"`
-
-	// the ID of the connection invitation
-	ID string `json:"@id,omitempty"`
-
-	// the Label of the connection invitation
-	Label string `json:"label,omitempty"`
-
-	// the DID of the connection invitation
-	DID string `json:"did,omitempty"`
-
-	// the RoutingKeys of the connection invitation
-	RoutingKeys []string `json:"routingKeys,omitempty"`
-
-	// the Type of the connection invitation
-	Type   string            `json:"@type,omitempty"`
-	Thread *decorator.Thread `json:"~thread,omitempty"`
+type AgentInfo struct {
+	InvitationType string
+	InvitationID   string
+	EndpointURL    string
+	RecipientKey   string
+	AgentLabel     string
 }
 
-type OOBInvitation struct {
-	// the Type of the connection invitation
-	Type string `json:"@type,omitempty"`
+type ServiceEndpoint struct {
+	ID              string
+	ServiceEndpoint string
+	Type            string
+	RecipientKeys   []string
+	RoutingKeys     []string
+}
 
-	// the ID of the connection invitation
-	ID string `json:"@id,omitempty"`
+type Invitation interface {
+	Build() (string, error)
+	Version() DIDExchangeVersion
+	Type() string
+	ID() string
+	Label() string
+	Services() []ServiceEndpoint
+	ImageURL() string
+	Accept() []string
+	HandshakeProtocols() []string
+}
 
-	// the Label of the connection invitation
-	Label string `json:"label,omitempty"`
+const DIDKeyPrefix = "did:key"
 
-	Accept []string `json:"accept,omitempty"`
+func init() {
+	gob.Register(&invitationDIDExchangeV0{})
+	gob.Register(&invitationDIDExchangeV1{})
+}
 
-	HandshakeProtocols []string `json:"handshake_protocols,omitempty"`
+func didKeysToB58(keys []string) []string {
+	for index, key := range keys {
+		if strings.HasPrefix(key, DIDKeyPrefix) {
+			keyBytes := try.To1(fingerprint.PubKeyFromDIDKey(key))
+			keys[index] = base58.Encode(keyBytes)
+		} else {
+			keys[index] = key
+		}
+	}
+	return keys
+}
 
-	Services []struct {
-		ID              string   `json:"id,omitempty"`
-		ServiceEndpoint string   `json:"serviceEndpoint,omitempty"`
-		Type            string   `json:"type,omitempty"`
-		RecipientKeys   []string `json:"recipientKeys,omitempty"`
-		RoutingKeys     []string `json:"routingKeys,omitempty"`
-	} `json:"services,omitempty"`
+func (s ServiceEndpoint) RecipientKeysAsB58() []string {
+	return didKeysToB58(s.RecipientKeys)
+}
 
-	// the Image URL of the connection invitation
-	ImageURL string `json:"imageUrl,omitempty"`
+func (s ServiceEndpoint) RoutingKeysAsB58() []string {
+	return didKeysToB58(s.RoutingKeys)
 }
