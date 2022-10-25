@@ -14,7 +14,7 @@ import (
 )
 
 type invitationHeader struct {
-	// the ID of the connection invitation
+	// the Type of the connection invitation
 	Type string `json:"@type,omitempty"`
 }
 
