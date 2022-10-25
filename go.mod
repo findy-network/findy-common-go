@@ -12,7 +12,7 @@ require (
 	github.com/hyperledger/aries-framework-go v0.1.8
 	github.com/lainio/err2 v0.8.11
 	github.com/mr-tron/base58 v1.2.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c
 	google.golang.org/grpc v1.50.1
