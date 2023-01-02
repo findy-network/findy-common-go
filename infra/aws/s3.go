@@ -46,7 +46,7 @@ func (c *S3Client) S3DownloadBucketFiles(
 ) (
 	err error,
 ) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	for _, item := range input.Contents {
 		if subfolder == "" || strings.HasPrefix(*item.Key, subfolder) {
