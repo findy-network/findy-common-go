@@ -27,7 +27,7 @@ func decodeB64(str string) ([]byte, error) {
 }
 
 func parseInvitationJSON(jsonBytes []byte) (i Invitation, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	var header invitationHeader
 	err = json.Unmarshal(jsonBytes, &header)
@@ -53,7 +53,7 @@ func parseInvitationJSON(jsonBytes []byte) (i Invitation, err error) {
 }
 
 func Translate(s string) (i Invitation, err error) {
-	defer err2.Returnf(&err, "invitation translate")
+	defer err2.Handle(&err, "invitation translate")
 
 	u, err := url.Parse(strings.TrimSpace(s))
 

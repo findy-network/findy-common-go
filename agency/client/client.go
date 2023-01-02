@@ -239,7 +239,7 @@ func (pw *Pairwise) doConnection(
 	ch chan *agency.ProtocolState,
 	err error,
 ) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well
@@ -405,7 +405,7 @@ func (conn Conn) Listen(
 	ch chan *agency.Question,
 	err error,
 ) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	listenStatusCh := try.To1(conn.ListenStatus(ctx, client, cOpts...))
 	waitQuestionCh := try.To1(conn.Wait(ctx, client, cOpts...))
@@ -465,7 +465,7 @@ func (conn Conn) ListenStatus(
 	ch chan *agency.AgentStatus,
 	err error,
 ) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.AgentStatus)
@@ -547,7 +547,7 @@ func (conn Conn) ListenStatusErr(
 	errCh chan error,
 	err error,
 ) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.AgentStatus)
@@ -628,7 +628,7 @@ func (conn Conn) WaitErr(
 	errCh chan error,
 	err error,
 ) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.Question)
@@ -652,7 +652,7 @@ func (conn Conn) Wait(
 	ch chan *agency.Question,
 	err error,
 ) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewAgentServiceClient(conn)
 	statusCh := make(chan *agency.Question)
@@ -721,7 +721,7 @@ func transportWait(
 }
 
 func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan *ops.AgencyStatus, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	opsClient := ops.NewAgencyServiceClient(conn)
 	statusCh := make(chan *ops.AgencyStatus)
@@ -747,7 +747,7 @@ func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan
 }
 
 func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan *agency.ProtocolState, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
 	statusCh := make(chan *agency.ProtocolState)
@@ -773,7 +773,7 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 }
 
 func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
 	pid = try.To1(c.Start(ctx, protocol, cOpts...))
@@ -783,7 +783,7 @@ func (conn Conn) DoStart(ctx context.Context, protocol *agency.Protocol, cOpts .
 }
 
 func (conn Conn) DoResume(ctx context.Context, state *agency.ProtocolState, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
 	pid = try.To1(c.Resume(ctx, state, cOpts...))
@@ -793,7 +793,7 @@ func (conn Conn) DoResume(ctx context.Context, state *agency.ProtocolState, cOpt
 }
 
 func (conn Conn) DoRelease(ctx context.Context, id *agency.ProtocolID, cOpts ...grpc.CallOption) (pid *agency.ProtocolID, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
 	pid = try.To1(c.Release(ctx, id, cOpts...))
@@ -803,7 +803,7 @@ func (conn Conn) DoRelease(ctx context.Context, id *agency.ProtocolID, cOpts ...
 }
 
 func (conn Conn) DoStatus(ctx context.Context, id *agency.ProtocolID, cOpts ...grpc.CallOption) (status *agency.ProtocolStatus, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	c := agency.NewProtocolServiceClient(conn)
 	status = try.To1(c.Status(ctx, id, cOpts...))

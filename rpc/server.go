@@ -31,7 +31,7 @@ type ServerCfg struct {
 
 // Server creates a gRPC server with TLS and JWT token authorization.
 func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	// TODO: require always a custom secret in production mode
 	if cfg.JWTSecret != "" {
@@ -86,7 +86,7 @@ func Serve(cfg *ServerCfg) {
 }
 
 func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	addr := fmt.Sprintf(":%d", cfg.Port)
 	if cfg.TestLis != nil {
@@ -102,7 +102,7 @@ func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) 
 }
 
 func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	caCert := try.To1(os.ReadFile(pw.Client.CertFile))
 	rootCAs := x509.NewCertPool()
