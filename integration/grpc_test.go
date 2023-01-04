@@ -116,7 +116,7 @@ func TestEnterInsecure(t *testing.T) {
 }
 
 func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	pki := rpc.LoadPKI("../cert")
 
@@ -187,7 +187,7 @@ type devOpsServer struct {
 }
 
 func (d devOpsServer) Enter(ctx context.Context, cmd *ops.Cmd) (cr *ops.CmdReturn, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	if doPanic {
 		panic("testing panic")

@@ -28,7 +28,7 @@ func PrefixName(prefix, name string) string {
 
 // FileCopy copies a source file to destination file.
 func FileCopy(src, dst string) (err error) {
-	defer err2.Returnf(&err, "copy %s -> %s", src, dst)
+	defer err2.Handle(&err, "copy %s -> %s", src, dst)
 
 	r := try.To1(os.Open(src))
 	defer r.Close()

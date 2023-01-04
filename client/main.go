@@ -45,7 +45,7 @@ func main() {
 }
 
 func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	pki := rpc.LoadPKIWithServerName("../cert", addr)
 	glog.V(5).Infoln("client with user:", user)

@@ -48,7 +48,7 @@ type Mgd struct {
 // and opening of the DB which is needed that DB can operate and backups can be
 // taken without explicitly closing the database.
 func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
-	defer err2.Returnf(&err, "db operate")
+	defer err2.Handle(&err, "db operate")
 
 	m.l.Lock()
 	defer m.l.Unlock()
@@ -91,13 +91,13 @@ func Init(cfg Cfg) (err error) {
 }
 
 func (m *Mgd) open() (err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	glog.V(1).Infoln("open DB", m.Filename)
 	m.db = try.To1(bolt.Open(m.Filename, 0600, nil))
 
 	try.To(m.db.Update(func(tx *bolt.Tx) (err error) {
-		defer err2.Returnf(&err, "create buckets")
+		defer err2.Handle(&err, "create buckets")
 
 		for _, bucket := range m.Buckets {
 			try.To1(tx.CreateBucketIfNotExists(bucket))
@@ -144,7 +144,7 @@ func (d *Data) set(b []byte) {
 
 // close closes managed encrypted db. Note! Instance must be locked!
 func (m *Mgd) close() (err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	glog.V(1).Infoln("close DB", m.Filename)
 	try.To(m.db.Close())
@@ -161,10 +161,10 @@ func (m *Mgd) backupName() string {
 // index use Data type's operators to encrypt and hash data on the fly.
 func (db *Mgd) AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
 	return db.operate(func(DB *bolt.DB) error {
-		defer err2.Returnf(&err, "add key")
+		defer err2.Handle(&err, "add key")
 
 		try.To(DB.Update(func(tx *bolt.Tx) (err error) {
-			defer err2.Return(&err)
+			defer err2.Handle(&err)
 
 			b := tx.Bucket(bucket)
 			try.To(b.Put(index.get(), keyValue.get()))
@@ -184,10 +184,10 @@ func AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
 // The index uses Data type's operators to encrypt and hash data on the fly.
 func (db *Mgd) RmKeyValueFromBucket(bucket []byte, index *Data) (err error) {
 	return db.operate(func(DB *bolt.DB) error {
-		defer err2.Returnf(&err, "rm key")
+		defer err2.Handle(&err, "rm key")
 
 		try.To(DB.Update(func(tx *bolt.Tx) (err error) {
-			defer err2.Return(&err)
+			defer err2.Handle(&err)
 
 			b := tx.Bucket(bucket)
 			try.To(b.Delete(index.get()))
@@ -226,11 +226,11 @@ func (db *Mgd) GetKeyValueFromBucket(
 	found bool,
 	err error,
 ) {
-	defer err2.Returnf(&err, "get value")
+	defer err2.Handle(&err, "get value")
 
 	try.To(db.operate(func(DB *bolt.DB) error {
 		try.To(DB.View(func(tx *bolt.Tx) (err error) {
-			defer err2.Return(&err)
+			defer err2.Handle(&err)
 
 			b := tx.Bucket(bucket)
 			d := b.Get(index.get())
@@ -276,13 +276,13 @@ func (db *Mgd) GetAllValuesFromBucket(
 	values [][]byte,
 	err error,
 ) {
-	defer err2.Returnf(&err, "get all values")
+	defer err2.Handle(&err, "get all values")
 
 	values = make([][]byte, 0)
 
 	try.To(db.operate(func(DB *bolt.DB) error {
 		try.To(DB.View(func(tx *bolt.Tx) (err error) {
-			defer err2.Return(&err)
+			defer err2.Handle(&err)
 
 			b := tx.Bucket(bucket)
 			try.To(b.ForEach(func(_, v []byte) error {
@@ -341,7 +341,7 @@ func Backup() (did bool, err error) {
 // Backup takes backup copy of the database. Before backup the database is
 // closed automatically and only dirty databases are backed up.
 func (db *Mgd) Backup() (did bool, err error) {
-	defer err2.Returnf(&err, "backup")
+	defer err2.Handle(&err, "backup")
 
 	db.l.Lock()
 	defer db.l.Unlock()
@@ -372,7 +372,7 @@ func Wipe() (err error) {
 
 // Wipe removes the whole database and its master file.
 func (db *Mgd) Wipe() (err error) {
-	defer err2.Returnf(&err, "wipe")
+	defer err2.Handle(&err, "wipe")
 
 	db.l.Lock()
 	defer db.l.Unlock()

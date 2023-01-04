@@ -168,7 +168,7 @@ func (pw Pairwise) ProposeProofWithAttrs(ctx context.Context, proofAttrs *agency
 // The invitationStr accepts both JSON and URL formated invitations. The agency
 // does the same.
 func (pw *Pairwise) Connection(ctx context.Context, invitationStr string) (pid *agency.ProtocolID, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	// assert that invitation is OK, and we need to return the connection ID
 	// because it's the task id as well

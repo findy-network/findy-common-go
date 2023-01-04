@@ -41,7 +41,7 @@ type devOpsServer struct {
 }
 
 func (d devOpsServer) Enter(ctx context.Context, cmd *ops.Cmd) (cr *ops.CmdReturn, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	user := jwt.User(ctx)
 

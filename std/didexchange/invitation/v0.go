@@ -48,7 +48,7 @@ func CreateInvitationV0(info *AgentInfo) Invitation {
 }
 
 func (inv *invitationDIDExchangeV0) Build() (s string, err error) {
-	defer err2.Returnf(&err, "build invitation V0")
+	defer err2.Handle(&err, "build invitation V0")
 
 	const prefix = "didcomm://aries_connection_invitation?c_i="
 	b := try.To1(json.Marshal(inv))

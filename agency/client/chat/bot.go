@@ -25,13 +25,13 @@ type Bot struct {
 }
 
 func LoadFSMMachineData(fName string, r io.Reader) (m fsm.MachineData, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 	data := try.To1(io.ReadAll(r))
 	return fsm.MachineData{FType: fName, Data: data}, nil
 }
 
 func LoadFSM(fName string, r io.Reader) (m *fsm.Machine, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 	data := try.To1(io.ReadAll(r))
 	m = loadFSMData(fName, data)
 	try.To(m.Initialize())
@@ -49,7 +49,7 @@ func loadFSMData(fName string, data []byte) *fsm.Machine {
 }
 
 func SaveFSM(m *fsm.Machine, fName string) (err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 	data := marshalFSM(fName, m)
 	try.To(os.WriteFile(fName, data, 0644))
 	return nil

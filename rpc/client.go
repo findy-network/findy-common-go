@@ -42,7 +42,7 @@ func (c ClientCfg) RequireTransportSecurity() bool {
 
 // ClientConn opens client connection with given configuration.
 func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	opts := make([]grpc.DialOption, 0)
 	switch {
@@ -77,7 +77,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 }
 
 func loadClientTLSFromFile(pw *PKI) (creds credentials.TransportCredentials, err error) {
-	defer err2.Return(&err)
+	defer err2.Handle(&err)
 
 	caCert := try.To1(os.ReadFile(pw.Server.CertFile))
 	rootCAs := x509.NewCertPool()
