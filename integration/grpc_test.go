@@ -16,8 +16,8 @@ import (
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
-	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 )
@@ -76,40 +76,44 @@ func tearDown() {
 }
 
 func TestEnter(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	c := ops.NewDevOpsServiceClient(conn)
 	r, err := c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, pingReturn, r.GetPing())
+	assert.NoError(err)
+	assert.Equal(pingReturn, r.GetPing())
 
 	doPanic = true
 	_, err = c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})
-	assert.Error(t, err)
+	assert.Error(err)
 	doPanic = false
 
 	defer cancel()
 }
 
 func TestEnterInsecure(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	c := ops.NewDevOpsServiceClient(insecureConn)
 	r, err := c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, pingReturn, r.GetPing())
+	assert.NoError(err)
+	assert.Equal(pingReturn, r.GetPing())
 
 	doPanic = true
 	_, err = c.Enter(ctx, &ops.Cmd{
 		Type: ops.Cmd_PING,
 	})
-	assert.Error(t, err)
+	assert.Error(err)
 	doPanic = false
 
 	defer cancel()

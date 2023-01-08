@@ -5,42 +5,48 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/lainio/err2/assert"
 )
 
 func TestBuildJWT(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	jwt := BuildJWT("user id 1")
 	ctx := context.Background()
-	assert.NotNil(t, ctx)
+	assert.INotNil(ctx)
 
 	ctx2, ok := check(ctx, jwt)
-	assert.NotNil(t, ctx2)
-	assert.True(t, ok)
+	assert.INotNil(ctx2)
+	assert.That(ok)
 
 	jwt2 := BuildJWTWithTime("user id 2", "", time.Second)
 	time.Sleep(2 * time.Second)
 	ctx2, ok = check(ctx, jwt2)
-	assert.NotNil(t, ctx2)
-	assert.False(t, ok)
+	assert.INotNil(ctx2)
+	assert.ThatNot(ok)
 }
 
 func TestValidateUser(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	user := "user-name"
 	wrong := "wrong-name"
 	jwt := BuildJWT(user)
-	assert.Equal(t, user, validateAndUser(jwt))
-	assert.NotEmpty(t, validateAndUser(jwt))
+	assert.Equal(user, validateAndUser(jwt))
+	assert.NotEmpty(validateAndUser(jwt))
 	a := []string{"Bearer " + jwt}
 	ok := IsValidUser(user, a)
-	assert.True(t, ok)
+	assert.That(ok)
 	ok = IsValidUser(wrong, a)
-	assert.False(t, ok)
+	assert.ThatNot(ok)
 }
 
 func TestCalcExpiration(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
 	jwt := BuildJWT("user-name")
 	yes := IsTimeLeft(jwt, 24*time.Hour)
-	assert.True(t, yes)
+	assert.That(yes)
 	yes = IsTimeLeft(jwt, 3*24*time.Hour+time.Second)
-	assert.False(t, yes)
+	assert.ThatNot(yes)
 }
