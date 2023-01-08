@@ -20,7 +20,7 @@ type Cipher struct {
 
 // NewCipher creates a new cipher with key 32-byte data given
 func NewCipher(k []byte) *Cipher {
-	assert.D.EqualInt(len(k), 32)
+	assert.SLen(k, 32)
 
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
