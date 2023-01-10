@@ -69,3 +69,7 @@ test_cov: test_cov_out
 	go tool cover -html=coverage.txt
 
 check: check_fmt vet shadow
+
+release:
+	gh workflow run do-release.yml
+
