@@ -89,7 +89,7 @@ func TryAuthOpenWithSleep(
 ) (
 	c Conn,
 ) {
-	assert.D.True(conf != nil, "conf cannot be nil")
+	assert.NotNil(conf)
 
 	if s == nil {
 		s = time.Sleep

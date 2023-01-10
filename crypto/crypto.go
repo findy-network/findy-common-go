@@ -20,7 +20,7 @@ type Cipher struct {
 
 // NewCipher creates a new cipher with key 32-byte data given
 func NewCipher(k []byte) *Cipher {
-	assert.D.EqualInt(len(k), 32)
+	assert.SLen(k, 32)
 
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
@@ -36,14 +36,19 @@ func NewCipher(k []byte) *Cipher {
 }
 
 // Encrypt is same as TryEncrypt but note used yet
-func (c *Cipher) _(in []byte) (out []byte, err error) {
-	defer err2.Handle(&err)
-	return c.TryEncrypt(in), nil
+func (c *Cipher) Encrypt(in []byte) (out []byte) {
+	return c.TryEncrypt(in)
 }
 
+// TryEncrypt encrypts dat with the cipher. This will be merged with Encrypt
+// function later.
 func (c *Cipher) TryEncrypt(in []byte) (out []byte) {
-	nonce := make([]byte, c.aesGCM.NonceSize())
-	try.To1(io.ReadFull(rand.Reader, nonce))
+	nonceSize := c.aesGCM.NonceSize()
+	nonce := make([]byte, nonceSize)
+
+	n, err := io.ReadFull(rand.Reader, nonce)
+	assert.Equal(n, nonceSize)
+	assert.NoError(err)
 
 	// We add it as a prefix to the encrypted data. The first nonce argument in
 	// Seal is the prefix.
