@@ -61,7 +61,7 @@ func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
 }
 
 var (
-	mgedDB Mgd
+	mgedDB Handle
 )
 
 // New creates a new managed and encrypted database. This is a preferred way to
@@ -84,9 +84,7 @@ func New(cfg Cfg) Handle {
 // Init initializes managed version of the encrypted database. Database is ready
 // to use after this call. See more information of Cfg struct.
 func Init(cfg Cfg) (err error) {
-	mgedDB = Mgd{
-		Cfg: cfg,
-	}
+	mgedDB = New(cfg)
 	return nil
 }
 
