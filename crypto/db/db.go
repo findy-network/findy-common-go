@@ -73,9 +73,10 @@ var (
 func New(cfg Cfg) Handle {
 	base := filepath.Base(cfg.Filename)
 	if strings.HasPrefix(base, MEM_PREFIX) {
-		glog.V(1).Infoln("open", base)
+		glog.V(5).Infoln("MEMORY-DB open:", base)
 		return NewMemDB(cfg.Buckets)
 	}
+	glog.V(5).Infof("File system DB (%v)", base)
 	return &Mgd{
 		Cfg: cfg,
 	}
