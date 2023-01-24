@@ -61,7 +61,7 @@ func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
 }
 
 var (
-	mgedDB Mgd
+	mgedDB Handle
 )
 
 // New creates a new managed and encrypted database. This is a preferred way to
@@ -73,9 +73,10 @@ var (
 func New(cfg Cfg) Handle {
 	base := filepath.Base(cfg.Filename)
 	if strings.HasPrefix(base, MEM_PREFIX) {
-		glog.V(1).Infoln("open", base)
+		glog.V(5).Infoln("MEMORY-DB open:", base)
 		return NewMemDB(cfg.Buckets)
 	}
+	glog.V(5).Infof("File system DB (%v)", base)
 	return &Mgd{
 		Cfg: cfg,
 	}
@@ -84,9 +85,7 @@ func New(cfg Cfg) Handle {
 // Init initializes managed version of the encrypted database. Database is ready
 // to use after this call. See more information of Cfg struct.
 func Init(cfg Cfg) (err error) {
-	mgedDB = Mgd{
-		Cfg: cfg,
-	}
+	mgedDB = New(cfg)
 	return nil
 }
 
