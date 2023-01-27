@@ -94,18 +94,26 @@ func NewMachine(data MachineData) *Machine {
 }
 
 type Machine struct {
-	Name    string            `json:"name,omitempty"`
-	Initial *Transition       `json:"initial"`
-	States  map[string]*State `json:"states"`
+	Name string `json:"name,omitempty"`
+
+	// marks the start state: there can be only one for the Machine, but there
+	// can be 0..n termination states. See State.Terminate field.
+	Initial *Transition `json:"initial"`
+
+	States map[string]*State `json:"states"`
 
 	Current     string `json:"-"`
 	Initialized bool   `json:"-"`
 
 	Memory map[string]string `json:"-"`
+
+	termChan TerminateChan `json:"-"`
 }
 
 type State struct {
 	Transitions []*Transition `json:"transitions"`
+
+	Terminate bool `json:"terminate,omitempty"`
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -364,6 +372,7 @@ func (m *Machine) TriggersByHook() *Transition {
 func (m *Machine) Step(t *Transition) {
 	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
+	m.checkTerm()
 }
 
 func (m *Machine) Answers(q *agency.Question) *Transition {
@@ -376,8 +385,20 @@ func (m *Machine) Answers(q *agency.Question) *Transition {
 	return nil
 }
 
-func (m *Machine) Start() []*Event {
+type TerminateChan chan bool
+
+func (m *Machine) checkTerm() {
+	if m.CurrentState().Terminate {
+		glog.V(1).Infoln("--- TERMINATE FSM ---")
+		if m.termChan != nil {
+			m.termChan <- true
+		}
+	}
+}
+
+func (m *Machine) Start(termChan TerminateChan) []*Event {
 	t := m.Initial
+	m.termChan = termChan
 	if (t.Trigger == nil || t.Trigger.Triggers(nil)) && t.Sends != nil {
 		return t.BuildSendEvents(nil)
 	}
@@ -613,7 +634,7 @@ func NotificationTypeID(typeName string) NotificationType {
 	} else if _, ok := QuestionTypeID[typeName]; ok {
 		return NotificationType(10) * NotificationType(QuestionTypeID[typeName])
 	}
-	glog.V(10).Infoln("unknown type: \"", typeName, "\" setting zero")
+	glog.V(10).Infof("unknown type: \"%v\" setting zero", typeName)
 	return 0
 }
 

@@ -8,6 +8,35 @@ import (
 )
 
 var (
+	machineTerminates = Machine{
+		Name: "machine",
+		Initial: &Transition{
+			Sends: []*Event{{
+				Protocol: "basic_message",
+				Data:     "Hello!",
+				NoStatus: true,
+			}},
+			Target: "IDLE",
+		},
+		States: map[string]*State{
+			"IDLE": {
+				Transitions: []*Transition{
+					{
+						Trigger: &Event{Protocol: "basic_message"},
+						Sends: []*Event{{
+							Protocol: "basic_message",
+							Rule:     "INPUT",
+						}},
+						Target: "TERMINATE",
+					},
+				},
+			},
+			"TERMINATE": {
+				Terminate: true,
+			},
+		},
+	}
+
 	machine = Machine{
 		Name: "machine",
 		Initial: &Transition{
@@ -121,7 +150,31 @@ func TestMachine_Initialize(t *testing.T) {
 		machine.States["IDLE"].Transitions[0].Sends[0].ProtocolType)
 }
 
+func TestMachine_InitializeTerminate(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
+	assert.ThatNot(machineTerminates.Initialized)
+	assert.That(machineTerminates.States["IDLE"].Transitions[0].Trigger.ProtocolType == 0)
+	assert.That(machineTerminates.States["IDLE"].Transitions[0].Sends[0].ProtocolType == 0)
+	assert.NoError(machineTerminates.Initialize())
+	assert.That(machineTerminates.Initialized)
+	assert.DeepEqual(agency.Protocol_BASIC_MESSAGE,
+		machineTerminates.States["IDLE"].Transitions[0].Trigger.ProtocolType)
+	assert.DeepEqual(agency.Protocol_BASIC_MESSAGE,
+		machineTerminates.States["IDLE"].Transitions[0].Sends[0].ProtocolType)
+}
+
 func TestMachine_Triggers(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
+	assert.NoError(machine.Initialize())
+	assert.That(nil == machine.Triggers(
+		protocolStatus(agency.Protocol_PRESENT_PROOF)))
+	assert.NotNil(t, machine.Triggers(
+		protocolStatus(agency.Protocol_BASIC_MESSAGE)))
+}
+
+func TestMachine_TriggersTerminate(t *testing.T) {
 	assert.PushTester(t)
 	defer assert.PopTester()
 	assert.NoError(machine.Initialize())
@@ -153,6 +206,30 @@ func TestMachine_Step(t *testing.T) {
 	assert.INotNil(transition)
 	machine.Step(transition)
 	assert.Equal("WAITING_STATUS", machine.Current)
+}
+
+func TestMachine_StepTerminate(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
+	assert.NoError(machineTerminates.Initialize())
+	termChan := make(TerminateChan)
+	go func() {
+		assert.PushTester(t)
+		defer assert.PopTester()
+		termSignaled, ok := <-termChan
+		assert.That(ok)
+		if ok {
+			assert.That(termSignaled)
+		}
+		assert.Equal("TERMINATE", machineTerminates.Current)
+	}()
+	_ = machine.Start(termChan)
+	transition := machineTerminates.Triggers(protocolStatus(agency.Protocol_PRESENT_PROOF))
+	assert.That(nil == transition)
+	transition = machineTerminates.Triggers(protocolStatus(agency.Protocol_BASIC_MESSAGE))
+	assert.INotNil(transition)
+	assert.Equal("IDLE", machineTerminates.Current)
+	go machineTerminates.Step(transition)
 }
 
 func TestMachine_Step2(t *testing.T) {
@@ -191,7 +268,7 @@ func TestMachine_Start(t *testing.T) {
 	assert.PushTester(t)
 	defer assert.PopTester()
 	assert.NoError(machine.Initialize())
-	sends := machine.Start()
+	sends := machine.Start(nil)
 	assert.INotNil(sends)
 	assert.SLen(sends, 1)
 	assert.INotNil(sends[0].Transition)
@@ -202,6 +279,6 @@ func TestMachine_Start_ProofMachine(t *testing.T) {
 	assert.PushTester(t)
 	defer assert.PopTester()
 	assert.NoError(showProofMachine.Initialize())
-	sends := showProofMachine.Start()
+	sends := showProofMachine.Start(nil)
 	assert.SLen(sends, 0)
 }

@@ -2,6 +2,8 @@ package chat
 
 import (
 	"context"
+	"os"
+	"syscall"
 
 	"github.com/findy-network/findy-common-go/agency/client"
 	"github.com/findy-network/findy-common-go/agency/client/async"
@@ -25,9 +27,11 @@ type Conversation struct {
 	StatusChan
 	QuestionChan
 	HookChan
+	fsm.TerminateChan
 
 	id string
 	client.Conn
+	intCh          chan os.Signal
 	lastProtocolID map[string]struct{} //*agency.ProtocolID
 
 	// machine can be ptr because multiplexer creates a new for each one
@@ -60,7 +64,7 @@ var (
 	Hook HookFn
 )
 
-func Multiplexer(conn client.Conn) {
+func Multiplexer(conn client.Conn, intCh chan os.Signal) {
 	glog.V(4).Infoln("starting multiplexer", Machine.FType)
 	for {
 		select {
@@ -70,11 +74,13 @@ func Multiplexer(conn client.Conn) {
 				glog.V(5).Infoln("Starting new conversation",
 					Machine.FType)
 				c = &Conversation{
-					id:           t.Notification.ConnectionID,
-					Conn:         conn,
-					StatusChan:   make(StatusChan),
-					QuestionChan: make(QuestionChan),
-					HookChan:     make(HookChan),
+					id:            t.Notification.ConnectionID,
+					Conn:          conn,
+					intCh:         intCh,
+					StatusChan:    make(StatusChan),
+					QuestionChan:  make(QuestionChan),
+					HookChan:      make(HookChan),
+					TerminateChan: make(fsm.TerminateChan),
 				}
 				go c.RunConversation(Machine)
 				conversations[t.Notification.ConnectionID] = c
@@ -86,11 +92,13 @@ func Multiplexer(conn client.Conn) {
 				glog.V(5).Infoln("Starting new conversation w/ question",
 					Machine.FType)
 				c = &Conversation{
-					id:           question.Status.Notification.ConnectionID,
-					Conn:         conn,
-					StatusChan:   make(StatusChan),
-					QuestionChan: make(QuestionChan),
-					HookChan:     make(HookChan),
+					id:            question.Status.Notification.ConnectionID,
+					Conn:          conn,
+					intCh:         intCh,
+					StatusChan:    make(StatusChan),
+					QuestionChan:  make(QuestionChan),
+					HookChan:      make(HookChan),
+					TerminateChan: make(fsm.TerminateChan),
 				}
 				go c.RunConversation(Machine)
 				conversations[question.Status.Notification.ConnectionID] = c
@@ -105,7 +113,8 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 	c.machine = fsm.NewMachine(data)
 	try.To(c.machine.Initialize())
 
-	c.send(c.machine.Start(), nil)
+	termChan := make(fsm.TerminateChan, 1)
+	c.send(c.machine.Start(termChan), nil)
 
 	for {
 		select {
@@ -115,6 +124,11 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 			c.questionReceived(q)
 		case hookData := <-c.HookChan:
 			c.hookReceived(hookData)
+		case <-c.TerminateChan:
+			// machine has reached its terminate state
+			// let's signal it outside. In future we could offer API to what
+			// to send to intCh. SIGTERM is very good compromise in K8s etc.
+			c.intCh <- syscall.SIGTERM
 		}
 	}
 }
