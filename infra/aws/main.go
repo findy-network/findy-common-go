@@ -14,7 +14,7 @@ func _(msg string, args ...interface{}) {
 }
 
 func main() {
-	defer err2.CatchTrace(func(err error) {
+	defer err2.Catch(func(err error) {
 		fmt.Fprintln(os.Stderr, err)
 	})
 

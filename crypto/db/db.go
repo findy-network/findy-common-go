@@ -313,7 +313,7 @@ func (db *Mgd) BackupTicker(interval time.Duration) (done chan<- struct{}) {
 	ticker := time.NewTicker(interval)
 	doneCh := make(chan struct{})
 	go func() {
-		defer err2.CatchTrace(func(err error) {
+		defer err2.Catch(func(err error) {
 			glog.Error(err)
 		})
 		for {
