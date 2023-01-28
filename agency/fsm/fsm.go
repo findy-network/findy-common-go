@@ -107,7 +107,7 @@ type Machine struct {
 
 	Memory map[string]string `json:"-"`
 
-	termChan TerminateChan `json:"-"`
+	termChan TerminateOutChan `json:"-"`
 }
 
 type State struct {
@@ -385,18 +385,26 @@ func (m *Machine) Answers(q *agency.Question) *Transition {
 	return nil
 }
 
-type TerminateChan chan bool
+type TerminateChan = chan bool
+type TerminateInChan = <-chan bool
+type TerminateOutChan = chan<- bool
 
 func (m *Machine) checkTerm() {
 	if m.CurrentState().Terminate {
-		glog.V(1).Infoln("--- TERMINATE FSM ---")
 		if m.termChan != nil {
+			glog.V(1).Infoln("--- TERMINATE FSM OK ---")
 			m.termChan <- true
+		} else {
+			glog.Warning("--- Cannot signall TERMINATE FSM ---")
 		}
+
 	}
 }
 
-func (m *Machine) Start(termChan TerminateChan) []*Event {
+// Start starts the FSM. It takes termination channel as an argument to be able
+// to signaling outside when machine is stoped. It accept nil as a channel value
+// when signaling isn't done.
+func (m *Machine) Start(termChan TerminateOutChan) []*Event {
 	t := m.Initial
 	m.termChan = termChan
 	if (t.Trigger == nil || t.Trigger.Triggers(nil)) && t.Sends != nil {
@@ -632,7 +640,7 @@ func NotificationTypeID(typeName string) NotificationType {
 	if _, ok := notificationTypeID[typeName]; ok {
 		return NotificationType(notificationTypeID[typeName])
 	} else if _, ok := QuestionTypeID[typeName]; ok {
-		return NotificationType(10) * NotificationType(QuestionTypeID[typeName])
+		return NotificationType(8) * NotificationType(QuestionTypeID[typeName])
 	}
 	glog.V(10).Infof("unknown type: \"%v\" setting zero", typeName)
 	return 0

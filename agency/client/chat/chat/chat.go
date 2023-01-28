@@ -27,11 +27,10 @@ type Conversation struct {
 	StatusChan
 	QuestionChan
 	HookChan
-	fsm.TerminateChan
+	fsm.TerminateChan // FSM tells us if machine has reached the end.
 
 	id string
 	client.Conn
-	intCh          chan os.Signal
 	lastProtocolID map[string]struct{} //*agency.ProtocolID
 
 	// machine can be ptr because multiplexer creates a new for each one
@@ -64,8 +63,13 @@ var (
 	Hook HookFn
 )
 
-func Multiplexer(conn client.Conn, intCh chan os.Signal) {
-	glog.V(4).Infoln("starting multiplexer", Machine.FType)
+// Multiplexer is a goroutine function to started multiplex all the
+// conversations an agent is currently having. It takes gRPC connection handle
+// and signaling channel as an arguments. Interrupt channel is need to tell when
+// a FSM has reached to the end. Note. Some state machines do that never.
+func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
+	glog.V(3).Infoln("starting multiplexer", Machine.FType)
+	termChan := make(fsm.TerminateChan, 1)
 	for {
 		select {
 		case t := <-Status:
@@ -76,11 +80,10 @@ func Multiplexer(conn client.Conn, intCh chan os.Signal) {
 				c = &Conversation{
 					id:            t.Notification.ConnectionID,
 					Conn:          conn,
-					intCh:         intCh,
 					StatusChan:    make(StatusChan),
 					QuestionChan:  make(QuestionChan),
 					HookChan:      make(HookChan),
-					TerminateChan: make(fsm.TerminateChan),
+					TerminateChan: termChan,
 				}
 				go c.RunConversation(Machine)
 				conversations[t.Notification.ConnectionID] = c
@@ -94,16 +97,22 @@ func Multiplexer(conn client.Conn, intCh chan os.Signal) {
 				c = &Conversation{
 					id:            question.Status.Notification.ConnectionID,
 					Conn:          conn,
-					intCh:         intCh,
 					StatusChan:    make(StatusChan),
 					QuestionChan:  make(QuestionChan),
 					HookChan:      make(HookChan),
-					TerminateChan: make(fsm.TerminateChan),
+					TerminateChan: termChan,
 				}
 				go c.RunConversation(Machine)
 				conversations[question.Status.Notification.ConnectionID] = c
 			}
 			c.QuestionChan <- question
+		case <-termChan:
+			// machine has reached its terminate state let's signal it to
+			// outside. In future we could offer API to what to send to
+			// intCh. SIGTERM is very good compromise in K8s, etc.
+			glog.V(1).Infoln("<- FSM Terminate signal received")
+			intCh <- syscall.SIGTERM
+			glog.V(1).Infoln("-> signaled SIGTERM")
 		}
 		// TODO HookChan handler isn't implemented yet!
 	}
@@ -113,8 +122,7 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 	c.machine = fsm.NewMachine(data)
 	try.To(c.machine.Initialize())
 
-	termChan := make(fsm.TerminateChan, 1)
-	c.send(c.machine.Start(termChan), nil)
+	c.send(c.machine.Start(fsm.TerminateOutChan(c.TerminateChan)), nil)
 
 	for {
 		select {
@@ -124,11 +132,6 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 			c.questionReceived(q)
 		case hookData := <-c.HookChan:
 			c.hookReceived(hookData)
-		case <-c.TerminateChan:
-			// machine has reached its terminate state
-			// let's signal it outside. In future we could offer API to what
-			// to send to intCh. SIGTERM is very good compromise in K8s etc.
-			c.intCh <- syscall.SIGTERM
 		}
 	}
 }
@@ -177,7 +180,7 @@ func (c *Conversation) statusReceived(as *agency.AgentStatus) {
 				return
 			}
 			if glog.V(3) {
-				glog.Infof("machine: %s (%p)", c.machine.Name, c.machine)
+				glog.Infof("machine: %s, ptr(%p)", c.machine.Name, c.machine)
 				glog.Infoln("role:", status.GetState().ProtocolID.Role)
 				glog.Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
 			}
