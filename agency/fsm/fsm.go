@@ -426,7 +426,7 @@ func padStr(s string) string {
 func (m *Machine) String() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintf(w, "title %s\n", m.Name)
-	fmt.Fprintf(w, "[*] -> %s\n", m.Initial.Target)
+	fmt.Fprintf(w, "[*] --> %s\n", m.Initial.Target)
 	for stateName, state := range m.States {
 		fmt.Fprintf(w, "state \"%s\" as %s\n", padStr(stateName), stateName)
 		for _, transition := range state.Transitions {
@@ -437,7 +437,12 @@ func (m *Machine) String() string {
 			}
 			fmt.Fprintln(w)
 		}
-		fmt.Fprintln(w)
+		glog.V(10).Infof("terminate: %s -> %v", stateName, state.Terminate)
+		if state.Terminate {
+			fmt.Fprintf(w, "%s --> [*]\n", stateName)
+		} else {
+			fmt.Fprintln(w)
+		}
 	}
 	return w.String()
 }
