@@ -645,7 +645,7 @@ func NotificationTypeID(typeName string) NotificationType {
 	if _, ok := notificationTypeID[typeName]; ok {
 		return NotificationType(notificationTypeID[typeName])
 	} else if _, ok := QuestionTypeID[typeName]; ok {
-		return NotificationType(8) * NotificationType(QuestionTypeID[typeName])
+		return NotificationType(10) * NotificationType(QuestionTypeID[typeName])
 	}
 	glog.V(10).Infof("unknown type: \"%v\" setting zero", typeName)
 	return 0
