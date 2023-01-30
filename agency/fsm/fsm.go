@@ -94,18 +94,26 @@ func NewMachine(data MachineData) *Machine {
 }
 
 type Machine struct {
-	Name    string            `json:"name,omitempty"`
-	Initial *Transition       `json:"initial"`
-	States  map[string]*State `json:"states"`
+	Name string `json:"name,omitempty"`
+
+	// marks the start state: there can be only one for the Machine, but there
+	// can be 0..n termination states. See State.Terminate field.
+	Initial *Transition `json:"initial"`
+
+	States map[string]*State `json:"states"`
 
 	Current     string `json:"-"`
 	Initialized bool   `json:"-"`
 
 	Memory map[string]string `json:"-"`
+
+	termChan TerminateOutChan `json:"-"`
 }
 
 type State struct {
 	Transitions []*Transition `json:"transitions"`
+
+	Terminate bool `json:"terminate,omitempty"`
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -364,6 +372,7 @@ func (m *Machine) TriggersByHook() *Transition {
 func (m *Machine) Step(t *Transition) {
 	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
+	m.checkTerm()
 }
 
 func (m *Machine) Answers(q *agency.Question) *Transition {
@@ -376,8 +385,28 @@ func (m *Machine) Answers(q *agency.Question) *Transition {
 	return nil
 }
 
-func (m *Machine) Start() []*Event {
+type TerminateChan = chan bool
+type TerminateInChan = <-chan bool
+type TerminateOutChan = chan<- bool
+
+func (m *Machine) checkTerm() {
+	if m.CurrentState().Terminate {
+		if m.termChan != nil {
+			glog.V(1).Infoln("--- TERMINATE FSM OK ---")
+			m.termChan <- true
+		} else {
+			glog.Warning("--- Cannot signall TERMINATE FSM ---")
+		}
+
+	}
+}
+
+// Start starts the FSM. It takes termination channel as an argument to be able
+// to signaling outside when machine is stoped. It accept nil as a channel value
+// when signaling isn't done.
+func (m *Machine) Start(termChan TerminateOutChan) []*Event {
 	t := m.Initial
+	m.termChan = termChan
 	if (t.Trigger == nil || t.Trigger.Triggers(nil)) && t.Sends != nil {
 		return t.BuildSendEvents(nil)
 	}
@@ -397,7 +426,7 @@ func padStr(s string) string {
 func (m *Machine) String() string {
 	w := new(bytes.Buffer)
 	fmt.Fprintf(w, "title %s\n", m.Name)
-	fmt.Fprintf(w, "[*] -> %s\n", m.Initial.Target)
+	fmt.Fprintf(w, "[*] --> %s\n", m.Initial.Target)
 	for stateName, state := range m.States {
 		fmt.Fprintf(w, "state \"%s\" as %s\n", padStr(stateName), stateName)
 		for _, transition := range state.Transitions {
@@ -408,7 +437,12 @@ func (m *Machine) String() string {
 			}
 			fmt.Fprintln(w)
 		}
-		fmt.Fprintln(w)
+		glog.V(10).Infof("terminate: %s -> %v", stateName, state.Terminate)
+		if state.Terminate {
+			fmt.Fprintf(w, "%s --> [*]\n", stateName)
+		} else {
+			fmt.Fprintln(w)
+		}
 	}
 	return w.String()
 }
@@ -613,7 +647,7 @@ func NotificationTypeID(typeName string) NotificationType {
 	} else if _, ok := QuestionTypeID[typeName]; ok {
 		return NotificationType(10) * NotificationType(QuestionTypeID[typeName])
 	}
-	glog.V(10).Infoln("unknown type: \"", typeName, "\" setting zero")
+	glog.V(10).Infof("unknown type: \"%v\" setting zero", typeName)
 	return 0
 }
 

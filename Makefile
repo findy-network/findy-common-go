@@ -1,3 +1,5 @@
+TEST_TIMEOUT?="10s"
+
 API_BRANCH=$(shell ./scripts/branch.sh ../findy-agent-api/)
 SRC_ROOT=$(PWD)/../../..
 IDL_PATH=../findy-agent-api/idl/v1
@@ -53,10 +55,13 @@ lint_e:
 	@$(GOPATH)/bin/golint ./... | grep -v export | cat
 
 test:
-	go test -v -p 1 -failfast ./...
+	go test -timeout $(TEST_TIMEOUT) -v -p 1 -failfast ./...
+
+test_fsm:
+	go test -timeout $(TEST_TIMEOUT) -v -p 1 -failfast ./agency/fsm/... -args -logtostderr -v=10
 
 logged_test:
-	go test -v -p 1 -failfast ./... -args -logtostderr=true -v=10
+	go test -timeout $(TEST_TIMEOUT) -v -p 1 -failfast ./... -args -logtostderr -v=10
 
 test_cov_out:
 	go test -p 1 -failfast \

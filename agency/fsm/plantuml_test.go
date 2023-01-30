@@ -20,6 +20,8 @@ func TestGenerateURL(t *testing.T) {
 	}{
 		{name: "simple", args: args{"svg", &machine}, wantErr: false,
 			wantURL: simpleURL},
+		{name: "simpleTerminate", args: args{"svg", &machineTerminates}, wantErr: false,
+			wantURL: simpleURL},
 		{name: "proof machine", args: args{"svg", &showProofMachine}, wantErr: false,
 			wantURL: proofMachineURL},
 	}
@@ -30,6 +32,7 @@ func TestGenerateURL(t *testing.T) {
 				t.Errorf("GenerateURL() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+			// not very good test
 			if gotURL == nil || gotURL.Host != tt.wantURL.Host || !gotURL.IsAbs() {
 				t.Errorf("GenerateURL() gotURL = %v, want %v", gotURL, tt.wantURL)
 			}

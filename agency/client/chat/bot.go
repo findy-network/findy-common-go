@@ -75,7 +75,7 @@ func (b Bot) Run(intCh chan os.Signal) {
 
 	chat.Machine = b.MachineData
 
-	go chat.Multiplexer(b.Conn)
+	go chat.Multiplexer(b.Conn, intCh)
 
 loop:
 	for {
