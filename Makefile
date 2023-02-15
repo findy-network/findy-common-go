@@ -4,6 +4,8 @@ API_BRANCH=$(shell ./scripts/branch.sh ../findy-agent-api/)
 SRC_ROOT=$(PWD)/../../..
 IDL_PATH=../findy-agent-api/idl/v1
 
+protoc:	protoc_protocol protoc_agency protoc_agent protoc_authn
+
 protoc_protocol:
 	protoc --proto_path=$(IDL_PATH) --go_out=$(SRC_ROOT) --go-grpc_out=$(SRC_ROOT) protocol.proto
 
@@ -13,8 +15,8 @@ protoc_agency:
 protoc_agent:
 	protoc --proto_path=$(IDL_PATH) --go_out=$(SRC_ROOT) --go-grpc_out=$(SRC_ROOT) agent.proto
 
-protoc:	protoc_protocol protoc_agency protoc_agent
-
+protoc_authn:
+	protoc --proto_path=$(IDL_PATH) --go_out=$(SRC_ROOT) --go-grpc_out=$(SRC_ROOT) authn.proto 
 
 drop_api:
 	go mod edit -dropreplace github.com/findy-network/findy-agent-api
