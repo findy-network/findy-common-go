@@ -59,6 +59,12 @@ lint_e:
 test:
 	go test -timeout $(TEST_TIMEOUT) -v -p 1 -failfast ./...
 
+testr:
+	go test -race -timeout $(TEST_TIMEOUT) -v -p 1 -failfast ./...
+
+testr_fsm:
+	go test -race -timeout $(TEST_TIMEOUT) -v -p 1 -failfast ./agency/fsm/... -args -logtostderr -v=10
+
 test_fsm:
 	go test -timeout $(TEST_TIMEOUT) -v -p 1 -failfast ./agency/fsm/... -args -logtostderr -v=10
 
