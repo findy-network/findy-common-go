@@ -61,7 +61,7 @@ const digitsInPIN = 6
 var seed = time.Now().UnixNano()
 
 func init() {
-	rand.Seed(seed)
+	rand.NewSource(seed)
 }
 
 // NewBasicMessage creates a new message which can be send to machine

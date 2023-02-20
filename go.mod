@@ -1,6 +1,6 @@
 module github.com/findy-network/findy-common-go
 
-go 1.18
+go 1.20
 
 require (
 	github.com/auth0/go-jwt-middleware v1.0.1
@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hyperledger/aries-framework-go v0.1.8
-	github.com/lainio/err2 v0.8.13
+	github.com/lainio/err2 v0.8.14
 	github.com/mr-tron/base58 v1.2.0
 	go.etcd.io/bbolt v1.3.6
 	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c
@@ -41,8 +41,9 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e // indirect
+	golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3 // indirect
 	golang.org/x/net v0.0.0-20210226172049-e18ecbb05110 // indirect
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect

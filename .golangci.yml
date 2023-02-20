@@ -79,7 +79,7 @@ linters:
     - typecheck
     - unconvert
     - unparam
-    - unused
+      #   - unused # TODO: Forced to remove or linter crashes!!!
 #    - whitespace
 # don't enable:
 # - asciicheck
