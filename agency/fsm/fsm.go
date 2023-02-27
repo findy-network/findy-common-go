@@ -16,12 +16,14 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 )
 
 const (
+	// monitors how our proof/issue protocol goes
 	TriggerTypeOurMessage    = "OUR_STATUS"
-	TriggerTypeUseInput      = "INPUT"      // works like echo
+	TriggerTypeUseInput      = "INPUT"      // used just for echo/forward
 	TriggerTypeUseInputSave  = "INPUT_SAVE" // saves input data
 	TriggerTypeFormat        = "FORMAT"
 	TriggerTypeFormatFromMem = "FORMAT_MEM"
@@ -139,12 +141,16 @@ type Event struct {
 	// we will continue with this when other protocol QAs will be implemented
 	// New! Hook now uses TypeID for hook name/ID
 
+	// These both are string versions to make writing the yaml fsm easier.
+	// There parser methdod, Initialize() that must be call to make the machine
+	// to work. It also make other syntax checks.
 	Protocol string `json:"protocol"` // Note! See ProtocolType below
 	TypeID   string `json:"type_id"`  // Note! See NotificationType below
 
-	Rule     string `json:"rule"`
-	Data     string `json:"data,omitempty"`
-	NoStatus bool   `json:"no_status,omitempty"`
+	Rule string `json:"rule"`
+	Data string `json:"data,omitempty"`
+	// Used for sending: we don't want status update, aka echo
+	NoStatus bool `json:"no_status,omitempty"`
 
 	*EventData `json:"event_data,omitempty"`
 
@@ -189,9 +195,8 @@ func (e Event) Answers(status *agency.Question) bool {
 	case agency.Question_ISSUE_PROPOSE_WAITS:
 	case agency.Question_PROOF_PROPOSE_WAITS:
 	case agency.Question_PROOF_VERIFY_WAITS:
-		if e.ProtocolType != agency.Protocol_PRESENT_PROOF {
-			panic("programming error")
-		}
+		assert.Equal(e.ProtocolType, agency.Protocol_PRESENT_PROOF)
+
 		var attrValues []ProofAttr
 		try.To(json.Unmarshal([]byte(e.Data), &attrValues))
 
@@ -497,9 +502,10 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
-			if input == nil && send.Rule != TriggerTypeData {
-				panic("FSM syntax error")
-			}
+			assert.That(input != nil ||
+				send.Rule == TriggerTypeData ||
+				send.Rule == TriggerTypeFormatFromMem,
+			)
 			switch send.Rule {
 			case TriggerTypeUseInput:
 				sends[i].EventData = input.EventData
