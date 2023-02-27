@@ -22,23 +22,44 @@ import (
 
 const (
 	// monitors how our proof/issue protocol goes
-	TriggerTypeOurMessage    = "OUR_STATUS"
-	TriggerTypeUseInput      = "INPUT"      // used just for echo/forward
-	TriggerTypeUseInputSave  = "INPUT_SAVE" // saves input data
-	TriggerTypeFormat        = "FORMAT"
-	TriggerTypeFormatFromMem = "FORMAT_MEM"
-	TriggerTypePIN           = "GEN_PIN"
-	TriggerTypeData          = ""
+	TriggerTypeOurMessage = "OUR_STATUS"
 
+	// used just for echo/forward
+	TriggerTypeUseInput = "INPUT"
+
+	// saves input data to event that we can use it, data tells the name of
+	// memory slot
+	TriggerTypeUseInputSave = "INPUT_SAVE"
+
+	// formates input data with then format string which is in send data
+	TriggerTypeFormat = "FORMAT"
+
+	// formates send event where data is themplate and every memory map value
+	// are available. See exmaples for more information.
+	TriggerTypeFormatFromMem = "FORMAT_MEM"
+
+	// helps to generate a PIN code to send e.g. email (endpoint not yet
+	// supported).
+	TriggerTypePIN = "GEN_PIN"
+
+	// quides to use send events `data` as is.
+	TriggerTypeData = ""
+
+	// these three validate 'operations' compare input data to send data
 	TriggerTypeValidateInputEqual    = "INPUT_VALIDATE_EQUAL"
 	TriggerTypeValidateInputNotEqual = "INPUT_VALIDATE_NOT_EQUAL"
 	TriggerTypeInputEqual            = "INPUT_EQUAL"
 
+	// these two need other states to help them (in production). The previous
+	// states decide to which of these the FSM transits.
+	// accept and stores present proof values and stores them to FSM memory map
 	TriggerTypeAcceptAndInputValues = "ACCEPT_AND_INPUT_VALUES"
-	TriggerTypeNotAcceptValues      = "NOT_ACCEPT_VALUES"
+	// not accept present proof protocol
+	TriggerTypeNotAcceptValues = "NOT_ACCEPT_VALUES"
 )
 
 const (
+	// these are Aries DIDComm protocols
 	MessageNone         = ""
 	MessageBasicMessage = "basic_message"
 	MessageIssueCred    = "issue_cred"
@@ -48,8 +69,8 @@ const (
 
 	MessageAnswer = "answer"
 
-	MessageEmail = "email"
-	MessageHook  = "hook"
+	MessageEmail = "email" // not supported yet
+	MessageHook  = "hook"  // internal program call back
 )
 
 const (
