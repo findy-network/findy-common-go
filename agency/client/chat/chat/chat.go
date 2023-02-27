@@ -10,6 +10,7 @@ import (
 	"github.com/findy-network/findy-common-go/agency/fsm"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/golang/glog"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 )
 
@@ -164,7 +165,7 @@ func (c *Conversation) statusReceived(as *agency.AgentStatus) {
 	switch as.Notification.TypeID {
 	case agency.Notification_STATUS_UPDATE:
 		glog.V(3).Infoln("status update")
-		if c.IsOursAndRm(as.Notification.ProtocolID) {
+		if c.isOursAndRm(as.Notification.ProtocolID) {
 			glog.V(10).Infoln("discarding event")
 			return
 		}
@@ -298,9 +299,8 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 		case fsm.EmailProtocol:
 			c.sendEmail(output.Email, output.NoStatus)
 		case fsm.QAProtocol:
-			if status == nil {
-				panic("FSM syntax error")
-			}
+			assert.NotNil(status, "FSM syntax error")
+
 			ack := false
 			if output.Data == "ACK" {
 				ack = true
@@ -312,9 +312,11 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 	}
 }
 
-func (c *Conversation) IsOursAndRm(id string) bool {
+func (c *Conversation) isOursAndRm(id string) bool {
 	if _, ok := c.lastProtocolID[id]; ok {
-		c.lastProtocolID[id] = struct{}{}
+		// TODO: Why we aren't calling delete to the map?
+		//c.lastProtocolID[id] = struct{}{}
+		delete(c.lastProtocolID, id)
 		return true
 	}
 	return false
