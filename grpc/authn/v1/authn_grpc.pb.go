@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AuthnServiceClient interface {
-	// Enter enters authn command.
+	// Enter enters authn command: REGISTER or LOGIN.
 	Enter(ctx context.Context, in *Cmd, opts ...grpc.CallOption) (AuthnService_EnterClient, error)
 	// EnterSecret enters needed secrets after specific CmdStatus has received.
 	EnterSecret(ctx context.Context, in *SecretMsg, opts ...grpc.CallOption) (*SecretResult, error)
@@ -81,7 +81,7 @@ func (c *authnServiceClient) EnterSecret(ctx context.Context, in *SecretMsg, opt
 // All implementations must embed UnimplementedAuthnServiceServer
 // for forward compatibility
 type AuthnServiceServer interface {
-	// Enter enters authn command.
+	// Enter enters authn command: REGISTER or LOGIN.
 	Enter(*Cmd, AuthnService_EnterServer) error
 	// EnterSecret enters needed secrets after specific CmdStatus has received.
 	EnterSecret(context.Context, *SecretMsg) (*SecretResult, error)
