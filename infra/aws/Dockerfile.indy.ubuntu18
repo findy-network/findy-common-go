@@ -27,7 +27,9 @@ RUN apt-get update && \
   libsodium-dev \
   curl
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.46.0
+# Hack for QEMU-compatible rust
+ENV SHELL "/bin/sh"
+RUN curl -sSf https://sh.rustup.rs | sed 's#/proc/self/exe#$SHELL#g' | sh -s -- -y --default-toolchain 1.46.0
 ENV PATH=/root/.cargo/bin:$PATH
 ENV RUST_BACKTRACE=1
 

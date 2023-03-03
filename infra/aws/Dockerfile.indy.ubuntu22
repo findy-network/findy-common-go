@@ -26,17 +26,13 @@ RUN apt-get update && \
   libsodium-dev \
   curl
 
-RUN arch=$(dpkg --print-architecture) && \
-  curl http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.17_$arch.deb -o libssl1.1_1.1.1f-1ubuntu2.17_$arch.deb && \
-  dpkg -i libssl1.1_1.1.1f-1ubuntu2.17_$arch.deb && \
-  curl http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.17_$arch.deb -o libssl-dev_1.1.1f-1ubuntu2.17_$arch.deb && \
-  dpkg -i libssl-dev_1.1.1f-1ubuntu2.17_$arch.deb && \
-  target=$(uname -m) && \
-  cp -R /usr/lib/$target-linux-gnu/engines-1.1 /usr/lib/engines-1.1 && \
-  cp /usr/lib/$target-linux-gnu/libcrypto.so.1.1 /usr/lib/libcrypto.so.1.1 && \
-  cp /usr/lib/$target-linux-gnu/libssl.so.1.1 /usr/lib/libssl.so.1.1
+ADD dl-ssl1.1.sh .
+RUN ./dl-ssl1.1.sh
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.46.0
+#RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.46.0
+# Hack for QEMU-compatible rust
+ENV SHELL "/bin/sh"
+RUN curl -sSf https://sh.rustup.rs | sed 's#/proc/self/exe#$SHELL#g' | sh -s -- -y --default-toolchain 1.46.0
 ENV PATH=/root/.cargo/bin:$PATH
 ENV RUST_BACKTRACE=1
 
