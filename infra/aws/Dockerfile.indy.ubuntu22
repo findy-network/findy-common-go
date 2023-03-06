@@ -1,13 +1,13 @@
-FROM golang:1.20-buster AS s3-builder
+# FROM golang:1.20-buster AS s3-builder
 
-WORKDIR /work
+# WORKDIR /work
 
-COPY go.* ./
-RUN go mod download
+# COPY go.* ./
+# RUN go mod download
 
-COPY . ./
+# COPY . ./
 
-RUN go build -o /go/bin/s3-copy
+# RUN go build -o /go/bin/s3-copy
 
 FROM ubuntu:22.04 AS indy-builder
 
@@ -17,14 +17,14 @@ WORKDIR /
 
 RUN apt-get update && \
   apt-get install -y \
-  build-essential \
-  pkg-config \
-  cmake \
-  libsqlite3-dev \
-  libzmq5-dev \
-  libncursesw5-dev \
-  libsodium-dev \
-  curl
+    build-essential \
+    pkg-config \
+    cmake \
+    libsqlite3-dev \
+    libzmq5-dev \
+    libncursesw5-dev \
+    libsodium-dev \
+    curl
 
 ADD dl-ssl1.1.sh .
 RUN ./dl-ssl1.1.sh
@@ -46,8 +46,8 @@ FROM ubuntu:22.04
 
 ARG INDY_LIB_VERSION="1.16.0"
 
-COPY --from=s3-builder /go/bin/s3-copy /s3-copy
-RUN chmod a+x /s3-copy
+#COPY --from=s3-builder /go/bin/s3-copy /s3-copy
+#RUN chmod a+x /s3-copy
 
 # install indy deps and files from build phase
 RUN apt-get update && apt-get install -y libsodium23 libzmq5
