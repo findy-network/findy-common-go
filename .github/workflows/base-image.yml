@@ -15,9 +15,9 @@ jobs:
       matrix:
         include:
           - tag: indy-1.16.ubuntu-18.04
-            file: Dockerfile.indy.ubuntu18
+            file: Dockerfile.ubuntu18
           - tag: indy-1.16.ubuntu-22.04
-            file: Dockerfile.indy.ubuntu22
+            file: Dockerfile.ubuntu22
           - tag: alpine-3.17
             file: Dockerfile.alpine
 
