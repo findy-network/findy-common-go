@@ -1,14 +1,3 @@
-FROM golang:1.20-buster AS s3-builder
-
-WORKDIR /work
-
-COPY go.* ./
-RUN go mod download
-
-COPY . ./
-
-RUN go build -o /go/bin/s3-copy
-
 FROM ubuntu:18.04 AS indy-builder
 
 ARG INDY_LIB_VERSION="1.16.0"
@@ -42,9 +31,6 @@ RUN cd ./indy-sdk-${INDY_LIB_VERSION}/libindy && \
 FROM ubuntu:18.04
 
 ARG INDY_LIB_VERSION="1.16.0"
-
-COPY --from=s3-builder /go/bin/s3-copy /s3-copy
-RUN chmod a+x /s3-copy
 
 # install indy deps and files from build phase
 RUN apt-get update && apt-get install -y libsodium23 libssl1.1 libzmq5

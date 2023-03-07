@@ -30,23 +30,9 @@ RUN curl -sOL https://github.com/hyperledger/indy-sdk/archive/v${INDY_LIB_VERSIO
 RUN cd ./indy-sdk-${INDY_LIB_VERSION}/libindy && \
   cargo build --release --features "fatal_warnings sodium_static"
 
-FROM golang:1.20-buster AS s3-builder
-
-WORKDIR /work
-
-COPY go.* ./
-RUN go mod download
-
-COPY . ./
-
-RUN go build -o /go/bin/s3-copy
-
 FROM ubuntu:22.04
 
 ARG INDY_LIB_VERSION="1.16.0"
-
-COPY --from=s3-builder /go/bin/s3-copy /s3-copy
-RUN chmod a+x /s3-copy
 
 # install indy deps and files from build phase
 RUN apt-get update && apt-get install -y libsodium23 libzmq5
