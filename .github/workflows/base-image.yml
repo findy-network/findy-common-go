@@ -47,7 +47,6 @@ jobs:
           cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/findy-agent-infra/indy-base:${{ matrix.tag }}
           cache-to: type=inline
 
-
   push-base-images:
     needs: push-indy-images
     runs-on: ubuntu-latest
