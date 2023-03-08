@@ -13,7 +13,8 @@ RUN apt-get update && \
   libzmq5-dev \
   libncursesw5-dev \
   libsodium-dev \
-  curl
+  curl \
+  git
 
 ADD dl-ssl1.1.sh .
 RUN ./dl-ssl1.1.sh

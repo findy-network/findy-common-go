@@ -14,7 +14,8 @@ RUN apt-get update && \
   libzmq5-dev \
   libncursesw5-dev \
   libsodium-dev \
-  curl
+  curl \
+  git
 
 # Hack for QEMU-compatible rust
 ENV SHELL "/bin/sh"
