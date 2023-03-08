@@ -9,7 +9,7 @@ COPY . ./
 
 RUN go build -o /go/bin/s3-copy
 
-FROM alpine:3.15
+FROM alpine:3.17
 
 COPY --from=0 /go/bin/s3-copy /s3-copy
 

@@ -1,14 +1,3 @@
-FROM golang:1.18-buster AS s3-builder
-
-WORKDIR /work
-
-COPY go.* ./
-RUN go mod download
-
-COPY . ./
-
-RUN go build -o /go/bin/s3-copy
-
 FROM ubuntu:18.04 AS indy-builder
 
 ARG INDY_LIB_VERSION="1.16.0"
@@ -16,33 +5,35 @@ ARG INDY_LIB_VERSION="1.16.0"
 WORKDIR /
 
 RUN apt-get update && \
-    apt-get install -y \
-    build-essential \
-    pkg-config \
-    cmake \
-    libssl-dev \
-    libsqlite3-dev \
-    libzmq5-dev \
-    libncursesw5-dev \
-    libsodium-dev \
-    curl
+  apt-get install -y \
+  build-essential \
+  pkg-config \
+  cmake \
+  libssl-dev \
+  libsqlite3-dev \
+  libzmq5-dev \
+  libncursesw5-dev \
+  libsodium-dev \
+  curl \
+  git
 
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.46.0
+# Hack for QEMU-compatible rust
+ENV SHELL "/bin/sh"
+RUN curl -sSf https://sh.rustup.rs | sed 's#/proc/self/exe#$SHELL#g' | sh -s -- -y --default-toolchain 1.46.0
 ENV PATH=/root/.cargo/bin:$PATH
 ENV RUST_BACKTRACE=1
 
 RUN curl -sOL https://github.com/hyperledger/indy-sdk/archive/v${INDY_LIB_VERSION}.tar.gz && \
-    tar -xvf v${INDY_LIB_VERSION}.tar.gz
+  tar -xvf v${INDY_LIB_VERSION}.tar.gz
 
-RUN cd ./indy-sdk-${INDY_LIB_VERSION}/libindy && \
-    cargo build --release --features "fatal_warnings sodium_static"
+RUN echo "[net]" >> ~/.cargo/config.toml && \
+  echo "  git-fetch-with-cli=true" >> ~/.cargo/config.toml && \
+  cd ./indy-sdk-${INDY_LIB_VERSION}/libindy && \
+  cargo build --release --features "fatal_warnings sodium_static"
 
 FROM ubuntu:18.04
 
 ARG INDY_LIB_VERSION="1.16.0"
-
-COPY --from=s3-builder /go/bin/s3-copy /s3-copy
-RUN chmod a+x /s3-copy
 
 # install indy deps and files from build phase
 RUN apt-get update && apt-get install -y libsodium23 libssl1.1 libzmq5
