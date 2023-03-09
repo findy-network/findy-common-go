@@ -16,3 +16,27 @@ jobs:
         with:
           files: ./coverage.txt
           fail_ci_if_error: true
+  test-with-core:
+    runs-on: ubuntu-latest
+    container: ghcr.io/findy-network/findy-base:indy-1.16.ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
+      with:
+        repository: "findy-network/findy-agent"
+        ref: dev
+        path: '../findy-agent'
+    - uses: actions/setup-go@v3
+      with:
+        go-version-file: './go.mod'
+    - name: test
+      run: |
+        cd ../findy-agent
+        go mod edit -replace github.com/findy-network/findy-common-go=../findy-common-go
+        go test -p 1 -failfast -timeout=1200s \
+          -coverpkg=github.com/findy-network/findy-common-go/... \
+          -coverprofile=$(COV_FILE)  \
+        	-covermode=atomic \
+          ./...
+        cat coverage.txt
+
