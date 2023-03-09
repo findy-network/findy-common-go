@@ -1,27 +1,18 @@
 name: test
 on: push
 jobs:
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.51.1
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: setup
-        uses: actions/setup-go@v2
+      - name: setup go and lint
+        uses: findy-network/setup-go-action@master
         with:
-          go-version: 1.20.x
-      - name: checkout
-        uses: actions/checkout@v2
+          linter-config-path: .golangci.yml
+          skip-scan: true
       - name: test
         run: make test_cov_out
       - name: upload
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3
         with:
           files: ./coverage.txt
+          fail_ci_if_error: true
