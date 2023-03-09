@@ -4,7 +4,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: setup go
+      - name: setup go and lint
         uses: findy-network/setup-go-action@master
         with:
           linter-config-path: .golangci.yml
