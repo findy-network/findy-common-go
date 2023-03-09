@@ -8,6 +8,7 @@ jobs:
         uses: findy-network/setup-go-action@master
         with:
           linter-config-path: .golangci.yml
+          skip-scan: true
       - name: test
         run: make test_cov_out
       - name: upload
