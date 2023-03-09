@@ -25,14 +25,14 @@ jobs:
       with:
         repository: "findy-network/findy-agent"
         ref: dev
-        path: '../findy-agent'
+        path: './findy-agent'
     - uses: actions/setup-go@v3
       with:
         go-version-file: './go.mod'
     - name: test
       run: |
-        cd ../findy-agent
-        go mod edit -replace github.com/findy-network/findy-common-go=../findy-common-go
+        cd ./findy-agent
+        go mod edit -replace github.com/findy-network/findy-common-go=../
         go test -p 1 -failfast -timeout=1200s \
           -coverpkg=github.com/findy-network/findy-common-go/... \
           -coverprofile=coverage.txt  \
