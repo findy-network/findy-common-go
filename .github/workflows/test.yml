@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     container: ghcr.io/findy-network/findy-base:indy-1.16.ubuntu-18.04
     steps:
+    - name: Install certs etc.
+      run: apt-get update && apt-get install -y build-essential ca-certificates
     - uses: actions/checkout@v3
     - uses: actions/checkout@v3
       with:
