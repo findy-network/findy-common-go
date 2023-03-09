@@ -35,7 +35,7 @@ jobs:
         go mod edit -replace github.com/findy-network/findy-common-go=../findy-common-go
         go test -p 1 -failfast -timeout=1200s \
           -coverpkg=github.com/findy-network/findy-common-go/... \
-          -coverprofile=$(COV_FILE)  \
+          -coverprofile=coverage.txt  \
         	-covermode=atomic \
           ./...
         cat coverage.txt
