@@ -47,7 +47,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ github.sha }}-coverage-core.txt
-        path: ./coverage-core.txt
+        path: ./findy-agent/coverage-core.txt
         retention-days: 1
 
   upload-coverage:
