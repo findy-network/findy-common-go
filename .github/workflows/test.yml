@@ -11,8 +11,92 @@ jobs:
           skip-scan: true
       - name: test
         run: make test_cov_out
-      - name: upload
+      - name: store coverage file
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ github.sha }}-coverage.txt
+          path: ./coverage.txt
+          retention-days: 1
+
+  services-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - repository: "findy-agent"
+          - repository: "findy-agent-vault"
+          - repository: "findy-agent-auth"
+
+    steps:
+    # install indy
+    - uses: actions/checkout@v3
+      if: ${{ matrix.repository == 'findy-agent' }}
+      with:
+        repository: "findy-network/findy-wrapper-go"
+    - name: install indy
+      if: ${{ matrix.repository == 'findy-agent' }}
+      run: make indy_to_debian
+    - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
+      with:
+        repository: "findy-network/${{ matrix.repository }}"
+        ref: dev
+        path: './target'
+    - uses: actions/setup-go@v3
+      with:
+        go-version-file: './go.mod'
+    - name: test with ${{ matrix.repository }}
+      run: |
+        cd ./target
+        go mod edit -replace github.com/findy-network/findy-common-go=../
+        go test -p 1 -failfast -timeout=1200s \
+          -coverpkg=github.com/findy-network/findy-common-go/... \
+          -coverprofile=coverage-${{ matrix.repository }}.txt  \
+        	-covermode=atomic \
+          ./...
+    - name: store coverage file
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ github.sha }}-coverage-${{ matrix.repository }}.txt
+        path: ./target/coverage-${{ matrix.repository }}.txt
+        retention-days: 1
+
+    env:
+      FAV_DB_PASSWORD: password
+    # TODO: move vault to separate test
+    services:
+      postgres:
+        image: postgres:13.8-alpine
+        ports:
+          - 5433:5432
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: vault
+
+  upload-coverage:
+    runs-on: ubuntu-latest
+    needs: [test, services-tests]
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: download coverage file
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}-coverage.txt
+      - name: download coverage file
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}-coverage-findy-agent.txt
+      - name: download coverage file
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}-coverage-findy-agent-vault.txt
+      - name: download coverage file
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ github.sha }}-coverage-findy-agent-auth.txt
+      - name: upload coverage
         uses: codecov/codecov-action@v3
         with:
-          files: ./coverage.txt
+          files: ./coverage.txt,./coverage-findy-agent.txt,./coverage-findy-agent-vault.txt,./coverage-findy-agent-auth.txt
           fail_ci_if_error: true
