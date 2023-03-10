@@ -10,6 +10,7 @@ import (
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
+	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -51,7 +52,9 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 		opts = make([]grpc.DialOption, 0)
 		if cfg.JWT != "" {
 			// we wrap our JWT token to Oauth token
-			perRPC := oauth.NewOauthAccess(jwt.OauthToken(cfg.JWT))
+			perRPC := oauth.TokenSource{
+				TokenSource: oauth2.StaticTokenSource(jwt.OauthToken(cfg.JWT)),
+			}
 			glog.V(10).Infoln("grpc oauth wrap for JWT done")
 			opts = append(opts, grpc.WithPerRPCCredentials(perRPC))
 		}
