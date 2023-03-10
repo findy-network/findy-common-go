@@ -49,7 +49,7 @@ jobs:
       run: |
         cd ./target
         go mod edit -replace github.com/findy-network/findy-common-go=../
-        go mod tidy
+        go mod tidy -e
         go test -p 1 -failfast -timeout=1200s \
           -coverpkg=github.com/findy-network/findy-common-go/... \
           -coverprofile=coverage-${{ matrix.repository }}.txt  \
