@@ -45,7 +45,7 @@ jobs:
     - uses: actions/setup-go@v3
       with:
         go-version-file: './go.mod'
-    - name: test with core
+    - name: test with ${{ matrix.repository }}
       run: |
         cd ./target
         go mod edit -replace github.com/findy-network/findy-common-go=../
@@ -58,7 +58,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ${{ github.sha }}-coverage-${{ matrix.repository }}.txt
-        path: ./findy-agent/coverage-${{ matrix.repository }}.txt
+        path: ./target/coverage-${{ matrix.repository }}.txt
         retention-days: 1
 
     env:
