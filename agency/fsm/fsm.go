@@ -16,13 +16,14 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 )
 
 const (
-	TriggerTypeOurMessage    = "OUR_STATUS"
+	TriggerTypeOurMessage    = "OUR_STATUS" // use for VC exchange protocols
 	TriggerTypeUseInput      = "INPUT"      // works like echo
-	TriggerTypeUseInputSave  = "INPUT_SAVE" // saves input data
+	TriggerTypeUseInputSave  = "INPUT_SAVE" // saves input data, TODO: leak? delete?
 	TriggerTypeFormat        = "FORMAT"
 	TriggerTypeFormatFromMem = "FORMAT_MEM"
 	TriggerTypePIN           = "GEN_PIN"
@@ -114,6 +115,9 @@ type State struct {
 	Transitions []*Transition `json:"transitions"`
 
 	Terminate bool `json:"terminate,omitempty"`
+
+	// TODO: add KeepMemory, see Step()
+	// TODO: transient state + new rules
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -321,7 +325,17 @@ func (m *Machine) Initialize() (err error) {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
 						m.States[id].Transitions[j].Sends[k].Data)
 				}
+				// TODO: Testing different machines that we can make syntax
+				// update!
+				if !m.States[id].Transitions[j].Sends[k].NoStatus {
+					assert.ThatNot(m.States[id].Transitions[j].Sends[k].NoStatus)
+				}
+				// This is now default, to allow simplify FSMs
+				m.States[id].Transitions[j].Sends[k].NoStatus = true
 			}
+		}
+		if m.Initial == nil {
+			return errors.New("machine doesn't have initial state")
 		}
 		if id == m.Initial.Target {
 			if initSet {
@@ -372,6 +386,8 @@ func (m *Machine) TriggersByHook() *Transition {
 func (m *Machine) Step(t *Transition) {
 	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
+	// TODO: add m.checkFreeMemory() if transition to Initial state default
+	// should be FreeMemory
 	m.checkTerm()
 }
 
@@ -425,7 +441,10 @@ func padStr(s string) string {
 //goland:noinspection ALL
 func (m *Machine) String() string {
 	w := new(bytes.Buffer)
-	fmt.Fprintf(w, "title %s\n", m.Name)
+	fsmName := m.Name
+	if fsmName != "" {
+		fmt.Fprintf(w, "title %s\n", fsmName)
+	}
 	fmt.Fprintf(w, "[*] --> %s\n", m.Initial.Target)
 	for stateName, state := range m.States {
 		fmt.Fprintf(w, "state \"%s\" as %s\n", padStr(stateName), stateName)
