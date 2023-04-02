@@ -193,9 +193,7 @@ func (e Event) Answers(status *agency.Question) bool {
 	case agency.Question_ISSUE_PROPOSE_WAITS:
 	case agency.Question_PROOF_PROPOSE_WAITS:
 	case agency.Question_PROOF_VERIFY_WAITS:
-		if e.ProtocolType != agency.Protocol_PRESENT_PROOF {
-			panic("programming error")
-		}
+		assert.Equal(e.ProtocolType, agency.Protocol_PRESENT_PROOF)
 		var attrValues []ProofAttr
 		try.To(json.Unmarshal([]byte(e.Data), &attrValues))
 
@@ -325,13 +323,14 @@ func (m *Machine) Initialize() (err error) {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
 						m.States[id].Transitions[j].Sends[k].Data)
 				}
-				// TODO: Testing different machines that we can make syntax
-				// update!
-				if !m.States[id].Transitions[j].Sends[k].NoStatus {
-					assert.ThatNot(m.States[id].Transitions[j].Sends[k].NoStatus)
+
+				pType := m.States[id].Transitions[j].Sends[k].ProtocolType
+				switch pType {
+				case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
+					m.States[id].Transitions[j].Sends[k].NoStatus = false
+				default:
+					m.States[id].Transitions[j].Sends[k].NoStatus = true
 				}
-				// This is now default, to allow simplify FSMs
-				m.States[id].Transitions[j].Sends[k].NoStatus = true
 			}
 		}
 		if m.Initial == nil {
@@ -516,9 +515,10 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
-			if input == nil && send.Rule != TriggerTypeData {
-				panic("FSM syntax error")
-			}
+			assert.That(input != nil ||
+				send.Rule == TriggerTypeData ||
+				send.Rule == TriggerTypeFormatFromMem,
+			)
 			switch send.Rule {
 			case TriggerTypeUseInput:
 				sends[i].EventData = input.EventData
@@ -588,6 +588,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 	case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
 		switch t.Trigger.Rule {
 		case TriggerTypeOurMessage:
+			glog.V(4).Infoln("+++ Our message:", status.GetState().ProtocolID.TypeID)
 			return e
 		}
 	case agency.Protocol_DIDEXCHANGE:
