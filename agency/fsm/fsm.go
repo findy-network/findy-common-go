@@ -21,23 +21,45 @@ import (
 )
 
 const (
-	TriggerTypeOurMessage    = "OUR_STATUS" // use for VC exchange protocols
-	TriggerTypeUseInput      = "INPUT"      // works like echo
-	TriggerTypeUseInputSave  = "INPUT_SAVE" // saves input data, TODO: leak? delete?
-	TriggerTypeFormat        = "FORMAT"
-	TriggerTypeFormatFromMem = "FORMAT_MEM"
-	TriggerTypePIN           = "GEN_PIN"
-	TriggerTypeData          = ""
+	// monitors how our proof/issue protocol goes
+	TriggerTypeOurMessage = "OUR_STATUS"
 
+	// used just for echo/forward
+	TriggerTypeUseInput = "INPUT"
+
+	// saves input data to event that we can use it, data tells the name of
+	// memory slot
+	TriggerTypeUseInputSave = "INPUT_SAVE"
+
+	// formates input data with then format string which is in send data
+	TriggerTypeFormat = "FORMAT"
+
+	// formates send event where data is themplate and every memory map value
+	// are available. See exmaples for more information.
+	TriggerTypeFormatFromMem = "FORMAT_MEM"
+
+	// helps to generate a PIN code to send e.g. email (endpoint not yet
+	// supported).
+	TriggerTypePIN = "GEN_PIN"
+
+	// quides to use send events `data` as is.
+	TriggerTypeData = ""
+
+	// these three validate 'operations' compare input data to send data
 	TriggerTypeValidateInputEqual    = "INPUT_VALIDATE_EQUAL"
 	TriggerTypeValidateInputNotEqual = "INPUT_VALIDATE_NOT_EQUAL"
 	TriggerTypeInputEqual            = "INPUT_EQUAL"
 
+	// these two need other states to help them (in production). The previous
+	// states decide to which of these the FSM transits.
+	// accept and stores present proof values and stores them to FSM memory map
 	TriggerTypeAcceptAndInputValues = "ACCEPT_AND_INPUT_VALUES"
-	TriggerTypeNotAcceptValues      = "NOT_ACCEPT_VALUES"
+	// not accept present proof protocol
+	TriggerTypeNotAcceptValues = "NOT_ACCEPT_VALUES"
 )
 
 const (
+	// these are Aries DIDComm protocols
 	MessageNone         = ""
 	MessageBasicMessage = "basic_message"
 	MessageIssueCred    = "issue_cred"
@@ -47,8 +69,8 @@ const (
 
 	MessageAnswer = "answer"
 
-	MessageEmail = "email"
-	MessageHook  = "hook"
+	MessageEmail = "email" // not supported yet
+	MessageHook  = "hook"  // internal program call back
 )
 
 const (
@@ -117,7 +139,8 @@ type State struct {
 	Terminate bool `json:"terminate,omitempty"`
 
 	// TODO: add KeepMemory, see Step()
-	// TODO: transient state + new rules
+	// TODO: transient state (empedding Lua is tested) + new rules
+	// - we should find proper use case to develop these
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -143,12 +166,16 @@ type Event struct {
 	// we will continue with this when other protocol QAs will be implemented
 	// New! Hook now uses TypeID for hook name/ID
 
+	// These both are string versions to make writing the yaml fsm easier.
+	// There parser methdod, Initialize() that must be call to make the machine
+	// to work. It also make other syntax checks.
 	Protocol string `json:"protocol"` // Note! See ProtocolType below
 	TypeID   string `json:"type_id"`  // Note! See NotificationType below
 
-	Rule     string `json:"rule"`
-	Data     string `json:"data,omitempty"`
-	NoStatus bool   `json:"no_status,omitempty"`
+	Rule string `json:"rule"`
+	Data string `json:"data,omitempty"`
+	// Used for sending: we don't want status update, aka echo
+	NoStatus bool `json:"no_status,omitempty"`
 
 	*EventData `json:"event_data,omitempty"`
 
@@ -193,9 +220,8 @@ func (e Event) Answers(status *agency.Question) bool {
 	case agency.Question_ISSUE_PROPOSE_WAITS:
 	case agency.Question_PROOF_PROPOSE_WAITS:
 	case agency.Question_PROOF_VERIFY_WAITS:
-		if e.ProtocolType != agency.Protocol_PRESENT_PROOF {
-			panic("programming error")
-		}
+		assert.Equal(e.ProtocolType, agency.Protocol_PRESENT_PROOF)
+
 		var attrValues []ProofAttr
 		try.To(json.Unmarshal([]byte(e.Data), &attrValues))
 
@@ -325,13 +351,14 @@ func (m *Machine) Initialize() (err error) {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
 						m.States[id].Transitions[j].Sends[k].Data)
 				}
-				// TODO: Testing different machines that we can make syntax
-				// update!
-				if !m.States[id].Transitions[j].Sends[k].NoStatus {
-					assert.ThatNot(m.States[id].Transitions[j].Sends[k].NoStatus)
+
+				pType := m.States[id].Transitions[j].Sends[k].ProtocolType
+				switch pType {
+				case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
+					m.States[id].Transitions[j].Sends[k].NoStatus = false
+				default:
+					m.States[id].Transitions[j].Sends[k].NoStatus = true
 				}
-				// This is now default, to allow simplify FSMs
-				m.States[id].Transitions[j].Sends[k].NoStatus = true
 			}
 		}
 		if m.Initial == nil {
@@ -386,8 +413,12 @@ func (m *Machine) TriggersByHook() *Transition {
 func (m *Machine) Step(t *Transition) {
 	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
-	// TODO: add m.checkFreeMemory() if transition to Initial state default
-	// should be FreeMemory
+
+	// coming to Initial state default is to clear the memory map
+	if m.Current == m.Initial.Target { // TODO: KeepMemory field to override
+		m.Memory = make(map[string]string)
+		glog.V(1).Infoln("--- clearing memory map")
+	}
 	m.checkTerm()
 }
 
@@ -516,9 +547,10 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
-			if input == nil && send.Rule != TriggerTypeData {
-				panic("FSM syntax error")
-			}
+			assert.That(input != nil ||
+				send.Rule == TriggerTypeData ||
+				send.Rule == TriggerTypeFormatFromMem,
+			)
 			switch send.Rule {
 			case TriggerTypeUseInput:
 				sends[i].EventData = input.EventData
@@ -588,6 +620,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 	case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
 		switch t.Trigger.Rule {
 		case TriggerTypeOurMessage:
+			glog.V(4).Infoln("+++ Our message:", status.GetState().ProtocolID.TypeID)
 			return e
 		}
 	case agency.Protocol_DIDEXCHANGE:
