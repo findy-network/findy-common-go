@@ -139,7 +139,8 @@ type State struct {
 	Terminate bool `json:"terminate,omitempty"`
 
 	// TODO: add KeepMemory, see Step()
-	// TODO: transient state + new rules
+	// TODO: transient state (empedding Lua is tested) + new rules
+	// - we should find proper use case to develop these
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -412,8 +413,12 @@ func (m *Machine) TriggersByHook() *Transition {
 func (m *Machine) Step(t *Transition) {
 	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
-	// TODO: add m.checkFreeMemory() if transition to Initial state default
-	// should be FreeMemory
+
+	// coming to Initial state default is to clear the memory map
+	if m.Current == m.Initial.Target { // TODO: KeepMemory field to override
+		m.Memory = make(map[string]string)
+		glog.V(1).Infoln("--- clearing memory map")
+	}
 	m.checkTerm()
 }
 
