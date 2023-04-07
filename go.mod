@@ -13,7 +13,7 @@ require (
 	github.com/lainio/err2 v0.9.0
 	github.com/mr-tron/base58 v1.2.0
 	go.etcd.io/bbolt v1.3.7
-	golang.org/x/oauth2 v0.6.0
+	golang.org/x/oauth2 v0.7.0
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
 )
@@ -41,9 +41,9 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3 // indirect
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/net v0.9.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
