@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -187,6 +188,29 @@ type Event struct {
 	*Transition            `json:"-"`
 }
 
+func (e *Event) filterEnvs() {
+	if e == nil {
+		glog.V(7).Infoln("no event data, in filter:", e.Protocol)
+		return
+	}
+	glog.V(10).Infoln("in filter:", e.Protocol)
+
+	switch e.ProtocolType {
+	case agency.Protocol_ISSUE_CREDENTIAL:
+		if e.EventData != nil && e.EventData.Issuing != nil {
+			e.EventData.Issuing.CredDefID = filterEnvs(e.EventData.Issuing.CredDefID)
+		}
+		e.Data = filterEnvs(e.Data)
+	case agency.Protocol_PRESENT_PROOF:
+		if e.EventData != nil && e.EventData.Proof != nil {
+			e.EventData.Proof.ProofJSON = filterEnvs(e.EventData.Proof.ProofJSON)
+		}
+		e.Data = filterEnvs(e.Data)
+	default:
+		glog.V(7).Infoln("wrong type, in filter:", e.ProtocolType)
+	}
+}
+
 func (e Event) TriggersByHook() bool {
 	return true
 }
@@ -340,6 +364,8 @@ func (m *Machine) Initialize() (err error) {
 				ProtocolType[m.States[id].Transitions[j].Trigger.Protocol]
 			m.States[id].Transitions[j].Trigger.NotificationType =
 				NotificationTypeID(m.States[id].Transitions[j].Trigger.TypeID)
+			trEvent := m.States[id].Transitions[j].Trigger
+			trEvent.filterEnvs()
 			for k := range m.States[id].Transitions[j].Sends {
 				m.States[id].Transitions[j].Sends[k].Transition = m.States[id].Transitions[j]
 				m.States[id].Transitions[j].Sends[k].ProtocolType =
@@ -351,14 +377,10 @@ func (m *Machine) Initialize() (err error) {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
 						m.States[id].Transitions[j].Sends[k].Data)
 				}
+				sEvent := m.States[id].Transitions[j].Sends[k]
+				sEvent.filterEnvs()
 
-				pType := m.States[id].Transitions[j].Sends[k].ProtocolType
-				switch pType {
-				case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
-					m.States[id].Transitions[j].Sends[k].NoStatus = false
-				default:
-					m.States[id].Transitions[j].Sends[k].NoStatus = true
-				}
+				setSendDefs(sEvent)
 			}
 		}
 		if m.Initial == nil {
@@ -377,11 +399,21 @@ func (m *Machine) Initialize() (err error) {
 		m.Initial.Sends[i].Transition = m.Initial
 		m.Initial.Sends[i].ProtocolType =
 			ProtocolType[m.Initial.Sends[i].Protocol]
+		setSendDefs(m.Initial.Sends[i])
 	}
 	m.Initialized = true
 	return nil
 }
 
+func setSendDefs(e *Event) {
+	pType := e.ProtocolType
+	switch pType {
+	case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
+		e.NoStatus = false
+	default:
+		e.NoStatus = true
+	}
+}
 func (m *Machine) CurrentState() *State {
 	return m.States[m.Current]
 }
@@ -679,6 +711,39 @@ func (t *Transition) GenPIN(_ *Event) {
 func (t *Transition) BuildSendAnswers(status *agency.AgentStatus) []*Event {
 	input := t.buildInputAnswers(status)
 	return t.doBuildSendEvents(input)
+}
+
+func filterEnvs(in string) (o string) {
+	defer func() {
+		glog.V(5).Infoln(in, "->", o)
+	}()
+	s := strings.Split(in, "${")
+	for i, sub := range s {
+		if strings.HasPrefix(in, sub) {
+			o += sub
+		} else {
+			s2 := strings.Split(sub, "}")
+			e := ""
+			if len(s2) > 1 {
+				e = os.Getenv(s2[0])
+			}
+			if e == "" {
+				return in
+			}
+			o += e
+			theEnd := i == len(s)-1
+			if theEnd {
+				for j, sub2 := range s2[i:] {
+					if j > 0 {
+						o += "}"
+					}
+					o += sub2
+				}
+				return o
+			}
+		}
+	}
+	return o
 }
 
 var ProtocolType = map[string]agency.Protocol_Type{

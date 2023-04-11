@@ -1,6 +1,7 @@
 package fsm
 
 import (
+	"os"
 	"testing"
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
@@ -281,4 +282,50 @@ func TestMachine_Start_ProofMachine(t *testing.T) {
 	assert.NoError(showProofMachine.Initialize())
 	sends := showProofMachine.Start(nil)
 	assert.SLen(sends, 0)
+}
+
+func Test_filterEnvs(t *testing.T) {
+	type args struct {
+		i      string
+		envKey string
+		envVal string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{"simplest",
+			args{
+				`${CRED_DEF_ID}`,
+				"CRED_DEF_ID",
+				"2K74emXCd9H8FV54MbVYjD:3:CL:13:TAG",
+			},
+			`2K74emXCd9H8FV54MbVYjD:3:CL:13:TAG`},
+		{"simple",
+			args{
+				`[{"name":"email","credDefId":"${CRED_DEF_ID}"}]`,
+				"CRED_DEF_ID",
+				"2K74emXCd9H8FV54MbVYjD:3:CL:13:TAG",
+			},
+			`[{"name":"email","credDefId":"2K74emXCd9H8FV54MbVYjD:3:CL:13:TAG"}]`},
+		{"double",
+			args{
+				`${CRED_DEF_ID}${CRED_DEF_ID}`,
+				"CRED_DEF_ID",
+				"2K74emXCd9H8FV54MbVYjD:3:CL:13:TAG",
+			},
+			`2K74emXCd9H8FV54MbVYjD:3:CL:13:TAG2K74emXCd9H8FV54MbVYjD:3:CL:13:TAG`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.PushTester(t)
+			defer assert.PopTester()
+
+			os.Setenv(tt.args.envKey, tt.args.envVal)
+			got := filterEnvs(tt.args.i)
+			os.Setenv(tt.args.envKey, "")
+			assert.Equal(got, tt.want)
+		})
+	}
 }
