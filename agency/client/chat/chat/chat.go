@@ -244,6 +244,7 @@ func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
 }
 
 func (c *Conversation) sendReqProof(message *fsm.Proof, noAck bool) {
+	glog.V(5).Infoln("+++ message.ProofJSON", message.ProofJSON)
 	r := try.To1(async.NewPairwise(
 		c.Conn,
 		c.id,
