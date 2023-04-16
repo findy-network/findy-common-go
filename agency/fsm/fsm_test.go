@@ -15,7 +15,6 @@ var (
 			Sends: []*Event{{
 				Protocol: "basic_message",
 				Data:     "Hello!",
-				NoStatus: true,
 			}},
 			Target: "IDLE",
 		},
@@ -44,7 +43,6 @@ var (
 			Sends: []*Event{{
 				Protocol: "basic_message",
 				Data:     "Hello!",
-				NoStatus: true,
 			}},
 			Target: "IDLE",
 		},
