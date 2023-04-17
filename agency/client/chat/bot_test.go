@@ -238,11 +238,13 @@ func Test_marshalFSM(t *testing.T) {
 			assert.PushTester(t)
 			defer assert.PopTester()
 
-			tt.args.fsm.Initialize()
+			err := tt.args.fsm.Initialize()
+			assert.NoError(err)
 			gotbytes := marshalFSM(tt.args.fName, tt.args.fsm)
 			gotMachine := loadFSMData(tt.args.fName, gotbytes)
 			// we know that ReqProofMachine is Initialized
-			gotMachine.Initialize()
+			err = gotMachine.Initialize()
+			assert.NoError(err)
 			assert.DeepEqual(gotMachine, tt.args.fsm,
 				"we should get same machine after marshal round")
 		})
