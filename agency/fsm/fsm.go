@@ -89,9 +89,11 @@ const (
 	digitsInPIN = 6
 
 	// register names for communication thru machine's memory map.
-	INPUT  = "INPUT"  // current incoming data like basic_message.content
-	OUTPUT = "OUTPUT" // lua scripts output register name
-	OK     = "OK"     // lua scripts OK return value
+	LUA_INPUT  = "INPUT"  // current incoming data like basic_message.content
+	LUA_OUTPUT = "OUTPUT" // lua scripts output register name
+	LUA_OK     = "OK"     // lua scripts OK return value
+	LUA_ALL_OK = ""       // lua scripts return values are OK
+	LUA_ERROR  = "ERR"    // lua scripts key for error message
 )
 
 var seed = time.Now().UnixNano()
@@ -240,7 +242,6 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 		return true
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
-		e.Machine.Memory[INPUT] = content
 		switch e.Rule {
 		case TriggerTypeValidateInputNotEqual:
 			return e.Machine.Memory[e.Data] != content
@@ -251,23 +252,36 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 		case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
 			return true
 		case TriggerTypeLua:
-			return e.ExecLua()
+			_, ok := e.ExecLua(content)
+			return ok
 		}
 	}
 	return false
 }
 
-func (e Event) ExecLua() (ok bool) {
+func (e Event) ExecLua(content string, a ...string) (out string, ok bool) {
 	defer err2.Catch(func(err error) {
 		ok = false
 	})
 
+	okStr := LUA_OK
+	if len(a) > 0 {
+		okStr = a[0]
+	}
+	e.Machine.Memory[LUA_INPUT] = content
 	luaScript := e.Data
 	try.To(lua.DoString(e.Machine.luaState, luaScript))
-	var v string
-	v, ok = e.Machine.Memory[OUTPUT]
-	ok = ok && v == "OK"
-	return ok
+	out, ok = e.Machine.Memory[LUA_OUTPUT]
+	if !ok {
+		glog.Warning("lua script: no output. Trying to get error")
+		errMsg := assert.MKeyExists(e.Machine.Memory, LUA_ERROR)
+		glog.Errorln("lua error:", errMsg)
+	}
+	if okStr == LUA_ALL_OK {
+		return out, true
+	}
+	ok = ok && out == okStr
+	return out, ok
 }
 
 func (e Event) Answers(status *agency.Question) bool {
@@ -613,6 +627,7 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 	return t.doBuildSendEvents(input)
 }
 
+//nolint:funlen
 func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 	events := t.Sends
 	sends := make([]*Event, len(events))
@@ -669,6 +684,18 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
 					Content: t.FmtFromMem(send),
 				}}
+			case TriggerTypeLua:
+				content := input.Data
+				out, ok := sends[i].ExecLua(content, "")
+				if ok {
+					sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+						Content: out,
+					}}
+				} else {
+					sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+						Content: content,
+					}}
+				}
 			}
 		case MessageHook:
 			switch send.Rule {
@@ -731,7 +758,8 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
 		switch t.Trigger.Rule {
-		case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual, TriggerTypeUseInput:
+		case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual,
+			TriggerTypeLua, TriggerTypeUseInput:
 			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
