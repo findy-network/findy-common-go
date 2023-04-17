@@ -219,31 +219,31 @@ func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
 		status.Notification.ID, cid.ID)
 }
 
-func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, noAck bool) {
+func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, wantStatus bool) {
 	r := try.To1(async.NewPairwise(
 		c.Conn,
 		c.id,
 	).BasicMessage(context.Background(),
 		message.Content))
 	glog.V(10).Infoln("protocol id:", r.ID)
-	if noAck {
+	if !wantStatus {
 		c.SetLastProtocolID(r)
 	}
 }
 
-func (c *Conversation) sendIssuing(message *fsm.Issuing, noAck bool) {
+func (c *Conversation) sendIssuing(message *fsm.Issuing, wantStatus bool) {
 	r := try.To1(async.NewPairwise(
 		c.Conn,
 		c.id,
 	).Issue(context.Background(),
 		message.CredDefID, message.AttrsJSON))
 	glog.V(10).Infoln("protocol id:", r.ID)
-	if noAck {
+	if !wantStatus {
 		c.SetLastProtocolID(r)
 	}
 }
 
-func (c *Conversation) sendReqProof(message *fsm.Proof, noAck bool) {
+func (c *Conversation) sendReqProof(message *fsm.Proof, wantStatus bool) {
 	glog.V(5).Infoln("+++ message.ProofJSON", message.ProofJSON)
 	r := try.To1(async.NewPairwise(
 		c.Conn,
@@ -251,7 +251,7 @@ func (c *Conversation) sendReqProof(message *fsm.Proof, noAck bool) {
 	).ReqProof(context.Background(),
 		message.ProofJSON))
 	glog.V(10).Infoln("protocol id:", r.ID)
-	if noAck {
+	if !wantStatus {
 		c.SetLastProtocolID(r)
 	}
 }
@@ -292,13 +292,13 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 		case agency.Protocol_DIDEXCHANGE:
 			glog.Warningf("we should not be here!!")
 		case agency.Protocol_BASIC_MESSAGE:
-			c.sendBasicMessage(output.BasicMessage, output.NoStatus)
+			c.sendBasicMessage(output.BasicMessage, output.WantStatus)
 		case agency.Protocol_ISSUE_CREDENTIAL:
-			c.sendIssuing(output.Issuing, output.NoStatus)
+			c.sendIssuing(output.Issuing, output.WantStatus)
 		case agency.Protocol_PRESENT_PROOF:
-			c.sendReqProof(output.Proof, output.NoStatus)
+			c.sendReqProof(output.Proof, output.WantStatus)
 		case fsm.EmailProtocol:
-			c.sendEmail(output.Email, output.NoStatus)
+			c.sendEmail(output.Email, output.WantStatus)
 		case fsm.QAProtocol:
 			assert.NotNil(status, "FSM syntax error")
 

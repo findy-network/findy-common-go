@@ -175,8 +175,11 @@ type Event struct {
 
 	Rule string `json:"rule"`
 	Data string `json:"data,omitempty"`
-	// Used for sending: we don't want status update, aka echo
+	// Deprecated: replaced by WantStatus, left to keep file format
 	NoStatus bool `json:"no_status,omitempty"`
+	// Tells that we want status updates about our sending, this is calculated
+	// automatically
+	WantStatus bool `json:"want_status,omitempty"`
 
 	*EventData `json:"event_data,omitempty"`
 
@@ -409,9 +412,9 @@ func setSendDefs(e *Event) {
 	pType := e.ProtocolType
 	switch pType {
 	case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_PRESENT_PROOF:
-		e.NoStatus = false
+		e.WantStatus = true
 	default:
-		e.NoStatus = true
+		e.WantStatus = false
 	}
 }
 func (m *Machine) CurrentState() *State {
