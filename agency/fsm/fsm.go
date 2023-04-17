@@ -13,6 +13,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Shopify/go-lua"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
@@ -22,6 +23,10 @@ import (
 )
 
 const (
+	// Executes Lua script that can access to machines memory and which must
+	// return true/false if trigger can be executed.
+	TriggerTypeLua = "LUA"
+
 	// monitors how our proof/issue protocol goes
 	TriggerTypeOurMessage = "OUR_STATUS"
 
@@ -80,7 +85,14 @@ const (
 	HookProtocol  = 102
 )
 
-const digitsInPIN = 6
+const (
+	digitsInPIN = 6
+
+	// register names for communication thru machine's memory map.
+	INPUT  = "INPUT"  // current incoming data like basic_message.content
+	OUTPUT = "OUTPUT" // lua scripts output register name
+	OK     = "OK"     // lua scripts OK return value
+)
 
 var seed = time.Now().UnixNano()
 
@@ -132,6 +144,7 @@ type Machine struct {
 	Memory map[string]string `json:"-"`
 
 	termChan TerminateOutChan `json:"-"`
+	luaState *lua.State       `json:"-"`
 }
 
 type State struct {
@@ -227,6 +240,7 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 		return true
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
+		e.Machine.Memory[INPUT] = content
 		switch e.Rule {
 		case TriggerTypeValidateInputNotEqual:
 			return e.Machine.Memory[e.Data] != content
@@ -236,9 +250,24 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 			return content == e.Data
 		case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
 			return true
+		case TriggerTypeLua:
+			return e.ExecLua()
 		}
 	}
 	return false
+}
+
+func (e Event) ExecLua() (ok bool) {
+	defer err2.Catch(func(err error) {
+		ok = false
+	})
+
+	luaScript := e.Data
+	try.To(lua.DoString(e.Machine.luaState, luaScript))
+	var v string
+	v, ok = e.Machine.Memory[OUTPUT]
+	ok = ok && v == "OK"
+	return ok
 }
 
 func (e Event) Answers(status *agency.Question) bool {
@@ -353,6 +382,37 @@ type Hook struct {
 	Data map[string]string
 }
 
+// ------ lua stuff ------
+
+func (m *Machine) registerMemFuncs() {
+	// TODO: getRegisterValue() ??
+	m.luaState.Register("getValue", func(l *lua.State) (status int) {
+		defer err2.Catch(func(err error) {
+			status = 0
+		})
+		k, ok := l.ToString(1)
+		assert.That(ok)
+		glog.V(6).Infoln("k:", k)
+		v := assert.MKeyExists(m.Memory, k)
+		glog.V(6).Infoln("v:", v)
+		l.PushString(v)
+		return 1
+	})
+
+	m.luaState.Register("setValue", func(l *lua.State) (nResults int) {
+		defer err2.Catch(func(err error) {
+			nResults = 0
+		})
+		k, ok := l.ToString(1)
+		assert.That(ok)
+		v, ok := l.ToString(2)
+		assert.That(ok)
+		m.Memory[k] = v
+		glog.V(6).Infof("[%s] = '%v'", k, v)
+		return 0
+	})
+}
+
 // Initialize initializes and optimizes the state machine because the JSON is
 // meant for humans to write and machines to read. Initialize also moves machine
 // to the initial state. It returns error if machine has them.
@@ -404,8 +464,16 @@ func (m *Machine) Initialize() (err error) {
 			ProtocolType[m.Initial.Sends[i].Protocol]
 		setSendDefs(m.Initial.Sends[i])
 	}
+
 	m.Initialized = true
 	return nil
+}
+
+func (m *Machine) InitLua() {
+	// intitialize lua stuff in own function to help tests
+	m.luaState = lua.NewState()
+	m.registerMemFuncs()
+	lua.OpenLibraries(m.luaState)
 }
 
 func setSendDefs(e *Event) {
