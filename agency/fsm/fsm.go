@@ -397,31 +397,50 @@ type Hook struct {
 }
 
 // ------ lua stuff ------
+const (
+	REG_MEMORY  = "MEM"
+	REG_DB      = "DB"
+	REG_PROCESS = "PROC"
+)
+
+func (m *Machine) register(name string) map[string]string {
+	switch name {
+	case REG_MEMORY:
+		return m.Memory
+	default:
+		return m.Memory
+	}
+}
 
 func (m *Machine) registerMemFuncs() {
-	// TODO: getRegisterValue() ??
-	m.luaState.Register("getValue", func(l *lua.State) (status int) {
+	m.luaState.Register("getRegValue", func(l *lua.State) (status int) {
 		defer err2.Catch(func(err error) {
 			status = 0
 		})
-		k, ok := l.ToString(1)
+		r, ok := l.ToString(1)
+		assert.That(ok)
+		glog.V(6).Infoln("r:", r)
+		k, ok := l.ToString(2)
 		assert.That(ok)
 		glog.V(6).Infoln("k:", k)
-		v := assert.MKeyExists(m.Memory, k)
+		v := assert.MKeyExists(m.register(r), k)
 		glog.V(6).Infoln("v:", v)
 		l.PushString(v)
 		return 1
 	})
 
-	m.luaState.Register("setValue", func(l *lua.State) (nResults int) {
+	m.luaState.Register("setRegValue", func(l *lua.State) (nResults int) {
 		defer err2.Catch(func(err error) {
 			nResults = 0
 		})
-		k, ok := l.ToString(1)
+		r, ok := l.ToString(1)
 		assert.That(ok)
-		v, ok := l.ToString(2)
+		glog.V(6).Infoln("r:", r)
+		k, ok := l.ToString(2)
 		assert.That(ok)
-		m.Memory[k] = v
+		v, ok := l.ToString(3)
+		assert.That(ok)
+		m.register(r)[k] = v
 		glog.V(6).Infof("[%s] = '%v'", k, v)
 		return 0
 	})

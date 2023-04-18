@@ -56,11 +56,16 @@ var (
 	conversations = make(map[string]*Conversation)
 
 	// Machine is the initial finite-state machine from where every
-	// conversations will be started
+	// conversations will be loaded and started.
 	Machine fsm.MachineData
+
+	// SharedMem is memory register to be shared between all conversations.
+	// It can be used e.g. gather information.. not sure if this is needed.
+	SharedMem = make(map[string]string)
 
 	// Hook is function to be set from user of the chat bot. It will be called
 	// when state machine has triggered transition where Hook should be called.
+	// Hook allows process who is running FSM extend it with a callback.
 	Hook HookFn
 )
 

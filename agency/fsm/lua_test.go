@@ -75,18 +75,18 @@ func TestLuaTestLuaSend(t *testing.T) {
 
 var (
 	luaScript1 = `
-local i=getValue("INPUT")
+local i=getRegValue("MEM", "INPUT")
 if i == "TEST" then
-	setValue("OUTPUT", "OK")
+	setRegValue("MEM", "OUTPUT", "OK")
 else
-	setValue("OUTPUT", "NO")
+	setRegValue("MEM", "OUTPUT", "NO")
 end
  `
 
 	luaScript2 = `
-local i=getValue("INPUT")
+local i=getRegValue("MEM", "INPUT")
 local retval=i .. "+" .. i
-setValue("OUTPUT", retval)
+setRegValue("MEM", "OUTPUT", retval)
  `
 
 	luaMachine = Machine{
