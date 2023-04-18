@@ -71,8 +71,9 @@ var (
 
 // Multiplexer is a goroutine function to started multiplex all the
 // conversations an agent is currently having. It takes a gRPC connection handle
-// and a signaling channel as an arguments. The interrupt channel is needed to tell when
-// a FSM has reached to the end. Note. Some state machines never do that.
+// and a signaling channel as an arguments. The second argument, the interrupt
+// channel, is needed to tell when the multiplexer has reached to the end. Note.
+// Most of the state machines never do that.
 func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 	glog.V(3).Infoln("starting multiplexer", Machine.FType)
 	termChan := make(fsm.TerminateChan, 1)
@@ -113,8 +114,17 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 			}
 			c.QuestionChan <- question
 		case <-termChan:
-			// machine has reached its terminate state. Let's signal it to
-			// outside. In future we could offer an API to what to send to
+			// One machine has reached its terminate state. Let's signal
+			// outside that the whole system is ready to stop.
+			//
+			// TODO: in the future we should change this. It seems that we
+			// should have two (2) different mahines:
+			// 1. Multiplexer (class lvl) machine that includes rules what to
+			// do at process lvl.
+			// 2. The pairwise lvl, aka conversation FSMs what we have had
+			// for now.
+			// 
+			// In future we could offer an API to what to send to
 			// the intCh. SIGTERM is very good compromise in K8s, etc.
 			glog.V(1).Infoln("<- FSM Terminate signal received")
 			intCh <- syscall.SIGTERM

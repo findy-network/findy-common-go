@@ -65,6 +65,7 @@ func marshalFSM(fName string, fsm *fsm.Machine) []byte {
 	return data
 }
 
+// Run starts to run a chatbot and its FSM instances.
 func (b Bot) Run(intCh chan os.Signal) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // for server side stops, for proper cleanup
