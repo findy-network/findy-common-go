@@ -74,7 +74,7 @@ func (b Bot) Run(intCh chan os.Signal) {
 	ch := try.To1(b.Conn.ListenStatus(ctx, client))
 	questionCh := try.To1(b.Conn.Wait(ctx, client))
 
-	chat.Machine = b.MachineData
+	chat.MachineConversation = b.MachineData
 
 	go chat.Multiplexer(b.Conn, intCh)
 

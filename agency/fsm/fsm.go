@@ -77,12 +77,18 @@ const (
 
 	MessageEmail = "email" // not supported yet
 	MessageHook  = "hook"  // internal program call back
+
+	// these are internal messages send between Backend (service) FSM and
+	// conversation (pairwise connection) FSM
+	MessageBackend = "backend"
 )
 
 const (
 	EmailProtocol = 100
 	QAProtocol    = 101
 	HookProtocol  = 102
+
+	BackendProtocol = 103 // see MessageBackend
 )
 
 const (
@@ -200,7 +206,7 @@ type Event struct {
 
 	ProtocolType     agency.Protocol_Type `json:"-"`
 	NotificationType NotificationType     `json:"-"`
-	//NotificationType agency.Notification_Type `json:"-"`
+	// NotificationType agency.Notification_Type `json:"-"`
 
 	*agency.ProtocolStatus `json:"-"`
 	*Transition            `json:"-"`
@@ -227,6 +233,24 @@ func (e *Event) filterEnvs() {
 	default:
 		glog.V(7).Infoln("wrong type, in filter:", e.ProtocolType)
 	}
+}
+
+func (e Event) TriggersByBackendData(data BackendData) bool {
+	content := data.Content
+	switch e.Rule {
+	case TriggerTypeValidateInputNotEqual:
+		return e.Machine.Memory[e.Data] != content
+	case TriggerTypeValidateInputEqual:
+		return e.Machine.Memory[e.Data] == content
+	case TriggerTypeInputEqual:
+		return content == e.Data
+	case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
+		return true
+	case TriggerTypeLua:
+		_, ok := e.ExecLua(content)
+		return ok
+	}
+	return false
 }
 
 func (e Event) TriggersByHook() bool {
@@ -361,6 +385,8 @@ type EventData struct {
 	Email        *Email        `json:"email,omitempty"`
 	Proof        *Proof        `json:"proof,omitempty"`
 	Hook         *Hook         `json:"hook,omitempty"`
+
+	Backend *BackendData `json:"backend,omitempty"`
 }
 
 type Email struct {
@@ -546,6 +572,16 @@ func (m *Machine) TriggersByHook() *Transition {
 	return nil
 }
 
+func (m *Machine) TriggersByBackendData(data BackendData) *Transition {
+	for _, transition := range m.CurrentState().Transitions {
+		if transition.Trigger.ProtocolType == BackendProtocol &&
+			transition.Trigger.TriggersByBackendData(data) {
+			return transition
+		}
+	}
+	return nil
+}
+
 func (m *Machine) Step(t *Transition) {
 	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
 	m.Current = t.Target
@@ -633,6 +669,14 @@ func (m *Machine) String() string {
 	return w.String()
 }
 
+func (t *Transition) BuildSendEventsFromBackendData(data BackendData) []*Event {
+	input := &Event{
+		ProtocolType: HookProtocol,
+		EventData:    &EventData{Backend: &data},
+	}
+	return t.doBuildSendEvents(input)
+}
+
 func (t *Transition) BuildSendEventsFromHook(hookData map[string]string) []*Event {
 	input := &Event{
 		ProtocolType: HookProtocol,
@@ -684,38 +728,7 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 				sends[i].EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
-			assert.That(input != nil ||
-				send.Rule == TriggerTypeData ||
-				send.Rule == TriggerTypeFormatFromMem,
-			)
-			switch send.Rule {
-			case TriggerTypeUseInput:
-				sends[i].EventData = input.EventData
-			case TriggerTypeData:
-				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-					Content: send.Data,
-				}}
-			case TriggerTypeFormat:
-				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-					Content: fmt.Sprintf(send.Data, input.Data),
-				}}
-			case TriggerTypeFormatFromMem:
-				sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-					Content: t.FmtFromMem(send),
-				}}
-			case TriggerTypeLua:
-				content := input.Data
-				out, ok := sends[i].ExecLua(content, "")
-				if ok {
-					sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-						Content: out,
-					}}
-				} else {
-					sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
-						Content: content,
-					}}
-				}
-			}
+			t.buildBMSend(input, send, sends, i)
 		case MessageHook:
 			switch send.Rule {
 			case TriggerTypeData:
@@ -755,6 +768,41 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 		}
 	}
 	return sends
+}
+
+func (t *Transition) buildBMSend(input *Event, send *Event, sends []*Event, i int) {
+	assert.That(input != nil ||
+		send.Rule == TriggerTypeData ||
+		send.Rule == TriggerTypeFormatFromMem,
+	)
+	switch send.Rule {
+	case TriggerTypeUseInput:
+		sends[i].EventData = input.EventData
+	case TriggerTypeData:
+		sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+			Content: send.Data,
+		}}
+	case TriggerTypeFormat:
+		sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+			Content: fmt.Sprintf(send.Data, input.Data),
+		}}
+	case TriggerTypeFormatFromMem:
+		sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+			Content: t.FmtFromMem(send),
+		}}
+	case TriggerTypeLua:
+		content := input.Data
+		out, ok := sends[i].ExecLua(content, "")
+		if ok {
+			sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: out,
+			}}
+		} else {
+			sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: content,
+			}}
+		}
+	}
 }
 
 func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
