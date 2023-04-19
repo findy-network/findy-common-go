@@ -4,6 +4,7 @@ import "github.com/findy-network/findy-common-go/agency/fsm"
 
 var EmailIssuerMachine = fsm.Machine{
 	Name: "email issuer machine",
+	Type: fsm.MachineTypeConversation,
 	Initial: &fsm.Transition{
 		Sends: []*fsm.Event{{
 			Protocol: "basic_message",
@@ -136,6 +137,7 @@ We are ready now. Bye bye!`,
 }
 
 var ReqProofMachine = fsm.Machine{
+	Type: fsm.MachineTypeConversation,
 	Name: "machine",
 	Initial: &fsm.Transition{
 		Sends: []*fsm.Event{{
@@ -277,6 +279,7 @@ var ReqProofMachine = fsm.Machine{
 
 var EchoMachine = fsm.Machine{
 	Name: "echo machine",
+	Type: fsm.MachineTypeConversation,
 	Initial: &fsm.Transition{
 		Sends: []*fsm.Event{{
 			Protocol: "basic_message",

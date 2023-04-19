@@ -71,7 +71,7 @@ var (
 	Question = make(QuestionChan)
 
 	// conversations is a map of all instances indexed by connection id aka
-	// pairwise id
+	// pairwise id. TODO: check thread safety with Backend
 	conversations = make(map[string]*Conversation)
 
 	// MachineConversation is the initial finite-state machine from where every
@@ -81,6 +81,7 @@ var (
 	// MachineBackend is the state-machine for the process level i.e. service
 	// level. Not all of the chatbots have that.
 	MachineBackend fsm.MachineData
+	BackendMachine *Backend
 
 	// SharedMem is memory register to be shared between all conversations.
 	// It can be used e.g. gather information.. not sure if this is needed.
@@ -157,23 +158,50 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 	}
 }
 
-func (c *Backend) RunBackend(data fsm.MachineData) {
-	c.machine = fsm.NewMachine(data)
-	try.To(c.machine.Initialize())
-	c.machine.InitLua()
+func (b *Backend) RunBackend(data fsm.MachineData) {
+	b.machine = fsm.NewMachine(data)
+	try.To(b.machine.Initialize())
+	b.machine.InitLua()
 
-	// TODO: build new send for our backend
-	// c.send(c.machine.Start(fsm.TerminateOutChan(c.TerminateChan)), nil)
+	b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
 
-	for {
-		select {
-		//		case t := <-c.StatusChan:
-		//			c.statusReceived(t)
-		//		case q := <-c.QuestionChan:
-		//			c.questionReceived(q)
-		//		case hookData := <-c.HookChan:
-		//			c.hookReceived(hookData)
+	for { //nolint:gosimple
+		select { // we will need other channels.
+		case bd := <-b.BackendChan:
+			b.backendReceived(bd)
+			//		case t := <-b.StatusChan:
+			//			b.statusReceived(t)
+			//		case q := <-b.QuestionChan:
+			//			b.questionReceived(q)
+			//		case hookData := <-b.HookChan:
+			//			b.hookReceived(hookData)
 		}
+	}
+}
+
+func (b *Backend) backendReceived(data fsm.BackendData) {
+	glog.V(4).Infoln("backend data arrived:", data)
+	if transition := b.machine.TriggersByBackendData(data); transition != nil {
+		b.send(transition.BuildSendEventsFromBackendData(data))
+		b.machine.Step(transition)
+	}
+}
+
+func (b *Backend) send(outputs []*fsm.Event) {
+	if outputs == nil {
+		return
+	}
+	for _, output := range outputs {
+		switch output.ProtocolType {
+		case fsm.BackendProtocol:
+			b.sendBackendData(output.EventData.Backend, false)
+		}
+	}
+}
+
+func (b *Backend) sendBackendData(data *fsm.BackendData, _ bool) {
+	for _, conversation := range conversations {
+		conversation.BackendChan <- *data
 	}
 }
 
@@ -198,7 +226,7 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 }
 
 func (c *Conversation) backendReceived(data fsm.BackendData) {
-	glog.V(4).Infoln("backend data arriwed:", data)
+	glog.V(4).Infoln("backend data arrived:", data)
 	if transition := c.machine.TriggersByBackendData(data); transition != nil {
 		c.send(transition.BuildSendEventsFromBackendData(data), nil)
 		c.machine.Step(transition)

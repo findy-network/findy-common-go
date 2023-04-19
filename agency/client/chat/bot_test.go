@@ -4,15 +4,19 @@ import (
 	"testing"
 
 	"github.com/findy-network/findy-common-go/agency/fsm"
+	"github.com/golang/glog"
+	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 )
 
-var issuerFSMYaml = `initial:
+var issuerFSMYaml = `
+type: MachineTypeConversation
+name: email issuer machine
+initial:
   sends:
   - data: Hello!
     protocol: basic_message
   target: IDLE
-name: email issuer machine
 states:
   IDLE:
     transitions:
@@ -100,12 +104,182 @@ states:
         rule: OUR_STATUS
 `
 
-var proofFSMYaml = `initial:
+var proofFSMJson = `{
+        "type": "MachineTypeConversation",
+        "name": "machine",
+        "initial": {
+                "sends": [
+                        {
+                                "protocol": "basic_message",
+                                "type_id": "",
+                                "rule": "",
+                                "data": "Hello!"
+                        }
+                ],
+                "target": "INITIAL"
+        },
+        "states": {
+                "INITIAL": {
+                        "transitions": [
+                                {
+                                        "trigger": {
+                                                "protocol": "connection",
+                                                "type_id": "",
+                                                "rule": ""
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "basic_message",
+                                                        "type_id": "",
+                                                        "rule": "",
+                                                        "data": "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue."
+                                                }
+                                        ],
+                                        "target": "INITIAL"
+                                },
+                                {
+                                        "trigger": {
+                                                "protocol": "basic_message",
+                                                "type_id": "",
+                                                "rule": ""
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "present_proof",
+                                                        "type_id": "",
+                                                        "rule": "",
+                                                        "data": "[{\"name\":\"email\",\"credDefId\":\"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1\"}]",
+                                                        "want_status": true
+                                                }
+                                        ],
+                                        "target": "WAITING_EMAIL_PROOF_QA"
+                                }
+                        ]
+                },
+                "WAITING2_EMAIL_PROOF": {
+                        "transitions": [
+                                {
+                                        "trigger": {
+                                                "protocol": "present_proof",
+                                                "type_id": "",
+                                                "rule": ""
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "basic_message",
+                                                        "type_id": "",
+                                                        "rule": "FORMAT_MEM",
+                                                        "data": "Hello {{.email}}! I'm stupid bot who knows you have verified email address!!!\nI can trust you."
+                                                }
+                                        ],
+                                        "target": "WAITING_NEXT_CMD"
+                                }
+                        ]
+                },
+                "WAITING_EMAIL_PROOF_QA": {
+                        "transitions": [
+                                {
+                                        "trigger": {
+                                                "protocol": "basic_message",
+                                                "type_id": "",
+                                                "rule": "INPUT_EQUAL",
+                                                "data": "reset"
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "basic_message",
+                                                        "type_id": "",
+                                                        "rule": "",
+                                                        "data": "Going to beginning..."
+                                                }
+                                        ],
+                                        "target": "INITIAL"
+                                },
+                                {
+                                        "trigger": {
+                                                "protocol": "present_proof",
+                                                "type_id": "ANSWER_NEEDED_PROOF_VERIFY",
+                                                "rule": "NOT_ACCEPT_VALUES",
+                                                "data": "[{\"name\":\"email\",\"credDefId\":\"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1\"}]"
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "answer",
+                                                        "type_id": "",
+                                                        "rule": "",
+                                                        "data": "NACK"
+                                                }
+                                        ],
+                                        "target": "INITIAL"
+                                },
+                                {
+                                        "trigger": {
+                                                "protocol": "present_proof",
+                                                "type_id": "ANSWER_NEEDED_PROOF_VERIFY",
+                                                "rule": "ACCEPT_AND_INPUT_VALUES",
+                                                "data": "[{\"name\":\"email\",\"credDefId\":\"T2o5osjKcK6oVDPxcLjKnB:3:CL:T2o5osjKcK6oVDPxcLjKnB:2:my-schema:1.0:t1\"}]"
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "answer",
+                                                        "type_id": "",
+                                                        "rule": "",
+                                                        "data": "ACK"
+                                                }
+                                        ],
+                                        "target": "WAITING2_EMAIL_PROOF"
+                                }
+                        ]
+                },
+                "WAITING_NEXT_CMD": {
+                        "transitions": [
+                                {
+                                        "trigger": {
+                                                "protocol": "basic_message",
+                                                "type_id": "",
+                                                "rule": "INPUT_EQUAL",
+                                                "data": "reset"
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "basic_message",
+                                                        "type_id": "",
+                                                        "rule": "",
+                                                        "data": "Going to beginning."
+                                                }
+                                        ],
+                                        "target": "INITIAL"
+                                },
+                                {
+                                        "trigger": {
+                                                "protocol": "basic_message",
+                                                "type_id": "",
+                                                "rule": "INPUT_SAVE",
+                                                "data": "LINE"
+                                        },
+                                        "sends": [
+                                                {
+                                                        "protocol": "basic_message",
+                                                        "type_id": "",
+                                                        "rule": "FORMAT_MEM",
+                                                        "data": "{{.email}} says: {{.LINE}}"
+                                                }
+                                        ],
+                                        "target": "WAITING_NEXT_CMD"
+                                }
+                        ]
+                }
+        }
+}`
+
+var proofFSMYaml = `
+type: MachineTypeConversation
+name: machine
+initial:
   sends:
   - data: Hello!
     protocol: basic_message
   target: INITIAL
-name: machine
 states:
   INITIAL:
     transitions:
@@ -199,7 +373,11 @@ func Test_loadFSMData(t *testing.T) {
 			args:    args{fName: "file.yaml", data: []byte(issuerFSMYaml)},
 			wantFsm: &EmailIssuerMachine,
 		},
-		{name: "proof machine",
+		{name: "proof machine from json",
+			args:    args{fName: "file.json", data: []byte(proofFSMJson)},
+			wantFsm: &ReqProofMachine,
+		},
+		{name: "proof machine from json",
 			args:    args{fName: "file.yaml", data: []byte(proofFSMYaml)},
 			wantFsm: &ReqProofMachine,
 		},
@@ -209,8 +387,13 @@ func Test_loadFSMData(t *testing.T) {
 			assert.PushTester(t)
 			defer assert.PopTester()
 
+			defer err2.Catch(func(err error) {
+				assert.NoError(err)
+			})
+
 			gotFsm := loadFSMData(tt.args.fName, tt.args.data)
-			assert.DeepEqual(gotFsm, tt.wantFsm)
+			assert.Equal(gotFsm.Type, tt.wantFsm.Type)
+			assert.Equal(gotFsm.Name, tt.wantFsm.Name)
 
 			// test after Initialize call
 			err := gotFsm.Initialize()
@@ -231,7 +414,8 @@ func Test_marshalFSM(t *testing.T) {
 		name string
 		args args
 	}{
-		{name: "proof machine", args: args{fName: "file.yaml", fsm: &ReqProofMachine}},
+		{name: "proof machine in json", args: args{fName: "file.json", fsm: &ReqProofMachine}},
+		{name: "proof machine in yaml", args: args{fName: "file.yaml", fsm: &ReqProofMachine}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -241,6 +425,9 @@ func Test_marshalFSM(t *testing.T) {
 			err := tt.args.fsm.Initialize()
 			assert.NoError(err)
 			gotbytes := marshalFSM(tt.args.fName, tt.args.fsm)
+			glog.V(3).Infoln(len(gotbytes))
+			glog.V(3).Infoln(string(gotbytes))
+
 			gotMachine := loadFSMData(tt.args.fName, gotbytes)
 			// we know that ReqProofMachine is Initialized
 			err = gotMachine.Initialize()

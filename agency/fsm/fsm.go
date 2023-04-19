@@ -22,6 +22,7 @@ import (
 	"github.com/lainio/err2/try"
 )
 
+// TODO: use similar enum as we have MachineType
 const (
 	// Executes Lua script that can access to machines memory and which must
 	// return true/false if trigger can be executed.
@@ -138,7 +139,9 @@ func NewMachine(data MachineData) *Machine {
 }
 
 type Machine struct {
-	Name string `json:"name,omitempty"`
+	// Tells do we have a Backend (Service) bot or a connection lvl bot
+	Type MachineType `json:"type,omitempty"`
+	Name string      `json:"name,omitempty"`
 
 	// marks the start state: there can be only one for the Machine, but there
 	// can be 0..n termination states. See State.Terminate field.
@@ -153,6 +156,49 @@ type Machine struct {
 
 	termChan TerminateOutChan `json:"-"`
 	luaState *lua.State       `json:"-"`
+}
+
+type MachineType int
+
+const (
+	MachineTypeNone         = 0
+	MachineTypeConversation = 1 + iota
+	MachineTypeBackend
+)
+
+var machineTypeNames = map[MachineType]string{
+	MachineTypeNone:         "MachineTypeNone",
+	MachineTypeConversation: "MachineTypeConversation",
+	MachineTypeBackend:      "MachineTypeBackend",
+}
+
+var machineTypeValues = map[string]MachineType{
+	"MachineTypeNone":         MachineTypeNone,
+	"MachineTypeConversation": MachineTypeConversation,
+	"MachineTypeBackend":      MachineTypeBackend,
+}
+
+func (mt MachineType) String() string {
+	return machineTypeNames[mt]
+}
+
+func ParseMachineType(s string) (mt MachineType, err error) {
+	defer err2.Handle(&err)
+	mt = assert.MKeyExists(machineTypeValues, s)
+	return mt, nil
+}
+
+func (mt *MachineType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(mt.String())
+}
+
+func (mt *MachineType) UnmarshalJSON(data []byte) (err error) {
+	defer err2.Handle(&err)
+
+	var machineType string
+	try.To(json.Unmarshal(data, &machineType))
+	*mt = try.To1(ParseMachineType(machineType))
+	return nil
 }
 
 type State struct {
@@ -690,7 +736,6 @@ func (t *Transition) BuildSendEvents(status *agency.ProtocolStatus) []*Event {
 	return t.doBuildSendEvents(input)
 }
 
-//nolint:funlen
 func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 	events := t.Sends
 	sends := make([]*Event, len(events))
@@ -700,7 +745,7 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 		case MessageIssueCred:
 			switch send.Rule {
 			case TriggerTypeFormatFromMem:
-				sends[i].EventData = &EventData{Issuing: &Issuing{
+				send.EventData = &EventData{Issuing: &Issuing{
 					CredDefID: send.EventData.Issuing.CredDefID,
 					AttrsJSON: t.FmtFromMem(send),
 				}}
@@ -708,7 +753,7 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 		case MessagePresentProof:
 			switch send.Rule {
 			case TriggerTypeData:
-				sends[i].EventData = &EventData{Proof: &Proof{
+				send.EventData = &EventData{Proof: &Proof{
 					ProofJSON: send.Data,
 				}}
 			}
@@ -725,80 +770,126 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 					glog.Errorf("json error %v", err)
 				}
 				glog.V(1).Infoln("email:", emailJSON)
-				sends[i].EventData = &EventData{Email: &email}
+				send.EventData = &EventData{Email: &email}
 			}
 		case MessageBasicMessage:
-			t.buildBMSend(input, send, sends, i)
+			t.buildBMSend(input, send)
 		case MessageHook:
-			switch send.Rule {
-			case TriggerTypeData:
-				sends[i].EventData = &EventData{Hook: &Hook{
-					Data: map[string]string{
-						"ID":   send.TypeID,
-						"data": send.Data,
-					},
-				}}
-			case TriggerTypeUseInput:
-				dataStr := ""
-				if input.Protocol == MessageBasicMessage {
-					dataStr = input.EventData.BasicMessage.Content
-				}
-				sends[i].EventData = &EventData{Hook: &Hook{
-					Data: map[string]string{
-						"ID":   send.TypeID,
-						"data": dataStr,
-					},
-				}}
-			case TriggerTypeFormat:
-				sends[i].EventData = &EventData{Hook: &Hook{
-					Data: map[string]string{
-						"ID":   send.TypeID,
-						"data": fmt.Sprintf(send.Data, input.Data),
-					},
-				}}
-			case TriggerTypeFormatFromMem:
-				sends[i].EventData = &EventData{Hook: &Hook{
-					Data: map[string]string{
-						"ID":   send.TypeID,
-						"data": t.FmtFromMem(send),
-					},
-				}}
-			}
-
+			t.buildHookSend(input, send)
+		case MessageBackend:
+			t.buildBackendSend(input, send)
+		default:
+			glog.Warningln("didn't find protocol handler", send.Protocol)
+			return nil
 		}
 	}
 	return sends
 }
 
-func (t *Transition) buildBMSend(input *Event, send *Event, sends []*Event, i int) {
+func (t *Transition) buildBackendSend(input *Event, send *Event) {
+	switch send.Rule {
+	case TriggerTypeLua:
+		content := input.Data
+		out, ok := send.ExecLua(content, LUA_ALL_OK)
+		if ok {
+			send.EventData = &EventData{Backend: &BackendData{
+				Content: out,
+			}}
+		} else {
+			send.EventData = &EventData{Backend: &BackendData{
+				Content: content,
+			}}
+		}
+
+	case TriggerTypeData:
+		send.EventData = &EventData{Backend: &BackendData{
+			Content: send.Data,
+		}}
+	case TriggerTypeUseInput:
+		dataStr := ""
+		if input.Protocol == MessageBasicMessage {
+			dataStr = input.EventData.BasicMessage.Content
+		}
+		send.EventData = &EventData{Backend: &BackendData{
+			Content: dataStr,
+		}}
+	case TriggerTypeFormat:
+		send.EventData = &EventData{Backend: &BackendData{
+			Content: fmt.Sprintf(send.Data, input.Data),
+		}}
+	case TriggerTypeFormatFromMem:
+		send.EventData = &EventData{Backend: &BackendData{
+			Content: t.FmtFromMem(send),
+		}}
+	}
+}
+
+func (t *Transition) buildHookSend(input *Event, send *Event) {
+	switch send.Rule {
+	case TriggerTypeData:
+		send.EventData = &EventData{Hook: &Hook{
+			Data: map[string]string{
+				"ID":   send.TypeID,
+				"data": send.Data,
+			},
+		}}
+	case TriggerTypeUseInput:
+		dataStr := ""
+		if input.Protocol == MessageBasicMessage {
+			dataStr = input.EventData.BasicMessage.Content
+		}
+		send.EventData = &EventData{Hook: &Hook{
+			Data: map[string]string{
+				"ID":   send.TypeID,
+				"data": dataStr,
+			},
+		}}
+	case TriggerTypeFormat:
+		send.EventData = &EventData{Hook: &Hook{
+			Data: map[string]string{
+				"ID":   send.TypeID,
+				"data": fmt.Sprintf(send.Data, input.Data),
+			},
+		}}
+	case TriggerTypeFormatFromMem:
+		send.EventData = &EventData{Hook: &Hook{
+			Data: map[string]string{
+				"ID":   send.TypeID,
+				"data": t.FmtFromMem(send),
+			},
+		}}
+	}
+}
+
+func (t *Transition) buildBMSend(input *Event, send *Event) {
 	assert.That(input != nil ||
 		send.Rule == TriggerTypeData ||
 		send.Rule == TriggerTypeFormatFromMem,
 	)
 	switch send.Rule {
 	case TriggerTypeUseInput:
-		sends[i].EventData = input.EventData
+		send.EventData = input.EventData
 	case TriggerTypeData:
-		sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+		send.EventData = &EventData{BasicMessage: &BasicMessage{
 			Content: send.Data,
 		}}
 	case TriggerTypeFormat:
-		sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+		send.EventData = &EventData{BasicMessage: &BasicMessage{
 			Content: fmt.Sprintf(send.Data, input.Data),
 		}}
 	case TriggerTypeFormatFromMem:
-		sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+		send.EventData = &EventData{BasicMessage: &BasicMessage{
 			Content: t.FmtFromMem(send),
 		}}
 	case TriggerTypeLua:
 		content := input.Data
-		out, ok := sends[i].ExecLua(content, "")
+		out, ok := send.ExecLua(content, LUA_ALL_OK)
 		if ok {
-			sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+			send.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: out,
 			}}
 		} else {
-			sends[i].EventData = &EventData{BasicMessage: &BasicMessage{
+			send.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
 			}}
 		}
