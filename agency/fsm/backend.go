@@ -2,9 +2,10 @@ package fsm
 
 type BackendData struct {
 	// these two are the header part
-	FromConnID string
-	// ToConnID   string // todo: this is something that we don't need?
+	ToConnID string // backend/service FSM, should it have a UUID? maybe?
 	Protocol string
+
+	FromConnID string // this is something that might not be exist
 
 	// for the start we have only string content, but maybe later..
 	// see the EventData
@@ -13,6 +14,6 @@ type BackendData struct {
 	Content string
 }
 
-type BackendChan = chan BackendData
-type BackendInChan = <-chan BackendData
-type BackendOutChan = chan<- BackendData
+type BackendChan = chan *BackendData
+type BackendInChan = <-chan *BackendData
+type BackendOutChan = chan<- *BackendData

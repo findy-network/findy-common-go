@@ -256,6 +256,7 @@ type Event struct {
 
 	*agency.ProtocolStatus `json:"-"`
 	*Transition            `json:"-"`
+	*BackendData           `json:"-"`
 }
 
 func (e *Event) filterEnvs() {
@@ -281,7 +282,7 @@ func (e *Event) filterEnvs() {
 	}
 }
 
-func (e Event) TriggersByBackendData(data BackendData) bool {
+func (e Event) TriggersByBackendData(data *BackendData) bool {
 	content := data.Content
 	switch e.Rule {
 	case TriggerTypeValidateInputNotEqual:
@@ -520,7 +521,7 @@ func (m *Machine) registerMemFuncs() {
 
 // Initialize initializes and optimizes the state machine because the JSON is
 // meant for humans to write and machines to read. Initialize also moves machine
-// to the initial state. It returns error if machine has them.
+// to the initial state. It returns error if machine has them. TODO: refactor
 func (m *Machine) Initialize() (err error) {
 	m.Memory = make(map[string]string)
 	initSet := false
@@ -618,7 +619,7 @@ func (m *Machine) TriggersByHook() *Transition {
 	return nil
 }
 
-func (m *Machine) TriggersByBackendData(data BackendData) *Transition {
+func (m *Machine) TriggersByBackendData(data *BackendData) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
 		if transition.Trigger.ProtocolType == BackendProtocol &&
 			transition.Trigger.TriggersByBackendData(data) {
@@ -715,10 +716,11 @@ func (m *Machine) String() string {
 	return w.String()
 }
 
-func (t *Transition) BuildSendEventsFromBackendData(data BackendData) []*Event {
+func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event {
 	input := &Event{
-		ProtocolType: HookProtocol,
-		EventData:    &EventData{Backend: &data},
+		ProtocolType: BackendProtocol,
+		EventData:    &EventData{Backend: data},
+		Data:         data.Content,
 	}
 	return t.doBuildSendEvents(input)
 }
@@ -1013,6 +1015,7 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageEmail:        EmailProtocol,
 	MessageAnswer:       QAProtocol,
 	MessageHook:         HookProtocol,
+	MessageBackend:      BackendProtocol,
 }
 
 func NotificationTypeID(typeName string) NotificationType {

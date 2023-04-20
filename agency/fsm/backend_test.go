@@ -10,8 +10,8 @@ import (
 
 func TestBackendTestLuaTrigger(t *testing.T) {
 	type args struct {
-		m *Machine
-		c string
+		m       *Machine
+		content string
 	}
 	tests := []struct {
 		name    string
@@ -28,24 +28,34 @@ func TestBackendTestLuaTrigger(t *testing.T) {
 			defer assert.PopTester()
 			defer err2.Catch(func(err error) { assert.NoError(err) })
 
-			assert.NoError(tt.args.m.Initialize())
+			err := tt.args.m.Initialize()
+			assert.NoError(err)
 			tt.args.m.InitLua()
 			assert.Equal(tt.args.m.Type, MachineTypeBackend)
 			if tt.want {
-				status := protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c)
-				transition := tt.args.m.Triggers(status)
+				beData := newBackend(tt.args.content)
+				transition := tt.args.m.TriggersByBackendData(beData)
 				assert.NotNil(transition)
-				o := transition.BuildSendEvents(status)
+				o := transition.BuildSendEventsFromBackendData(beData)
 				assert.SLen(o, 1)
 				assert.NotNil(o[0].EventData.Backend)
 				assert.Equal(o[0].EventData.Backend.Content, tt.wantStr)
 				assert.INotNil(o)
-
 			} else {
 				assert.Nil(tt.args.m.Triggers(
-					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c)))
+					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.content)))
 			}
 		})
+	}
+}
+
+func newBackend(c string) *BackendData {
+	return &BackendData{
+		ToConnID:   "",
+		Protocol:   MessageBackend,
+		FromConnID: "123456", // uuid, this is for testing only
+		Subject:    "test",
+		Content:    c,
 	}
 }
 
@@ -76,7 +86,7 @@ setRegValue("MEM", "OUTPUT", retval)
 				Transitions: []*Transition{
 					{
 						Trigger: &Event{
-							Protocol: "basic_message",
+							Protocol: "backend",
 							Rule:     "LUA",
 							Data:     luaBackendScript1,
 						},

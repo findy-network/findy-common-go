@@ -10,6 +10,7 @@ import (
 	"github.com/findy-network/findy-common-go/agency/fsm"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/golang/glog"
+	"github.com/google/uuid"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 )
@@ -40,6 +41,7 @@ type Backend struct {
 
 	// machine can be ptr because multiplexer creates a new for each one
 	machine *fsm.Machine
+	ConnID  string // pseudo ConnectionID, there is no actual connection, now
 }
 
 type Conversation struct {
@@ -60,6 +62,8 @@ type Conversation struct {
 // These are class level variables for this chat bot which means that every
 // conversation of this bot will share these variables
 var (
+	ConversationBackendChan = make(fsm.BackendChan, 1)
+
 	// Status is input channel for multiplexing this chat bot i.e. CA sends
 	// every message to this channel from here they are transported to
 	// according conversations
@@ -80,7 +84,7 @@ var (
 
 	// MachineBackend is the state-machine for the process level i.e. service
 	// level. Not all of the chatbots have that.
-	MachineBackend fsm.MachineData
+	MachineBackend *fsm.MachineData
 	BackendMachine *Backend
 
 	// SharedMem is memory register to be shared between all conversations.
@@ -93,6 +97,15 @@ var (
 	Hook HookFn
 )
 
+func RunBackendService() {
+	BackendMachine = &Backend{
+		TerminateChan: make(chan bool),
+		BackendChan:   make(fsm.BackendChan, 1),
+		ConnID:        uuid.NewString(),
+	}
+	BackendMachine.Run(*MachineBackend)
+}
+
 // Multiplexer is a goroutine function to started multiplex all the
 // conversations an agent is currently having. It takes a gRPC connection handle
 // and a signaling channel as an arguments. The second argument, the interrupt
@@ -103,9 +116,14 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 	termChan := make(fsm.TerminateChan, 1)
 	for {
 		select {
+		case d := <-ConversationBackendChan:
+			c, ok := conversations[d.ToConnID]
+			assert.That(ok, "backend msgs to existing conversations only")
+			c.BackendChan <- d
 		case t := <-Status:
 			c, ok := conversations[t.Notification.ConnectionID]
 			if !ok {
+				// TODO: refactor conversation creation
 				glog.V(5).Infoln("Starting new conversation",
 					MachineConversation.FType)
 				c = &Conversation{
@@ -114,15 +132,17 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 					StatusChan:    make(StatusChan),
 					QuestionChan:  make(QuestionChan),
 					HookChan:      make(HookChan),
+					BackendChan:   make(fsm.BackendChan, 1),
 					TerminateChan: termChan,
 				}
-				go c.RunConversation(MachineConversation)
+				go c.Run(MachineConversation)
 				conversations[t.Notification.ConnectionID] = c
 			}
 			c.StatusChan <- t
 		case question := <-Question:
 			c, ok := conversations[question.Status.Notification.ConnectionID]
 			if !ok {
+				// TODO: se above
 				glog.V(5).Infoln("Starting new conversation w/ question",
 					MachineConversation.FType)
 				c = &Conversation{
@@ -131,9 +151,10 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 					StatusChan:    make(StatusChan),
 					QuestionChan:  make(QuestionChan),
 					HookChan:      make(HookChan),
+					BackendChan:   make(fsm.BackendChan, 1),
 					TerminateChan: termChan,
 				}
-				go c.RunConversation(MachineConversation)
+				go c.Run(MachineConversation)
 				conversations[question.Status.Notification.ConnectionID] = c
 			}
 			c.QuestionChan <- question
@@ -158,7 +179,7 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 	}
 }
 
-func (b *Backend) RunBackend(data fsm.MachineData) {
+func (b *Backend) Run(data fsm.MachineData) {
 	b.machine = fsm.NewMachine(data)
 	try.To(b.machine.Initialize())
 	b.machine.InitLua()
@@ -179,7 +200,7 @@ func (b *Backend) RunBackend(data fsm.MachineData) {
 	}
 }
 
-func (b *Backend) backendReceived(data fsm.BackendData) {
+func (b *Backend) backendReceived(data *fsm.BackendData) {
 	glog.V(4).Infoln("backend data arrived:", data)
 	if transition := b.machine.TriggersByBackendData(data); transition != nil {
 		b.send(transition.BuildSendEventsFromBackendData(data))
@@ -201,11 +222,11 @@ func (b *Backend) send(outputs []*fsm.Event) {
 
 func (b *Backend) sendBackendData(data *fsm.BackendData, _ bool) {
 	for _, conversation := range conversations {
-		conversation.BackendChan <- *data
+		conversation.BackendChan <- data
 	}
 }
 
-func (c *Conversation) RunConversation(data fsm.MachineData) {
+func (c *Conversation) Run(data fsm.MachineData) {
 	c.machine = fsm.NewMachine(data)
 	try.To(c.machine.Initialize())
 	c.machine.InitLua()
@@ -225,7 +246,7 @@ func (c *Conversation) RunConversation(data fsm.MachineData) {
 	}
 }
 
-func (c *Conversation) backendReceived(data fsm.BackendData) {
+func (c *Conversation) backendReceived(data *fsm.BackendData) {
 	glog.V(4).Infoln("backend data arrived:", data)
 	if transition := c.machine.TriggersByBackendData(data); transition != nil {
 		c.send(transition.BuildSendEventsFromBackendData(data), nil)
