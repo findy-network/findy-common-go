@@ -121,41 +121,17 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 			assert.That(ok, "backend msgs to existing conversations only")
 			c.BackendChan <- d
 		case t := <-Status:
-			c, ok := conversations[t.Notification.ConnectionID]
+			connID := t.Notification.ConnectionID
+			c, ok := conversations[connID]
 			if !ok {
-				// TODO: refactor conversation creation
-				glog.V(5).Infoln("Starting new conversation",
-					MachineConversation.FType)
-				c = &Conversation{
-					id:            t.Notification.ConnectionID,
-					Conn:          conn,
-					StatusChan:    make(StatusChan),
-					QuestionChan:  make(QuestionChan),
-					HookChan:      make(HookChan),
-					BackendChan:   make(fsm.BackendChan, 1),
-					TerminateChan: termChan,
-				}
-				go c.Run(MachineConversation)
-				conversations[t.Notification.ConnectionID] = c
+				c = newConversation(conn, connID, termChan)
 			}
 			c.StatusChan <- t
 		case question := <-Question:
-			c, ok := conversations[question.Status.Notification.ConnectionID]
+			connID := question.Status.Notification.ConnectionID
+			c, ok := conversations[connID]
 			if !ok {
-				// TODO: se above
-				glog.V(5).Infoln("Starting new conversation w/ question",
-					MachineConversation.FType)
-				c = &Conversation{
-					id:            question.Status.Notification.ConnectionID,
-					Conn:          conn,
-					StatusChan:    make(StatusChan),
-					QuestionChan:  make(QuestionChan),
-					HookChan:      make(HookChan),
-					BackendChan:   make(fsm.BackendChan, 1),
-					TerminateChan: termChan,
-				}
-				go c.Run(MachineConversation)
-				conversations[question.Status.Notification.ConnectionID] = c
+				c = newConversation(conn, connID, termChan)
 			}
 			c.QuestionChan <- question
 		case <-termChan:
@@ -177,6 +153,27 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 		}
 		// TODO HookChan handler isn't implemented yet!
 	}
+}
+
+func newConversation(
+	conn client.Conn,
+	connID string,
+	termChan fsm.TerminateChan,
+) *Conversation {
+	glog.V(5).Infoln("Starting new conversation",
+		MachineConversation.FType)
+	c := &Conversation{
+		id:            connID,
+		Conn:          conn,
+		StatusChan:    make(StatusChan),
+		QuestionChan:  make(QuestionChan),
+		HookChan:      make(HookChan),
+		BackendChan:   make(fsm.BackendChan, 1),
+		TerminateChan: termChan,
+	}
+	go c.Run(MachineConversation)
+	conversations[connID] = c
+	return c
 }
 
 func (b *Backend) Run(data fsm.MachineData) {
