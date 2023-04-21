@@ -237,6 +237,7 @@ type Event struct {
 	// These both are string versions to make writing the yaml fsm easier.
 	// There parser methdod, Initialize() that must be call to make the machine
 	// to work. It also make other syntax checks.
+	// NOTE. Don't use this here at code level, use ProtocolType!
 	Protocol string `json:"protocol"` // Note! See ProtocolType below
 	TypeID   string `json:"type_id"`  // Note! See NotificationType below
 
@@ -789,6 +790,12 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 }
 
 func (t *Transition) buildBackendSend(input *Event, send *Event) {
+	if input.Backend != nil {
+		glog.V(2).Infoln("input", input.Backend.Content)
+	}
+	if send != nil && send.EventData != nil && send.Backend != nil {
+		glog.V(2).Infoln("send", send.Backend.Content)
+	}
 	switch send.Rule {
 	case TriggerTypeLua:
 		content := input.Data
@@ -809,9 +816,10 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 		}}
 	case TriggerTypeUseInput:
 		dataStr := ""
-		if input.Protocol == MessageBasicMessage {
+		if input.ProtocolType == agency.Protocol_BASIC_MESSAGE {
 			dataStr = input.EventData.BasicMessage.Content
 		}
+		glog.V(2).Infoln("+++ dataStr:", dataStr)
 		send.EventData = &EventData{Backend: &BackendData{
 			Content: dataStr,
 		}}
@@ -837,7 +845,7 @@ func (t *Transition) buildHookSend(input *Event, send *Event) {
 		}}
 	case TriggerTypeUseInput:
 		dataStr := ""
-		if input.Protocol == MessageBasicMessage {
+		if input.ProtocolType == agency.Protocol_BASIC_MESSAGE {
 			dataStr = input.EventData.BasicMessage.Content
 		}
 		send.EventData = &EventData{Hook: &Hook{
