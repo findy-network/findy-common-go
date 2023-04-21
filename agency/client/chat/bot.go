@@ -83,7 +83,7 @@ func (b Bot) Run(intCh chan os.Signal) {
 	chat.MachineConversation = b.MachineData
 
 	if b.ServiceFSM != nil {
-		glog.V(3).Infoln("serviceFSM is set and be started...")
+		glog.V(1).Infoln("serviceFSM is set and be started...")
 		chat.MachineBackend = b.ServiceFSM
 		go chat.RunBackendService()
 	}
