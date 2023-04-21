@@ -140,8 +140,9 @@ func NewMachine(data MachineData) *Machine {
 
 type Machine struct {
 	// Tells do we have a Backend (Service) bot or a connection lvl bot
-	Type MachineType `json:"type,omitempty"`
-	Name string      `json:"name,omitempty"`
+	Type       MachineType `json:"type,omitempty"`
+	Name       string      `json:"name,omitempty"`
+	KeepMemory bool        `json:"keep_memory,omitempty"`
 
 	// marks the start state: there can be only one for the Machine, but there
 	// can be 0..n termination states. See State.Terminate field.
@@ -206,7 +207,6 @@ type State struct {
 
 	Terminate bool `json:"terminate,omitempty"`
 
-	// TODO: add KeepMemory, see Step()
 	// TODO: transient state (empedding Lua is tested) + new rules
 	// - we should find proper use case to develop these
 
@@ -524,6 +524,9 @@ func (m *Machine) registerMemFuncs() {
 // meant for humans to write and machines to read. Initialize also moves machine
 // to the initial state. It returns error if machine has them. TODO: refactor
 func (m *Machine) Initialize() (err error) {
+	if m.Type == MachineTypeNone {
+		m.Type = MachineTypeConversation
+	}
 	m.Memory = make(map[string]string)
 	initSet := false
 	for id := range m.States {
@@ -635,9 +638,11 @@ func (m *Machine) Step(t *Transition) {
 	m.Current = t.Target
 
 	// coming to Initial state default is to clear the memory map
-	if m.Current == m.Initial.Target { // TODO: KeepMemory field to override
+	if m.Current == m.Initial.Target && !m.KeepMemory {
 		m.Memory = make(map[string]string)
 		glog.V(1).Infoln("--- clearing memory map")
+	} else if m.KeepMemory {
+		glog.V(1).Infoln("--- NOT clearing memory map 'cause 'keep_memory'")
 	}
 	m.checkTerm()
 }
@@ -718,9 +723,21 @@ func (m *Machine) String() string {
 }
 
 func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event {
+	var (
+		usedProtocol agency.Protocol_Type = BackendProtocol
+		eData                             = &EventData{Backend: data}
+	)
+	if t.Machine.Type == MachineTypeConversation {
+		glog.V(2).Infoln("+++ conversation machines send Backend msgs as BM")
+		usedProtocol = agency.Protocol_BASIC_MESSAGE
+		eData = &EventData{BasicMessage: &BasicMessage{
+			Content: data.Content,
+		}}
+	}
 	input := &Event{
-		ProtocolType: BackendProtocol,
-		EventData:    &EventData{Backend: data},
+		Protocol:     toFileProtocolType[usedProtocol],
+		ProtocolType: usedProtocol,
+		EventData:    eData,
 		Data:         data.Content,
 	}
 	return t.doBuildSendEvents(input)
@@ -728,6 +745,7 @@ func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event 
 
 func (t *Transition) BuildSendEventsFromHook(hookData map[string]string) []*Event {
 	input := &Event{
+		Protocol:     toFileProtocolType[HookProtocol],
 		ProtocolType: HookProtocol,
 		EventData:    &EventData{Hook: &Hook{Data: hookData}},
 	}
@@ -796,6 +814,7 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 	if send != nil && send.EventData != nil && send.Backend != nil {
 		glog.V(2).Infoln("send", send.Backend.Content)
 	}
+	glog.V(3).Infoln("send.Rule:", send.Rule)
 	switch send.Rule {
 	case TriggerTypeLua:
 		content := input.Data
@@ -818,6 +837,8 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 		dataStr := ""
 		if input.ProtocolType == agency.Protocol_BASIC_MESSAGE {
 			dataStr = input.EventData.BasicMessage.Content
+		} else {
+			glog.V(2).Infoln("+++ build backend send: not BM")
 		}
 		glog.V(2).Infoln("+++ dataStr:", dataStr)
 		send.EventData = &EventData{Backend: &BackendData{
@@ -911,6 +932,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 		return nil
 	}
 	e = &Event{
+		Protocol:       toFileProtocolType[status.GetState().ProtocolID.TypeID],
 		ProtocolType:   status.GetState().ProtocolID.TypeID,
 		ProtocolStatus: status,
 	}
@@ -949,6 +971,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 
 func (t *Transition) buildInputAnswers(status *agency.AgentStatus) (e *Event) {
 	e = &Event{
+		Protocol:     toFileProtocolType[status.Notification.ProtocolType],
 		ProtocolType: status.Notification.ProtocolType,
 	}
 	return e
@@ -1024,6 +1047,19 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageAnswer:       QAProtocol,
 	MessageHook:         HookProtocol,
 	MessageBackend:      BackendProtocol,
+}
+
+var toFileProtocolType = map[agency.Protocol_Type]string{
+	agency.Protocol_NONE:             MessageNone,
+	agency.Protocol_DIDEXCHANGE:      MessageConnection,
+	agency.Protocol_ISSUE_CREDENTIAL: MessageIssueCred,
+	agency.Protocol_PRESENT_PROOF:    MessagePresentProof,
+	agency.Protocol_TRUST_PING:       MessageTrustPing,
+	agency.Protocol_BASIC_MESSAGE:    MessageBasicMessage,
+	EmailProtocol:                    MessageEmail,
+	QAProtocol:                       MessageAnswer,
+	HookProtocol:                     MessageHook,
+	BackendProtocol:                  MessageBackend,
 }
 
 func NotificationTypeID(typeName string) NotificationType {
