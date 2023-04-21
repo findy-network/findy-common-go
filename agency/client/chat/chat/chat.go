@@ -336,6 +336,7 @@ func (c *Conversation) reply(status *agency.AgentStatus, ack bool) {
 }
 
 func (c *Conversation) sendBasicMessage(message *fsm.BasicMessage, wantStatus bool) {
+	glog.V(10).Infoln("start sendBasicMessage")
 	r := try.To1(async.NewPairwise(
 		c.Conn,
 		c.id,
@@ -418,6 +419,9 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 		case agency.Protocol_DIDEXCHANGE:
 			glog.Warningf("we should not be here!!")
 		case agency.Protocol_BASIC_MESSAGE:
+			assert.Equal(output.ProtocolType, agency.Protocol_BASIC_MESSAGE)
+			assert.NotNil(output.EventData)
+			assert.NotNil(output.EventData.BasicMessage)
 			c.sendBasicMessage(output.BasicMessage, output.WantStatus)
 		case agency.Protocol_ISSUE_CREDENTIAL:
 			c.sendIssuing(output.Issuing, output.WantStatus)
