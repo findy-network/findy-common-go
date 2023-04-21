@@ -181,7 +181,9 @@ func (b *Backend) Run(data fsm.MachineData) {
 	try.To(b.machine.Initialize())
 	b.machine.InitLua()
 
+	glog.V(1).Infoln("starting and send first step:", data.FType)
 	b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
+	glog.V(1).Infoln("going to for loop:", data.FType)
 
 	for { //nolint:gosimple
 		select { // we will need other channels.
@@ -198,7 +200,7 @@ func (b *Backend) Run(data fsm.MachineData) {
 }
 
 func (b *Backend) backendReceived(data *fsm.BackendData) {
-	glog.V(4).Infoln("backend data arrived:", data)
+	glog.V(1).Infoln("+++ backend data arrived:", data)
 	if transition := b.machine.TriggersByBackendData(data); transition != nil {
 		b.send(transition.BuildSendEventsFromBackendData(data))
 		b.machine.Step(transition)
@@ -244,7 +246,7 @@ func (c *Conversation) Run(data fsm.MachineData) {
 }
 
 func (c *Conversation) backendReceived(data *fsm.BackendData) {
-	glog.V(4).Infoln("backend data arrived:", data)
+	glog.V(3).Infoln("conversation: backend w/ content:", data.Content)
 	if transition := c.machine.TriggersByBackendData(data); transition != nil {
 		c.send(transition.BuildSendEventsFromBackendData(data), nil)
 		c.machine.Step(transition)
@@ -385,6 +387,16 @@ func callHook(hookData map[string]string) {
 	}
 }
 
+func (c *Conversation) sendBackend(data *fsm.BackendData, wantStatus bool) {
+	glog.V(0).Infoln("sending backend, wantStatus:", wantStatus)
+	if BackendMachine != nil {
+		glog.V(0).Infoln("sending backend to", data.ToConnID, data.Content)
+		BackendMachine.BackendChan <- data
+	} else {
+		glog.V(0).Infoln("!!! cannot send message to Service FSM")
+	}
+}
+
 func (c *Conversation) sendEmail(message *fsm.Email, _ bool) {
 	// TODO: implement send email here
 	glog.V(0).Infoln("sending email to", message.To, message.Body)
@@ -411,6 +423,8 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 			c.sendIssuing(output.Issuing, output.WantStatus)
 		case agency.Protocol_PRESENT_PROOF:
 			c.sendReqProof(output.Proof, output.WantStatus)
+		case fsm.BackendProtocol:
+			c.sendBackend(output.Backend, output.WantStatus)
 		case fsm.EmailProtocol:
 			c.sendEmail(output.Email, output.WantStatus)
 		case fsm.QAProtocol:
