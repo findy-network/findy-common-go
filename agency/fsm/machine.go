@@ -97,7 +97,7 @@ func (m *Machine) registerMemFuncs() {
 
 // Initialize initializes and optimizes the state machine because the JSON is
 // meant for humans to write and machines to read. Initialize also moves machine
-// to the initial state. It returns error if machine has them. TODO: refactor
+// to the initial state. It returns error if machine has them.
 func (m *Machine) Initialize() (err error) {
 	if m.Type == MachineTypeNone {
 		m.Type = MachineTypeConversation
@@ -105,27 +105,27 @@ func (m *Machine) Initialize() (err error) {
 	m.Memory = make(map[string]string)
 	initSet := false
 	for id := range m.States {
-		for j := range m.States[id].Transitions {
-			m.States[id].Transitions[j].Machine = m
-			m.States[id].Transitions[j].Trigger.Transition = m.States[id].Transitions[j]
-			m.States[id].Transitions[j].Trigger.ProtocolType =
-				ProtocolType[m.States[id].Transitions[j].Trigger.Protocol]
-			m.States[id].Transitions[j].Trigger.NotificationType =
-				NotificationTypeID(m.States[id].Transitions[j].Trigger.TypeID)
-			trEvent := m.States[id].Transitions[j].Trigger
+		for _, transition := range m.States[id].Transitions {
+			transition.Machine = m
+			transition.Trigger.Transition = transition
+			transition.Trigger.ProtocolType =
+				ProtocolType[transition.Trigger.Protocol]
+			transition.Trigger.NotificationType =
+				NotificationTypeID(transition.Trigger.TypeID)
+			trEvent := transition.Trigger
 			trEvent.filterEnvs()
-			for k := range m.States[id].Transitions[j].Sends {
-				m.States[id].Transitions[j].Sends[k].Transition = m.States[id].Transitions[j]
-				m.States[id].Transitions[j].Sends[k].ProtocolType =
-					ProtocolType[m.States[id].Transitions[j].Sends[k].Protocol]
-				m.States[id].Transitions[j].Sends[k].NotificationType =
-					NotificationTypeID(m.States[id].Transitions[j].Sends[k].TypeID)
-				if m.States[id].Transitions[j].Sends[k].Protocol == MessageIssueCred &&
-					m.States[id].Transitions[j].Sends[k].EventData.Issuing == nil {
+			for _, send := range transition.Sends {
+				send.Transition = transition
+				send.ProtocolType =
+					ProtocolType[send.Protocol]
+				send.NotificationType =
+					NotificationTypeID(send.TypeID)
+				if send.Protocol == MessageIssueCred &&
+					send.EventData.Issuing == nil {
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
-						m.States[id].Transitions[j].Sends[k].Data)
+						send.Data)
 				}
-				sEvent := m.States[id].Transitions[j].Sends[k]
+				sEvent := send
 				sEvent.filterEnvs()
 
 				setSendDefs(sEvent)
@@ -143,11 +143,10 @@ func (m *Machine) Initialize() (err error) {
 		}
 	}
 	m.Initial.Machine = m
-	for i := range m.Initial.Sends {
-		m.Initial.Sends[i].Transition = m.Initial
-		m.Initial.Sends[i].ProtocolType =
-			ProtocolType[m.Initial.Sends[i].Protocol]
-		setSendDefs(m.Initial.Sends[i])
+	for _, initSend := range m.Initial.Sends {
+		initSend.Transition = m.Initial
+		initSend.ProtocolType = ProtocolType[initSend.Protocol]
+		setSendDefs(initSend)
 	}
 
 	m.Initialized = true
