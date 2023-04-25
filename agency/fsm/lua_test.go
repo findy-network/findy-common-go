@@ -106,12 +106,12 @@ setRegValue("MEM", "OUTPUT", retval)
 						Trigger: &Event{
 							Protocol: "basic_message",
 							Rule:     "LUA",
-							Data:     luaScript1,
+							Data:     `@{script1.lua}`,
 						},
 						Sends: []*Event{{
 							Protocol: "basic_message",
 							Rule:     "LUA",
-							Data:     luaScript2,
+							Data:     `@{script2.lua}`,
 						}},
 						Target: "TERMINATE",
 					},

@@ -10,6 +10,8 @@ import (
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/golang/glog"
+	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 // TODO: use similar enum as we have MachineType
@@ -201,11 +203,26 @@ const (
 	REG_PROCESS = "PROC"
 )
 
+func filterFilelink(in string) (o string) {
+	return filterLink(in, "@", func(k string) string {
+		defer err2.Catch()
+		d := try.To1(os.ReadFile(k))
+		s := string(d)
+		return s
+	})
+}
+
 func filterEnvs(in string) (o string) {
+	return filterLink(in, "$", func(k string) string {
+		return os.Getenv(k)
+	})
+}
+
+func filterLink(in, keyword string, getter func(k string) string) (o string) {
 	defer func() {
 		glog.V(5).Infoln(in, "->", o)
 	}()
-	s := strings.Split(in, "${")
+	s := strings.Split(in, keyword+"{")
 	for i, sub := range s {
 		if strings.HasPrefix(in, sub) {
 			o += sub
@@ -213,7 +230,7 @@ func filterEnvs(in string) (o string) {
 			s2 := strings.Split(sub, "}")
 			e := ""
 			if len(s2) > 1 {
-				e = os.Getenv(s2[0])
+				e = getter(s2[0])
 			}
 			if e == "" {
 				return in

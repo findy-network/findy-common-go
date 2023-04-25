@@ -125,7 +125,7 @@ func (e Event) ExecLua(content string, a ...string) (out string, ok bool) {
 		okStr = a[0]
 	}
 	e.Machine.Memory[LUA_INPUT] = content
-	luaScript := e.Data
+	luaScript := filterFilelink(e.Data)
 	try.To(lua.DoString(e.Machine.luaState, luaScript))
 	out, ok = e.Machine.Memory[LUA_OUTPUT]
 	if !ok {
