@@ -15,7 +15,6 @@ var (
 			Sends: []*Event{{
 				Protocol: "basic_message",
 				Data:     "Hello!",
-				NoStatus: true,
 			}},
 			Target: "IDLE",
 		},
@@ -44,7 +43,6 @@ var (
 			Sends: []*Event{{
 				Protocol: "basic_message",
 				Data:     "Hello!",
-				NoStatus: true,
 			}},
 			Target: "IDLE",
 		},
@@ -185,12 +183,16 @@ func TestMachine_TriggersTerminate(t *testing.T) {
 		protocolStatus(agency.Protocol_BASIC_MESSAGE)))
 }
 
-func protocolStatus(typeID agency.Protocol_Type) *agency.ProtocolStatus {
+func protocolStatus(typeID agency.Protocol_Type, a ...string) *agency.ProtocolStatus {
+	content := "test string"
+	if len(a) > 0 {
+		content = a[0] // TODO: only first is supported now
+	}
 	agencyProof := &agency.ProtocolStatus{
 		State: &agency.ProtocolState{ProtocolID: &agency.ProtocolID{TypeID: typeID}},
 		Status: &agency.ProtocolStatus_BasicMessage{
 			BasicMessage: &agency.ProtocolStatus_BasicMessageStatus{
-				Content: "test string",
+				Content: content,
 			},
 		},
 	}

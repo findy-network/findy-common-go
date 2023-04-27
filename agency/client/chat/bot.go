@@ -22,6 +22,12 @@ import (
 type Bot struct {
 	client.Conn
 	fsm.MachineData
+
+	// ServiceFSM is the optional backend FSM that has only 0 or 1 instance
+	// running of it. It communicates currently only with the conversation FSM.
+	// They send messages to it and it send messages back to them. It has its
+	// own memory to store data.
+	ServiceFSM *fsm.MachineData
 }
 
 func LoadFSMMachineData(fName string, r io.Reader) (m fsm.MachineData, err error) {
@@ -65,6 +71,7 @@ func marshalFSM(fName string, fsm *fsm.Machine) []byte {
 	return data
 }
 
+// Run starts to run a chatbot and its FSM instances.
 func (b Bot) Run(intCh chan os.Signal) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel() // for server side stops, for proper cleanup
@@ -73,8 +80,13 @@ func (b Bot) Run(intCh chan os.Signal) {
 	ch := try.To1(b.Conn.ListenStatus(ctx, client))
 	questionCh := try.To1(b.Conn.Wait(ctx, client))
 
-	chat.Machine = b.MachineData
+	chat.MachineConversation = b.MachineData
 
+	if b.ServiceFSM != nil {
+		glog.V(1).Infoln("serviceFSM is set and be started...")
+		chat.MachineBackend = b.ServiceFSM
+		go chat.RunBackendService()
+	}
 	go chat.Multiplexer(b.Conn, intCh)
 
 loop:

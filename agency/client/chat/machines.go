@@ -4,11 +4,11 @@ import "github.com/findy-network/findy-common-go/agency/fsm"
 
 var EmailIssuerMachine = fsm.Machine{
 	Name: "email issuer machine",
+	Type: fsm.MachineTypeConversation,
 	Initial: &fsm.Transition{
 		Sends: []*fsm.Event{{
 			Protocol: "basic_message",
 			Data:     "Hello!",
-			NoStatus: true,
 		}},
 		Target: "IDLE",
 	},
@@ -23,7 +23,6 @@ var EmailIssuerMachine = fsm.Machine{
 					Data: `
 Hello! I'm a email issuer.
 Please enter your email address.`,
-					NoStatus: true,
 				}},
 				Target: "WAITING_EMAIL_ADDRESS",
 			}},
@@ -42,7 +41,6 @@ Please enter your email address.`,
 						Data: `Thank you! I sent your pin code to {{.EMAIL}}.
 Please enter it here and I'll send your email credential.
 Say "reset" if you want to start over.`,
-						NoStatus: true,
 					},
 					{
 						Protocol: "email",
@@ -51,7 +49,6 @@ Say "reset" if you want to start over.`,
 "subject":"Your PIN for email issuer chat bot",
 "to":"{{.EMAIL}}",
 "body":"Thank you! This is your pin code:\n{{.PIN}}\nPlease enter it back to me, the chat bot, and I'll give your credential."}`,
-						NoStatus: true,
 					},
 				},
 				Target: "WAITING_EMAIL_PIN",
@@ -69,7 +66,6 @@ Say "reset" if you want to start over.`,
 						{
 							Protocol: "basic_message",
 							Data:     "Please enter your email address.",
-							NoStatus: true,
 						},
 					},
 					Target: "WAITING_EMAIL_ADDRESS",
@@ -86,7 +82,6 @@ Say "reset" if you want to start over.`,
 							Rule:     "FORMAT_MEM",
 							Data: `Incorrect PIN code. Please check your emails for:
 {{.EMAIL}}`,
-							NoStatus: true,
 						},
 					},
 					Target: "WAITING_EMAIL_PIN",
@@ -100,7 +95,6 @@ Say "reset" if you want to start over.`,
 					Sends: []*fsm.Event{
 						{
 							Protocol: "basic_message",
-							NoStatus: true,
 							Rule:     "FORMAT_MEM",
 							Data: `Thank you! Issuing an email credential for address:
 {{.EMAIL}}
@@ -131,7 +125,6 @@ Please follow your wallet app's instructions`,
 				Sends: []*fsm.Event{
 					{
 						Protocol: "basic_message",
-						NoStatus: true,
 						Rule:     "FORMAT_MEM",
 						Data: `Thank you {{.EMAIL}}!
 We are ready now. Bye bye!`,
@@ -144,12 +137,12 @@ We are ready now. Bye bye!`,
 }
 
 var ReqProofMachine = fsm.Machine{
+	Type: fsm.MachineTypeConversation,
 	Name: "machine",
 	Initial: &fsm.Transition{
 		Sends: []*fsm.Event{{
 			Protocol: "basic_message",
 			Data:     "Hello!",
-			NoStatus: true,
 		}},
 		Target: "INITIAL",
 	},
@@ -164,7 +157,6 @@ var ReqProofMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Data:     "Hello! I'm echo bot.\nFirst I need your verified email.\nI'm now sending you a proof request.\nPlease accept it and we can continue.",
-							NoStatus: true,
 						},
 					},
 					Target: "INITIAL",
@@ -195,7 +187,6 @@ var ReqProofMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Data:     "Going to beginning...",
-							NoStatus: true,
 						},
 					},
 					Target: "INITIAL",
@@ -244,7 +235,6 @@ var ReqProofMachine = fsm.Machine{
 							Protocol: "basic_message",
 							Rule:     "FORMAT_MEM",
 							Data:     "Hello {{.email}}! I'm stupid bot who knows you have verified email address!!!\nI can trust you.",
-							NoStatus: true,
 						},
 					},
 					Target: "WAITING_NEXT_CMD",
@@ -263,7 +253,6 @@ var ReqProofMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Data:     "Going to beginning.",
-							NoStatus: true,
 						},
 					},
 					Target: "INITIAL",
@@ -279,7 +268,6 @@ var ReqProofMachine = fsm.Machine{
 							Protocol: "basic_message",
 							Rule:     "FORMAT_MEM",
 							Data:     "{{.email}} says: {{.LINE}}",
-							NoStatus: true,
 						},
 					},
 					Target: "WAITING_NEXT_CMD",
@@ -291,11 +279,11 @@ var ReqProofMachine = fsm.Machine{
 
 var EchoMachine = fsm.Machine{
 	Name: "echo machine",
+	Type: fsm.MachineTypeConversation,
 	Initial: &fsm.Transition{
 		Sends: []*fsm.Event{{
 			Protocol: "basic_message",
 			Data:     "Hello!",
-			NoStatus: true,
 		}},
 		Target: "INITIAL",
 	},
@@ -310,7 +298,6 @@ var EchoMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
-							NoStatus: true,
 						},
 					},
 					Target: "INITIAL",
@@ -325,7 +312,6 @@ var EchoMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Data:     "Let's go!",
-							NoStatus: true,
 						},
 					},
 					Target: "IDLE",
@@ -338,7 +324,6 @@ var EchoMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Data:     "Hello! I'm echo bot.\nSay: run, and I'start.\nSay: reset, and I'll go beginning.",
-							NoStatus: true,
 						},
 					},
 					Target: "INITIAL",
@@ -357,7 +342,6 @@ var EchoMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Data:     "Going to beginning.",
-							NoStatus: true,
 						},
 					},
 					Target: "INITIAL",
@@ -371,7 +355,6 @@ var EchoMachine = fsm.Machine{
 						{
 							Protocol: "basic_message",
 							Rule:     "INPUT",
-							NoStatus: true,
 						},
 					},
 					Target: "IDLE",
