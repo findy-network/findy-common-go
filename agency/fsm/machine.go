@@ -9,11 +9,11 @@ import (
 
 	"github.com/Shopify/go-lua"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
-	"github.com/ghodss/yaml"
 )
 
 type MachineData struct {
