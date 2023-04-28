@@ -13,7 +13,7 @@ import (
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 )
 
 type MachineData struct {
@@ -120,8 +120,10 @@ func (m *Machine) Initialize() (err error) {
 					ProtocolType[send.Protocol]
 				send.NotificationType =
 					NotificationTypeID(send.TypeID)
-				if send.Protocol == MessageIssueCred &&
-					send.EventData.Issuing == nil {
+				if send.Protocol == MessageIssueCred && (send.EventData == nil ||
+					send.EventData.Issuing == nil) {
+					glog.Errorln("missing EventData of issue_cred msg. Target:",
+						send.Target)
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
 						send.Data)
 				}
