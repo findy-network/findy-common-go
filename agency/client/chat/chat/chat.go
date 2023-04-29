@@ -75,9 +75,8 @@ var (
 
 	// conversations is a map of all instances indexed by connection id aka
 	// pairwise id.
-	// TODO: check thread safety with Backend.
-	// TODO: and solution thread-safety, merge Multiplexer to Backend
-	// gorountine
+	// thread-safe because the multiplexer gorountine is the only one who
+	// processes the map.
 	conversations = make(map[string]*Conversation)
 
 	// backendMachine is the only instance needed, if needed, i.e. 0..1
@@ -94,19 +93,20 @@ var (
 	Hook HookFn
 )
 
-func RunBackendService(MachineBackend *fsm.MachineData) {
+func newBackendService() *Backend {
 	backendMachine = &Backend{
 		TerminateChan: make(chan bool),
 		BackendChan:   make(fsm.BackendChan, 1),
 		ConnID:        uuid.NewString(),
 	}
-	backendMachine.Run(*MachineBackend)
+	return backendMachine
 }
 
 type MultiplexerInfo struct {
 	Conn                client.Conn
 	InterruptCh         chan<- os.Signal
 	ConversationMachine fsm.MachineData
+	BackendMachine      *fsm.MachineData
 }
 
 // Multiplexer is a goroutine function to started multiplex all the
@@ -114,12 +114,30 @@ type MultiplexerInfo struct {
 // and a signaling channel as an arguments. The second argument, the interrupt
 // channel, is needed to tell when the multiplexer has reached to the end.
 // NOTE. Most of the state machines never do that.
-// NOTE. thread-safety idea: merge this function with Backend.Run.
 func Multiplexer(info MultiplexerInfo) {
 	glog.V(3).Infoln("starting multiplexer", info.ConversationMachine.FType)
 	termChan := make(fsm.TerminateChan, 1)
+
+	var backendChan fsm.BackendInChan
+	if info.BackendMachine.IsValid() {
+		b := newBackendService()
+		backendChan = b.BackendChan
+		b.machine = fsm.NewMachine(*info.BackendMachine)
+		try.To(b.machine.Initialize())
+		b.machine.InitLua()
+
+		glog.V(1).Infoln("starting and send first step:", info.BackendMachine.FType)
+		b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
+		glog.V(1).Infoln("going to for loop:", info.BackendMachine.FType)
+	}
+
 	for {
 		select {
+		// we serve backendMachine here if we have a REAL channel, see above
+		// NOTE. It's OK to listen nil channel (especially) in select.
+		case bd := <-backendChan:
+			backendMachine.backendReceived(bd)
+
 		case d := <-ConversationBackendChan:
 			c, ok := conversations[d.ToConnID]
 			assert.That(ok, "backend msgs to existing conversations only")
@@ -142,11 +160,10 @@ func Multiplexer(info MultiplexerInfo) {
 			// One machine has reached its terminate state. Let's signal
 			// outside that the whole system is ready to stop.
 			//
-			// We have two (2) different mahines:
+			// We have two (2) different types of mahines:
 			// 1. Multiplexer (class lvl) machine that includes rules what to
-			// do at process lvl.
-			// 2. The pairwise lvl, aka conversation FSMs what we have had
-			// for now.
+			// do at service/process lvl.
+			// 2. The pairwise lvl, aka conversation FSMs
 			//
 			// In future we could offer an API to what to send to
 			// the intCh. SIGTERM is very good compromise in K8s, etc.
@@ -177,29 +194,6 @@ func newConversation(
 	conversations[connID] = c
 	go c.Run(info.ConversationMachine)
 	return c
-}
-
-func (b *Backend) Run(data fsm.MachineData) {
-	b.machine = fsm.NewMachine(data)
-	try.To(b.machine.Initialize())
-	b.machine.InitLua()
-
-	glog.V(1).Infoln("starting and send first step:", data.FType)
-	b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
-	glog.V(1).Infoln("going to for loop:", data.FType)
-
-	for { //nolint:gosimple
-		select { // we will need other channels in future
-		case bd := <-b.BackendChan:
-			b.backendReceived(bd)
-			//		case t := <-b.StatusChan:
-			//			b.statusReceived(t)
-			//		case q := <-b.QuestionChan:
-			//			b.questionReceived(q)
-			//		case hookData := <-b.HookChan:
-			//			b.hookReceived(hookData)
-		}
-	}
 }
 
 func (b *Backend) backendReceived(data *fsm.BackendData) {
