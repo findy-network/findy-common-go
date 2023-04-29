@@ -99,6 +99,8 @@ func (m *Machine) registerMemFuncs() {
 // meant for humans to write and machines to read. Initialize also moves machine
 // to the initial state. It returns error if machine has them.
 func (m *Machine) Initialize() (err error) {
+	defer err2.Handle(&err)
+
 	if m.Type == MachineTypeNone {
 		m.Type = MachineTypeConversation
 	}
@@ -271,7 +273,6 @@ func padStr(s string) string {
 	return fmt.Sprintf("%*s", stateWidthInChar, s)
 }
 
-//goland:noinspection ALL
 func (m *Machine) String() string {
 	w := new(bytes.Buffer)
 	fsmName := m.Name
