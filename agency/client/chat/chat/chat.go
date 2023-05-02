@@ -10,7 +10,6 @@ import (
 	"github.com/findy-network/findy-common-go/agency/fsm"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/golang/glog"
-	"github.com/google/uuid"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 )
@@ -29,19 +28,11 @@ type HookChan chan map[string]string
 // because service is too generic and we want to underline that Conversations
 // are in the front and backend has our back!
 type Backend struct {
-	// StatusChan
-	// QuestionChan
-	// HookChan
 	fsm.TerminateChan // FSM tells us if machine has reached the end.
 	fsm.BackendChan
 
-	//	id string
-	//	client.Conn
-	//	lastProtocolID map[string]struct{} //*agency.ProtocolID
-
 	// machine can be ptr because multiplexer creates a new for each one
 	machine *fsm.Machine
-	ConnID  string // pseudo ConnectionID, there is no actual connection, now
 }
 
 type Conversation struct {
@@ -71,21 +62,17 @@ var (
 
 	// Question is input channel for multiplexing this chat bot i.e. CA sends
 	// every question to this channel.
-	// conversations
 	Question = make(QuestionChan)
 
 	// conversations is a map of all instances indexed by connection id aka
-	// pairwise id. TODO: check thread safety with Backend
+	// pairwise id.
+	// thread-safe because the multiplexer gorountine is the only one who
+	// processes the map.
 	conversations = make(map[string]*Conversation)
 
-	// MachineConversation is the initial finite-state machine from where every
-	// conversations will be loaded and started.
-	MachineConversation fsm.MachineData
-
-	// MachineBackend is the state-machine for the process level i.e. service
-	// level. Not all of the chatbots have that.
-	MachineBackend *fsm.MachineData
-	BackendMachine *Backend
+	// backendMachine is the only instance needed, if needed, i.e. 0..1
+	// created by function RunBackendService.
+	backendMachine *Backend
 
 	// SharedMem is memory register to be shared between all conversations.
 	// It can be used e.g. gather information.. not sure if this is needed.
@@ -97,25 +84,50 @@ var (
 	Hook HookFn
 )
 
-func RunBackendService() {
-	BackendMachine = &Backend{
+func newBackendService() *Backend {
+	backendMachine = &Backend{
 		TerminateChan: make(chan bool),
 		BackendChan:   make(fsm.BackendChan, 1),
-		ConnID:        uuid.NewString(),
 	}
-	BackendMachine.Run(*MachineBackend)
+	return backendMachine
+}
+
+type MultiplexerInfo struct {
+	Conn                client.Conn
+	InterruptCh         chan<- os.Signal
+	ConversationMachine fsm.MachineData
+	BackendMachine      *fsm.MachineData
 }
 
 // Multiplexer is a goroutine function to started multiplex all the
 // conversations an agent is currently having. It takes a gRPC connection handle
 // and a signaling channel as an arguments. The second argument, the interrupt
-// channel, is needed to tell when the multiplexer has reached to the end. Note.
-// Most of the state machines never do that.
-func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
-	glog.V(3).Infoln("starting multiplexer", MachineConversation.FType)
+// channel, is needed to tell when the multiplexer has reached to the end.
+// NOTE. Most of the state machines never do that.
+func Multiplexer(info MultiplexerInfo) {
+	glog.V(3).Infoln("starting multiplexer", info.ConversationMachine.FType)
 	termChan := make(fsm.TerminateChan, 1)
+
+	var backendChan fsm.BackendInChan
+	if info.BackendMachine.IsValid() {
+		b := newBackendService()
+		backendChan = b.BackendChan
+		b.machine = fsm.NewMachine(*info.BackendMachine)
+		try.To(b.machine.Initialize())
+		b.machine.InitLua()
+
+		glog.V(1).Infoln("starting and send first step:", info.BackendMachine.FType)
+		b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
+		glog.V(1).Infoln("going to for loop:", info.BackendMachine.FType)
+	}
+
 	for {
 		select {
+		// we serve backendMachine here if we have a REAL channel, see above
+		// NOTE. It's OK to listen nil channel (especially) in select.
+		case bd := <-backendChan:
+			backendMachine.backendReceived(bd)
+
 		case d := <-ConversationBackendChan:
 			c, ok := conversations[d.ToConnID]
 			assert.That(ok, "backend msgs to existing conversations only")
@@ -124,31 +136,29 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 			connID := t.Notification.ConnectionID
 			c, ok := conversations[connID]
 			if !ok {
-				c = newConversation(conn, connID, termChan)
+				c = newConversation(info, connID, termChan)
 			}
 			c.StatusChan <- t
 		case question := <-Question:
 			connID := question.Status.Notification.ConnectionID
 			c, ok := conversations[connID]
 			if !ok {
-				c = newConversation(conn, connID, termChan)
+				c = newConversation(info, connID, termChan)
 			}
 			c.QuestionChan <- question
 		case <-termChan:
 			// One machine has reached its terminate state. Let's signal
 			// outside that the whole system is ready to stop.
 			//
-			// TODO: in the future we should change this. It seems that we
-			// should have two (2) different mahines:
+			// We have two (2) different types of mahines:
 			// 1. Multiplexer (class lvl) machine that includes rules what to
-			// do at process lvl.
-			// 2. The pairwise lvl, aka conversation FSMs what we have had
-			// for now.
+			// do at service/process lvl.
+			// 2. The pairwise lvl, aka conversation FSMs
 			//
 			// In future we could offer an API to what to send to
 			// the intCh. SIGTERM is very good compromise in K8s, etc.
 			glog.V(1).Infoln("<- FSM Terminate signal received")
-			intCh <- syscall.SIGTERM
+			info.InterruptCh <- syscall.SIGTERM
 			glog.V(1).Infoln("-> signaled SIGTERM")
 		}
 		// TODO HookChan handler isn't implemented yet!
@@ -156,47 +166,24 @@ func Multiplexer(conn client.Conn, intCh chan<- os.Signal) {
 }
 
 func newConversation(
-	conn client.Conn,
+	info MultiplexerInfo,
 	connID string,
 	termChan fsm.TerminateChan,
 ) *Conversation {
 	glog.V(5).Infoln("Starting new conversation",
-		MachineConversation.FType)
+		info.ConversationMachine.FType)
 	c := &Conversation{
 		id:            connID,
-		Conn:          conn,
+		Conn:          info.Conn,
 		StatusChan:    make(StatusChan),
 		QuestionChan:  make(QuestionChan),
 		HookChan:      make(HookChan),
 		BackendChan:   make(fsm.BackendChan, 1),
 		TerminateChan: termChan,
 	}
-	go c.Run(MachineConversation)
 	conversations[connID] = c
+	go c.Run(info.ConversationMachine)
 	return c
-}
-
-func (b *Backend) Run(data fsm.MachineData) {
-	b.machine = fsm.NewMachine(data)
-	try.To(b.machine.Initialize())
-	b.machine.InitLua()
-
-	glog.V(1).Infoln("starting and send first step:", data.FType)
-	b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
-	glog.V(1).Infoln("going to for loop:", data.FType)
-
-	for { //nolint:gosimple
-		select { // we will need other channels.
-		case bd := <-b.BackendChan:
-			b.backendReceived(bd)
-			//		case t := <-b.StatusChan:
-			//			b.statusReceived(t)
-			//		case q := <-b.QuestionChan:
-			//			b.questionReceived(q)
-			//		case hookData := <-b.HookChan:
-			//			b.hookReceived(hookData)
-		}
-	}
 }
 
 func (b *Backend) backendReceived(data *fsm.BackendData) {
@@ -390,9 +377,9 @@ func callHook(hookData map[string]string) {
 
 func (c *Conversation) sendBackend(data *fsm.BackendData, wantStatus bool) {
 	glog.V(0).Infoln("sending backend, wantStatus:", wantStatus)
-	if BackendMachine != nil {
+	if backendMachine != nil {
 		glog.V(0).Infoln("sending backend to", data.ToConnID, data.Content)
-		BackendMachine.BackendChan <- data
+		backendMachine.BackendChan <- data
 	} else {
 		glog.V(0).Infoln("!!! cannot send message to Service FSM")
 	}

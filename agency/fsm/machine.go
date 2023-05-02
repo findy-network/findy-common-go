@@ -9,16 +9,20 @@ import (
 
 	"github.com/Shopify/go-lua"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
+	"github.com/ghodss/yaml"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
-	"gopkg.in/yaml.v2"
 )
 
 type MachineData struct {
 	FType string
 	Data  []byte
+}
+
+func (md MachineData) IsValid() bool {
+	return md.FType != "" && md.Data != nil
 }
 
 func NewMachine(data MachineData) *Machine {
@@ -99,6 +103,8 @@ func (m *Machine) registerMemFuncs() {
 // meant for humans to write and machines to read. Initialize also moves machine
 // to the initial state. It returns error if machine has them.
 func (m *Machine) Initialize() (err error) {
+	defer err2.Handle(&err)
+
 	if m.Type == MachineTypeNone {
 		m.Type = MachineTypeConversation
 	}
@@ -120,8 +126,10 @@ func (m *Machine) Initialize() (err error) {
 					ProtocolType[send.Protocol]
 				send.NotificationType =
 					NotificationTypeID(send.TypeID)
-				if send.Protocol == MessageIssueCred &&
-					send.EventData.Issuing == nil {
+				if send.Protocol == MessageIssueCred && (send.EventData == nil ||
+					send.EventData.Issuing == nil) {
+					glog.Errorln("missing EventData of issue_cred msg. Target:",
+						send.Target)
 					return fmt.Errorf("bad format in (%s) missing Issuing data",
 						send.Data)
 				}
@@ -269,7 +277,6 @@ func padStr(s string) string {
 	return fmt.Sprintf("%*s", stateWidthInChar, s)
 }
 
-//goland:noinspection ALL
 func (m *Machine) String() string {
 	w := new(bytes.Buffer)
 	fsmName := m.Name

@@ -186,7 +186,8 @@ func TestMachine_TriggersTerminate(t *testing.T) {
 func protocolStatus(typeID agency.Protocol_Type, a ...string) *agency.ProtocolStatus {
 	content := "test string"
 	if len(a) > 0 {
-		content = a[0] // TODO: only first is supported now
+		assert.SLen(a, 1, "currently only one (1) is supported")
+		content = a[0]
 	}
 	agencyProof := &agency.ProtocolStatus{
 		State: &agency.ProtocolState{ProtocolID: &agency.ProtocolID{TypeID: typeID}},

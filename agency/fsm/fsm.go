@@ -14,7 +14,9 @@ import (
 	"github.com/lainio/err2/try"
 )
 
-// TODO: use similar enum as we have MachineType
+// We cannot (atleast yet) to use JSON enum type like MachineType, because we
+// have used different naming like snake_case, etc. maybe refactor later, or
+// migrate old FSM files?
 const (
 	// Executes Lua script that can access to machines memory and which must
 	// return true/false if trigger can be executed.

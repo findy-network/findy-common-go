@@ -80,14 +80,12 @@ func (b Bot) Run(intCh chan os.Signal) {
 	ch := try.To1(b.Conn.ListenStatus(ctx, client))
 	questionCh := try.To1(b.Conn.Wait(ctx, client))
 
-	chat.MachineConversation = b.MachineData
-
-	if b.ServiceFSM != nil {
-		glog.V(1).Infoln("serviceFSM is set and be started...")
-		chat.MachineBackend = b.ServiceFSM
-		go chat.RunBackendService()
-	}
-	go chat.Multiplexer(b.Conn, intCh)
+	go chat.Multiplexer(chat.MultiplexerInfo{
+		Conn:                b.Conn,
+		InterruptCh:         intCh,
+		ConversationMachine: b.MachineData,
+		BackendMachine:      b.ServiceFSM,
+	})
 
 loop:
 	for {
