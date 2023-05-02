@@ -10,7 +10,6 @@ import (
 	"github.com/findy-network/findy-common-go/agency/fsm"
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/golang/glog"
-	"github.com/google/uuid"
 	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 )
@@ -29,19 +28,11 @@ type HookChan chan map[string]string
 // because service is too generic and we want to underline that Conversations
 // are in the front and backend has our back!
 type Backend struct {
-	// StatusChan
-	// QuestionChan
-	// HookChan
 	fsm.TerminateChan // FSM tells us if machine has reached the end.
 	fsm.BackendChan
 
-	//	id string
-	//	client.Conn
-	//	lastProtocolID map[string]struct{} //*agency.ProtocolID
-
 	// machine can be ptr because multiplexer creates a new for each one
 	machine *fsm.Machine
-	ConnID  string // pseudo ConnectionID, there is no actual connection, now
 }
 
 type Conversation struct {
@@ -97,7 +88,6 @@ func newBackendService() *Backend {
 	backendMachine = &Backend{
 		TerminateChan: make(chan bool),
 		BackendChan:   make(fsm.BackendChan, 1),
-		ConnID:        uuid.NewString(),
 	}
 	return backendMachine
 }
