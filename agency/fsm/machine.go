@@ -21,8 +21,8 @@ type MachineData struct {
 	Data  []byte
 }
 
-func (md MachineData) IsValid() bool {
-	return md.FType != "" && md.Data != nil
+func (md *MachineData) IsValid() bool {
+	return md != nil && md.FType != "" && md.Data != nil
 }
 
 func NewMachine(data MachineData) *Machine {
