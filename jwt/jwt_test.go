@@ -50,3 +50,15 @@ func TestCalcExpiration(t *testing.T) {
 	yes = IsTimeLeft(jwt, 3*24*time.Hour+time.Second)
 	assert.ThatNot(yes)
 }
+
+func TestTimeLeft(t *testing.T) {
+	assert.PushTester(t)
+	defer assert.PopTester()
+	jwt := BuildJWT("user-name")
+	tl, err := TimeLeft(jwt)
+	assert.NoError(err)
+	assert.NotZero(tl)
+	// there cannot be so slow or fast machine that...
+	assert.That(tl < 3*24*time.Hour)
+	assert.That(tl > 3*24*time.Hour-time.Second)
+}

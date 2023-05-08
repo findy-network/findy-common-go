@@ -2,11 +2,14 @@ package jwt
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
 	"github.com/form3tech-oss/jwt-go"
 	"github.com/golang/glog"
+	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -181,6 +184,22 @@ func IsTimeLeft(tokenStr string, delta time.Duration) bool {
 	}
 	glog.Error("no claims in token")
 	return false
+
+}
+
+func TimeLeft(tokenStr string) (t time.Duration, err error) {
+	defer err2.Handle(&err)
+
+	p := new(jwt.Parser)
+	token, _ := try.To2(p.ParseUnverified(tokenStr, &customClaims{}))
+
+	if claims, ok := token.Claims.(*customClaims); ok {
+		stamp := time.Now()
+		expTime := time.Unix(claims.ExpiresAt, 0)
+		return expTime.Sub(stamp), nil
+	}
+	glog.Error("no claims in token")
+	return 0, errors.New("no claims in token")
 
 }
 
