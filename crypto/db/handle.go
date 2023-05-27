@@ -1,6 +1,9 @@
 package db
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type Handle interface {
 	AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error)
@@ -11,4 +14,10 @@ type Handle interface {
 	Backup() (did bool, err error)
 	Wipe() (err error)
 	Close() (err error)
+	SetStatusFn(f OnFn)
 }
+
+// OnFn is call back to status of the database: on or off.
+type OnFn func() bool
+
+var ErrDisabledDB = errors.New("database is turned off")

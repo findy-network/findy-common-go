@@ -3,6 +3,9 @@ package db
 import (
 	"sync"
 	"time"
+
+	"github.com/lainio/err2"
+	"github.com/lainio/err2/try"
 )
 
 type bucket struct {
@@ -13,12 +16,14 @@ type bucket struct {
 
 type memDB struct {
 	buckets map[string]*bucket
+
+	on OnFn
 }
 
 // NewMemDB creates new memory database. The memory DB has same interface (Handle)
 // as the normal Bolt DB, but instead of writing data to file it leaves into the
 // memory. The DB is meant for the tests and performance measurements.
-func NewMemDB(bucketNames [][]byte) *memDB {
+func NewMemDB(bucketNames [][]byte) Handle {
 	buckets := make(map[string]*bucket, len(bucketNames))
 
 	for _, id := range bucketNames {
@@ -31,6 +36,9 @@ func NewMemDB(bucketNames [][]byte) *memDB {
 }
 
 func (db *memDB) AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err error) {
+	defer err2.Handle(&err)
+	try.To(db.checkIsOn())
+
 	b := db.buckets[string(bucket)]
 	b.Lock()
 	defer b.Unlock()
@@ -41,6 +49,9 @@ func (db *memDB) AddKeyValueToBucket(bucket []byte, keyValue, index *Data) (err 
 }
 
 func (db *memDB) RmKeyValueFromBucket(bucket []byte, index *Data) (err error) {
+	defer err2.Handle(&err)
+	try.To(db.checkIsOn())
+
 	b := db.buckets[string(bucket)]
 	b.Lock()
 	defer b.Unlock()
@@ -57,6 +68,9 @@ func (db *memDB) GetKeyValueFromBucket(
 	found bool,
 	err error,
 ) {
+	defer err2.Handle(&err)
+	try.To(db.checkIsOn())
+
 	b := db.buckets[string(bucket)]
 	b.Lock()
 	defer b.Unlock()
@@ -77,6 +91,9 @@ func (db *memDB) GetAllValuesFromBucket(
 	values [][]byte,
 	err error,
 ) {
+	defer err2.Handle(&err)
+	try.To(db.checkIsOn())
+
 	b := db.buckets[string(bucket)]
 	b.Lock()
 	defer b.Unlock()
@@ -97,13 +114,39 @@ func (db *memDB) BackupTicker(interval time.Duration) (done chan<- struct{}) {
 }
 
 func (db *memDB) Backup() (did bool, err error) {
+	defer err2.Handle(&err)
+	try.To(db.checkIsOn())
 	return false, nil
 }
 
 func (db *memDB) Wipe() (err error) {
+	defer err2.Handle(&err)
+	try.To(db.checkIsOn())
 	return nil
 }
 
 func (db *memDB) Close() (err error) {
+	defer err2.Handle(&err)
+	try.To(db.checkIsOn())
+	return nil
+}
+
+func (db *memDB) SetStatusFn(f OnFn) {
+	db.on = f
+}
+
+func (db *memDB) isOn() bool {
+	if db.on == nil {
+		return true
+	}
+	return db.on()
+}
+
+// checkIsOn checks if db is on. If not returns an error.
+// TODO: we could use x.Whom function here?
+func (db *memDB) checkIsOn() (err error) {
+	if !db.isOn() {
+		return ErrDisabledDB // TODO: use err2 value future
+	}
 	return nil
 }
