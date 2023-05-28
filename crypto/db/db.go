@@ -86,7 +86,7 @@ func New(cfg Cfg) Handle {
 	base := filepath.Base(cfg.Filename)
 	if strings.HasPrefix(base, MEM_PREFIX) {
 		glog.V(5).Infoln("MEMORY-DB open:", base)
-		return addInstance(NewMemDB(cfg.Buckets))
+		return addInstance(NewMemDB(cfg.Buckets, cfg.Filename))
 	}
 	glog.V(5).Infof("File system DB (%v)", base)
 	return addInstance(&Mgd{
@@ -98,8 +98,9 @@ func New(cfg Cfg) Handle {
 func GracefulStop() {
 	x.RxSlice(instances, func(s sHandles) {
 		for _, db := range s {
-			err := db.Close()
-			glog.Warning(err)
+			if err := db.Close(); err != nil {
+				glog.Warning(err)
+			}
 		}
 	})
 }
@@ -342,6 +343,9 @@ func (db *Mgd) BackupTicker(interval time.Duration) (done chan<- struct{}) {
 	ticker := time.NewTicker(interval)
 	doneCh := make(chan struct{})
 	go func() {
+		defer func() {
+			glog.V(1).Infoln("exiting backup tickers")
+		}()
 		defer err2.Catch(func(err error) {
 			glog.Error(err)
 		})
