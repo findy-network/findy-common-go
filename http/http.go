@@ -17,7 +17,11 @@ var (
 	server *nethttp.Server
 )
 
-func Run(s *nethttp.Server) <-chan os.Signal {
+// Run starts a http(s) server. It returns a channel which is configured to
+// listen system process termination signals: INTR, TERM. If server object is
+// given as a first argument, it is used. If also certFile and keyFile names are
+// given (in this order) the https server is started.
+func Run(s *nethttp.Server, a ...string) <-chan os.Signal {
 	server = s
 	if s == nil {
 		server = &nethttp.Server{
@@ -27,22 +31,33 @@ func Run(s *nethttp.Server) <-chan os.Signal {
 			IdleTimeout:       120 * time.Second,
 		}
 	}
+	startHTTPS := len(a) == 2
+	glog.V(3).Infof("startHTTPS: %v, length a: %v", startHTTPS, len(a))
 	go func() {
 		defer err2.Catch(func(err error) {
 			glog.Error(err)
 		})
 
-		if try.Is(server.ListenAndServe(), nethttp.ErrServerClosed) {
-			glog.Infoln("Stopped serving new connections.")
+		if startHTTPS {
+			glog.V(3).Infof("starting https server w/ cert: %s, key: %s",
+				a[0], a[1])
+			if try.Is(server.ListenAndServeTLS(a[0], a[1]), nethttp.ErrServerClosed) {
+				glog.Infoln("Stopped serving new connections.")
+			}
+		} else {
+			if try.Is(server.ListenAndServe(), nethttp.ErrServerClosed) {
+				glog.Infoln("Stopped serving new connections.")
+			}
 		}
 	}()
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	shutdownCh := make(chan os.Signal, 1)
+	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 
-	return sigChan
+	return shutdownCh
 }
 
+// GracefulStop stops the http(s) server gracefully.
 func GracefulStop() {
 	defer err2.Catch()
 
