@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/lainio/err2"
 	"github.com/lainio/err2/try"
 )
@@ -17,13 +18,14 @@ type bucket struct {
 type memDB struct {
 	buckets map[string]*bucket
 
+	name string // for logs mainly
 	on OnFn
 }
 
 // NewMemDB creates new memory database. The memory DB has same interface (Handle)
 // as the normal Bolt DB, but instead of writing data to file it leaves into the
 // memory. The DB is meant for the tests and performance measurements.
-func NewMemDB(bucketNames [][]byte) Handle {
+func NewMemDB(bucketNames [][]byte, a ...string) Handle {
 	buckets := make(map[string]*bucket, len(bucketNames))
 
 	for _, id := range bucketNames {
@@ -31,7 +33,11 @@ func NewMemDB(bucketNames [][]byte) Handle {
 		b := &bucket{id: name, data: make(map[string][]byte, 12)}
 		buckets[name] = b
 	}
-	return &memDB{buckets: buckets}
+	name := ""
+	if len(a) > 0 {
+		name = a[0]
+	}
+	return &memDB{buckets: buckets, name: name}
 
 }
 
@@ -126,8 +132,7 @@ func (db *memDB) Wipe() (err error) {
 }
 
 func (db *memDB) Close() (err error) {
-	defer err2.Handle(&err)
-	try.To(db.checkIsOn())
+	glog.V(1).Infoln("closing mem db:", db.name)
 	return nil
 }
 
