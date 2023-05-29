@@ -19,7 +19,7 @@ type memDB struct {
 	buckets map[string]*bucket
 
 	name string // for logs mainly
-	on OnFn
+	on   OnFn
 }
 
 // NewMemDB creates new memory database. The memory DB has same interface (Handle)
