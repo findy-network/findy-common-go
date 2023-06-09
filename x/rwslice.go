@@ -30,42 +30,40 @@ func NewRWSlice[S ~[]T, T any](size ...int) *RWSlice[S, T] {
 	}
 }
 
-// TxSlice executes a critical section during the function given as an argument.
-// This critical section allows the slice be updated. If you only need to read
-// the slice please use the Rx function that's for a read-only critical section.
-func TxSlice[S ~[]T, T any](s *RWSlice[S, T], f func(s S)) {
+// Tx executes a update transaction to the thread-safe slice.
+func (s *RWSlice[S, T]) Tx(f func(s S)) {
 	s.Lock()
 	defer s.Unlock()
 	f(s.s)
 }
 
-// AddSlice sets a key value pair to the slice.
-func AddSlice[S ~[]T, T any](s *RWSlice[S, T], val T) T {
+// Add adds a value to the thread-safe slice.
+func (s *RWSlice[S, T]) Add(val T) T {
 	s.Lock()
 	defer s.Unlock()
 	s.s = append(s.s, val)
 	return val
 }
 
-// SetSlice sets a key value pair to the slice.
-func SetSlice[S ~[]T, T any](s *RWSlice[S, T], key int, val T) T {
+// Set sets a value to the slice index in a thread-safe way.
+func (s *RWSlice[S, T]) Set(index int, val T) T {
 	s.Lock()
 	defer s.Unlock()
-	s.s[key] = val
+	s.s[index] = val
 	return val
 }
 
-// RxSlice executes thread-safe read transaction i.e. critical section for the
+// Rx executes thread-safe read transaction i.e. critical section for the
 // RWSlice.
-func RxSlice[S ~[]T, T any](s *RWSlice[S, T], f func(s S)) {
+func (s *RWSlice[S, T]) Rx(f func(s S)) {
 	s.RLock()
 	defer s.RUnlock()
 	f(s.s)
 }
 
-// GetSlice reads thread-safely value from index key.
-func GetSlice[S ~[]T, T any](s *RWSlice[S, T], key int) T {
+// Get reads thread-safely value from index index.
+func (s *RWSlice[S, T]) Get(index int) T {
 	s.RLock()
 	defer s.RUnlock()
-	return s.s[key]
+	return s.s[index]
 }
