@@ -96,7 +96,7 @@ func New(cfg Cfg) Handle {
 
 // GracefulStop closes all database instances immediately.
 func GracefulStop() {
-	x.RxSlice(instances, func(s sHandles) {
+	instances.Rx( func(s sHandles) {
 		for _, db := range s {
 			if err := db.Close(); err != nil {
 				glog.Warning(err)
@@ -113,7 +113,7 @@ func Init(cfg Cfg) (err error) {
 }
 
 func addInstance(h Handle) Handle {
-	return x.AddSlice(instances, h)
+	return instances.Add(h)
 }
 
 func (db *Mgd) open() (err error) {
