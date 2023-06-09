@@ -14,6 +14,8 @@ var (
 
 func TestSwap(t *testing.T) {
 	t.Parallel()
+	defer assert.PushTester(t)()
+	
 	{
 		var (
 			lhs, rhs = 1, 2 // these are ints as default
@@ -38,6 +40,8 @@ func TestSwap(t *testing.T) {
 
 func TestSReverse(t *testing.T) {
 	t.Parallel()
+	defer assert.PushTester(t)()
+	
 	SReverse(lengths)
 	assert.DeepEqual(lengths, reverseLengths)
 	SReverse(lengths) // it's reverse now turn it to original
