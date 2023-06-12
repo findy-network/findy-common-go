@@ -1,0 +1,4 @@
+github.com/lainio/err2 v0.9.0 h1:4ILuU6dczlPMAIZQSmLZhCjc1AWHJ8e+b67N7sTX6Po=
+github.com/lainio/err2 v0.9.0/go.mod h1:5d/fy7+ytZJEybxIPN/LGEfvnU4y+JWE1tZAWRECJqY=
+golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3 h1:fJwx88sMf5RXwDwziL0/Mn9Wqs+efMSo/RYcL+37W9c=
+golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3/go.mod h1:CxIveKay+FTh1D0yPZemJVgC/95VzuuOLq5Qi4xnoYc=

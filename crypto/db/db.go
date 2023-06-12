@@ -12,8 +12,10 @@ import (
 	"time"
 
 	"github.com/findy-network/findy-common-go/backup"
+	"github.com/findy-network/findy-common-go/x"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 	bolt "go.etcd.io/bbolt"
 )
@@ -39,29 +41,39 @@ type Cfg struct {
 // Mgd is a managed and encrypted (option, can be pre-procession as well) DB.
 type Mgd struct {
 	Cfg
-	db    *bolt.DB
+	bdb   *bolt.DB
 	dirty bool
 	l     sync.Mutex
+
+	// attributes to handle enabling/disabling the db
+	// disabled bool
+	on OnFn // tells if we are on or off, allows us to share one flag
 }
 
 // operate is a key element of the managed Bolt DB. It keeps track of closing
 // and opening of the DB which is needed that DB can operate and backups can be
 // taken without explicitly closing the database.
-func (m *Mgd) operate(f func(db *bolt.DB) error) (err error) {
+func (db *Mgd) operate(f func(db *bolt.DB) error) (err error) {
 	defer err2.Handle(&err, "db operate")
 
-	m.l.Lock()
-	defer m.l.Unlock()
+	db.l.Lock()
+	defer db.l.Unlock()
 
-	m.dirty = true
-	if m.db == nil {
-		try.To(m.open())
+	try.To(db.checkIsOn())
+
+	db.dirty = true
+	if db.bdb == nil {
+		try.To(db.open())
 	}
-	return f(m.db)
+	return f(db.bdb)
 }
+
+type sHandles = []Handle
 
 var (
 	mgedDB Handle
+
+	instances = x.NewRWSlice[sHandles](0, 12)
 )
 
 // New creates a new managed and encrypted database. This is a preferred way to
@@ -74,12 +86,23 @@ func New(cfg Cfg) Handle {
 	base := filepath.Base(cfg.Filename)
 	if strings.HasPrefix(base, MEM_PREFIX) {
 		glog.V(5).Infoln("MEMORY-DB open:", base)
-		return NewMemDB(cfg.Buckets)
+		return addInstance(NewMemDB(cfg.Buckets, cfg.Filename))
 	}
 	glog.V(5).Infof("File system DB (%v)", base)
-	return &Mgd{
+	return addInstance(&Mgd{
 		Cfg: cfg,
-	}
+	})
+}
+
+// GracefulStop closes all database instances immediately.
+func GracefulStop() {
+	instances.Rx(func(s sHandles) {
+		for _, db := range s {
+			if err := db.Close(); err != nil {
+				glog.Warning(err)
+			}
+		}
+	})
 }
 
 // Init initializes managed version of the encrypted database. Database is ready
@@ -89,16 +112,22 @@ func Init(cfg Cfg) (err error) {
 	return nil
 }
 
-func (m *Mgd) open() (err error) {
+func addInstance(h Handle) Handle {
+	return instances.Add(h)
+}
+
+func (db *Mgd) open() (err error) {
 	defer err2.Handle(&err)
 
-	glog.V(1).Infoln("open DB", m.Filename)
-	m.db = try.To1(bolt.Open(m.Filename, 0600, nil))
+	try.To(db.checkIsOn())
 
-	try.To(m.db.Update(func(tx *bolt.Tx) (err error) {
+	glog.V(1).Infoln("open DB", db.Filename)
+	db.bdb = try.To1(bolt.Open(db.Filename, 0600, nil))
+
+	try.To(db.bdb.Update(func(tx *bolt.Tx) (err error) {
 		defer err2.Handle(&err, "create buckets")
 
-		for _, bucket := range m.Buckets {
+		for _, bucket := range db.Buckets {
 			try.To1(tx.CreateBucketIfNotExists(bucket))
 		}
 		return nil
@@ -142,18 +171,18 @@ func (d *Data) set(b []byte) {
 }
 
 // close closes managed encrypted db. Note! Instance must be locked!
-func (m *Mgd) close() (err error) {
+func (db *Mgd) close() (err error) {
 	defer err2.Handle(&err)
 
-	glog.V(1).Infoln("close DB", m.Filename)
-	try.To(m.db.Close())
-	m.db = nil
+	glog.V(1).Infoln("close DB", db.Filename)
+	try.To(db.bdb.Close())
+	db.bdb = nil
 	return nil
 }
 
-func (m *Mgd) backupName() string {
+func (db *Mgd) backupName() string {
 	timeStr := time.Now().Format(time.RFC3339)
-	return backup.PrefixName(timeStr, m.BackupName)
+	return backup.PrefixName(timeStr, db.BackupName)
 }
 
 // AddKeyValueToBucket add value to bucket pointed by the index. keyValue and
@@ -303,6 +332,7 @@ func (db *Mgd) GetAllValuesFromBucket(
 // file specified by the interval. Ticker can be stopped with returned done
 // channel.
 func BackupTicker(interval time.Duration) (done chan<- struct{}) {
+	assert.INotNil(mgedDB, "call Init before use pkg lvl db instance")
 	return mgedDB.BackupTicker(interval)
 }
 
@@ -313,6 +343,9 @@ func (db *Mgd) BackupTicker(interval time.Duration) (done chan<- struct{}) {
 	ticker := time.NewTicker(interval)
 	doneCh := make(chan struct{})
 	go func() {
+		defer func() {
+			glog.V(1).Infoln("exiting backup tickers")
+		}()
 		defer err2.Catch(func(err error) {
 			glog.Error(err)
 		})
@@ -334,6 +367,7 @@ func (db *Mgd) BackupTicker(interval time.Duration) (done chan<- struct{}) {
 // Backup takes backup copy of the database. Before backup the database is
 // closed automatically and only dirty databases are backed up.
 func Backup() (did bool, err error) {
+	assert.INotNil(mgedDB, "call Init before use pkg lvl db instance")
 	return mgedDB.Backup()
 }
 
@@ -345,11 +379,13 @@ func (db *Mgd) Backup() (did bool, err error) {
 	db.l.Lock()
 	defer db.l.Unlock()
 
+	try.To(db.checkIsOn())
+
 	if !db.dirty {
 		glog.V(1).Infoln("db isn't dirty, skipping backup")
 		return false, nil
 	}
-	if db.db != nil {
+	if db.bdb != nil {
 		try.To(db.close())
 	}
 
@@ -366,6 +402,7 @@ func (db *Mgd) Backup() (did bool, err error) {
 
 // Wipe removes the whole database and its master file.
 func Wipe() (err error) {
+	assert.INotNil(mgedDB, "call Init before use pkg lvl db instance")
 	return mgedDB.Wipe()
 }
 
@@ -376,7 +413,9 @@ func (db *Mgd) Wipe() (err error) {
 	db.l.Lock()
 	defer db.l.Unlock()
 
-	if db.db != nil {
+	try.To(db.checkIsOn())
+
+	if db.bdb != nil {
 		try.To(db.close())
 	}
 
@@ -386,18 +425,43 @@ func (db *Mgd) Wipe() (err error) {
 // Close closes the database. It can be used after that if wanted. Transactions
 // opens the database when needed.
 func Close() (err error) {
+	assert.INotNil(mgedDB, "call Init before use pkg lvl db instance")
 	return mgedDB.Close()
 }
 
 // Close closes the database. It can be used after that if wanted. Transactions
 // opens the database when needed.
 func (db *Mgd) Close() (err error) {
+	defer err2.Handle(&err)
+
 	db.l.Lock()
 	defer db.l.Unlock()
 
-	if db.db != nil {
+	if db.bdb != nil {
 		return db.close()
 	}
 
+	return nil
+}
+
+func (db *Mgd) SetStatusFn(f OnFn) {
+	db.l.Lock()
+	defer db.l.Unlock()
+	db.on = f
+}
+
+func (db *Mgd) isOn() bool {
+	if db.on == nil {
+		return true
+	}
+	return db.on()
+}
+
+// checkIsOn checks if db is on. If not returns an error.
+// TODO: we could use x.Whom function here?
+func (db *Mgd) checkIsOn() (err error) {
+	if !db.isOn() {
+		return ErrDisabledDB // TODO: use err2 value future
+	}
 	return nil
 }
