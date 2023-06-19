@@ -88,7 +88,7 @@ func loadClientTLSFromFile(pw *PKI) (creds credentials.TransportCredentials, err
 	rootCAs := x509.NewCertPool()
 	rootCAs.AppendCertsFromPEM(caCert)
 
-	clientCert, err := tls.LoadX509KeyPair(pw.Client.CertFile, pw.Client.KeyFile)
+	clientCert := try.To1(tls.LoadX509KeyPair(pw.Client.CertFile, pw.Client.KeyFile))
 	tlsConf := &tls.Config{
 		Certificates:       []tls.Certificate{clientCert},
 		RootCAs:            rootCAs,
