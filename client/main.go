@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
 	"time"
 
 	ops "github.com/findy-network/findy-common-go/grpc/ops/v1"
@@ -16,12 +17,15 @@ import (
 )
 
 var (
-	user       = flag.String("user", "findy-root", "test user name")
+	user       = flag.String("user", "", "test user name")
 	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
 	port       = flag.Int("port", 50051, "agency host gRPC port")
+	tls        = flag.Bool("tls", true, "use TLS and cert files")
 )
 
 func main() {
+	err2.SetTracers(os.Stderr)
+
 	defer err2.Catch(func(err error) {
 		glog.Error(err)
 	})
@@ -33,6 +37,7 @@ func main() {
 	conn := try.To1(newClient(*user, fmt.Sprintf("%s:%d", *serverAddr, *port)))
 	defer conn.Close()
 
+	glog.V(1).Info("connection created")
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 
 	c := ops.NewDevOpsServiceClient(conn)
@@ -47,12 +52,19 @@ func main() {
 func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	defer err2.Handle(&err)
 
-	pki := rpc.LoadPKIWithServerName("../cert", addr)
+	var pki *rpc.PKI
+	jwtStr := ""
+	if *tls {
+		pki = rpc.LoadPKIWithServerName("./cert", addr)
+		jwtStr = jwt.BuildJWT(user)
+	}
 	glog.V(5).Infoln("client with user:", user)
 	conn = try.To1(rpc.ClientConn(rpc.ClientCfg{
 		PKI:  pki,
-		JWT:  jwt.BuildJWT(user),
+		JWT:  jwtStr,
 		Addr: addr,
+
+		Insecure: !*tls,
 	}))
 	return
 }
