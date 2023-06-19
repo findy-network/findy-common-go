@@ -15,20 +15,34 @@ import (
 	"google.golang.org/grpc"
 )
 
+var (
+	user       = flag.String("user", "findy-root", "test user name")
+	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
+	port       = flag.Int("port", 50051, "agency host gRPC port")
+	tls        = flag.Bool("tls", true, "use TLS and cert files")
+)
+
 func main() {
+	defer err2.Catch()
+
 	flag.Parse()
 
 	// whe want this for glog, this is just a tester, not a real world service
 	try.To(flag.Set("logtostderr", "true"))
 
-	pki := rpc.LoadPKI("./cert")
-	glog.V(3).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",
-		pki.Server.CertFile, pki.Server.KeyFile, pki.Client.CertFile)
+	var pki *rpc.PKI
+	if *tls {
+		pki = rpc.LoadPKI("./cert")
+		glog.V(3).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",
+			pki.Server.CertFile, pki.Server.KeyFile, pki.Client.CertFile)
+	}
 	rpc.Serve(&rpc.ServerCfg{
-		Port: 50051,
+		NoAuthorization: !*tls,
+
+		Port: *port,
 		PKI:  pki,
 		Register: func(s *grpc.Server) error {
-			ops.RegisterDevOpsServiceServer(s, &devOpsServer{Root: "findy-root"})
+			ops.RegisterDevOpsServiceServer(s, &devOpsServer{Root: *user})
 			glog.V(10).Infoln("GRPC registration all done")
 			return nil
 		},
@@ -43,10 +57,13 @@ type devOpsServer struct {
 func (d devOpsServer) Enter(ctx context.Context, cmd *ops.Cmd) (cr *ops.CmdReturn, err error) {
 	defer err2.Handle(&err)
 
-	user := jwt.User(ctx)
+	glog.V(1).Info("enter Enter()")
+	if *tls {
+		user := jwt.User(ctx)
 
-	if user != d.Root {
-		return &ops.CmdReturn{Type: cmd.Type}, errors.New("access right")
+		if user != d.Root {
+			return &ops.CmdReturn{Type: cmd.Type}, errors.New("access right")
+		}
 	}
 
 	glog.V(3).Infoln("dev ops cmd", cmd.Type)
