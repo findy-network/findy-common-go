@@ -101,3 +101,4 @@ jobs:
         with:
           files: ./coverage.txt,./coverage-findy-agent.txt,./coverage-findy-agent-vault.txt,./coverage-findy-agent-auth.txt
           fail_ci_if_error: true
+          verbose: true
