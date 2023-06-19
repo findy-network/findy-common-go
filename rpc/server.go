@@ -27,6 +27,8 @@ type ServerCfg struct {
 	TestLis   *bufconn.Listener
 	Register  func(s *grpc.Server) error
 	JWTSecret string
+
+	NoAuthorization bool
 }
 
 // Server creates a gRPC server with TLS and JWT token authorization.
@@ -38,6 +40,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 		jwt.SetJWTSecret(cfg.JWTSecret)
 	}
 
+	glog.V(2).Infof("cfg.PKI: %v", cfg.PKI)
 	opts := make([]grpc.ServerOption, 0, 4)
 	if cfg.PKI != nil {
 		creds := try.To1(loadTLSCredentials(cfg.PKI))
@@ -45,7 +48,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	}
 
 	errHandler := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		glog.V(1).Infoln(jwt.User(ctx), "-agent gRPC call:", info.FullMethod)
+		glog.V(1).Infoln("-agent gRPC call:", info.FullMethod)
 		resp, err := handler(ctx, req)
 		if err != nil {
 			glog.Errorf("method %q failed: %s", info.FullMethod, err)
@@ -53,19 +56,30 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 		return resp, err
 	}
 
-	opts = append(opts,
-		//grpc.UnaryInterceptor(jwt.EnsureValidToken),
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
-			grpc_recovery.UnaryServerInterceptor(),
-			errHandler,
-		)),
-		//grpc.StreamInterceptor(jwt.EnsureValidTokenStream),
-		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
-			grpc_auth.StreamServerInterceptor(jwt.CheckTokenValidity),
-			grpc_recovery.StreamServerInterceptor(),
-		)),
-	)
+	if cfg.NoAuthorization {
+		glog.V(1).Infoln("no jwt authorization")
+		opts = append(opts,
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+				grpc_recovery.UnaryServerInterceptor(),
+				errHandler,
+			)),
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+				grpc_recovery.StreamServerInterceptor(),
+			)),
+		)
+	} else {
+		opts = append(opts,
+			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+				grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
+				grpc_recovery.UnaryServerInterceptor(),
+				errHandler,
+			)),
+			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+				grpc_auth.StreamServerInterceptor(jwt.CheckTokenValidity),
+				grpc_recovery.StreamServerInterceptor(),
+			)),
+		)
+	}
 
 	return grpc.NewServer(opts...), nil
 }

@@ -45,6 +45,7 @@ func (c ClientCfg) RequireTransportSecurity() bool {
 func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 	defer err2.Handle(&err)
 
+	glog.V(3).Infof("insecure: %v, pki: %v", cfg.Insecure, cfg.PKI)
 	opts := make([]grpc.DialOption, 0)
 	switch {
 	case cfg.PKI != nil:
@@ -68,6 +69,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 			opts = append(opts, grpc.WithPerRPCCredentials(cfg))
 		}
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		glog.V(3).Infoln("insecure gRPC call")
 	default:
 		glog.Warning("PKI nor Insecure not set")
 	}
