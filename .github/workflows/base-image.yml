@@ -41,7 +41,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/findy-agent-infra/indy-base:${{ matrix.tag }},ghcr.io/${{ github.repository_owner }}/findy-base:${{ matrix.tag }}
-          context: ./infra/aws
-          file: ./infra/aws/${{ matrix.file }}
+          context: ./infra
+          file: ./infra/${{ matrix.file }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/findy-agent-infra/indy-base:${{ matrix.tag }}
           cache-to: type=inline
