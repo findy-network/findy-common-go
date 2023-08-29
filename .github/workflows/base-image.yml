@@ -40,51 +40,8 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/findy-agent-infra/indy-base:${{ matrix.tag }}
-          context: ./infra/aws
-          file: ./infra/aws/${{ matrix.file }}
+          tags: ghcr.io/${{ github.repository_owner }}/findy-agent-infra/indy-base:${{ matrix.tag }},ghcr.io/${{ github.repository_owner }}/findy-base:${{ matrix.tag }}
+          context: ./infra
+          file: ./infra/${{ matrix.file }}
           cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/findy-agent-infra/indy-base:${{ matrix.tag }}
-          cache-to: type=inline
-
-  push-base-images:
-    needs: push-indy-images
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-      contents: read
-
-    strategy:
-      matrix:
-        include:
-          - tag: indy-1.16.ubuntu-22.04
-            file: Dockerfile.ubuntu22
-          - tag: alpine-3.17
-            file: Dockerfile.alpine
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-        with:
-          platforms: all
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Login to Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: docker/build-push-action@v3
-        with:
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/findy-base:${{ matrix.tag }}
-          context: ./infra/aws
-          file: ./infra/aws/${{ matrix.file }}
-          cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/findy-base:${{ matrix.tag }}
           cache-to: type=inline

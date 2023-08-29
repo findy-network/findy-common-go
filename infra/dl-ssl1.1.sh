@@ -2,10 +2,10 @@
 
 set -e
 
-LIBSSL11_AMD64_DL_URL="http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1-1ubuntu2.1~18.04.21_amd64.deb"
-LIBSSL_DEV_11_AMD64_DL_URL="http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl-dev_1.1.1-1ubuntu2.1~18.04.21_amd64.deb"
-LIBSSL11_ARM64_DL_URL="http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.17_arm64.deb"
-LIBSSL11_DEV_ARM64_DL_URL="http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.17_arm64.deb"
+LIBSSL11_AMD64_DL_URL="http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1-1ubuntu2.1~18.04.23_amd64.deb"
+LIBSSL_DEV_11_AMD64_DL_URL="http://security.ubuntu.com/ubuntu/pool/main/o/openssl/libssl-dev_1.1.1-1ubuntu2.1~18.04.23_amd64.deb"
+LIBSSL11_ARM64_DL_URL="http://ports.ubuntu.com/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.19_arm64.deb"
+LIBSSL11_DEV_ARM64_DL_URL="http://ports.ubuntu.com/pool/main/o/openssl/libssl-dev_1.1.1f-1ubuntu2.19_arm64.deb"
 
 arch=$(dpkg --print-architecture)
 
