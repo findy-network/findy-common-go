@@ -116,9 +116,9 @@ func (e Event) Triggers(status *agency.ProtocolStatus) bool {
 }
 
 func (e Event) ExecLua(content string, a ...string) (out string, ok bool) {
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		ok = false
-	})
+	}))
 
 	okStr := LUA_OK
 	if len(a) > 0 {

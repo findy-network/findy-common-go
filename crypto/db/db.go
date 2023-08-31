@@ -346,9 +346,9 @@ func (db *Mgd) BackupTicker(interval time.Duration) (done chan<- struct{}) {
 		defer func() {
 			glog.V(1).Infoln("exiting backup tickers")
 		}()
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			glog.Error(err)
-		})
+		}))
 		for {
 			select {
 			case <-doneCh:

@@ -285,9 +285,9 @@ func (t *Transition) buildInputAnswers(status *agency.AgentStatus) (e *Event) {
 }
 
 func (t *Transition) FmtFromMem(send *Event) string {
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		glog.Error(err)
-	})
+	}))
 	tmpl := template.Must(template.New("template").Parse(send.Data))
 	var buf bytes.Buffer
 	try.To(tmpl.Execute(&buf, t.Machine.Memory))

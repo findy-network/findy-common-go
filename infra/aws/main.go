@@ -14,9 +14,9 @@ func _(msg string, args ...interface{}) {
 }
 
 func main() {
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		fmt.Fprintln(os.Stderr, err)
-	})
+	}))
 
 	if len(os.Args) < 3 {
 		fmt.Printf("Usage: %s bucketName subfolder targetFolder\n", os.Args[0])

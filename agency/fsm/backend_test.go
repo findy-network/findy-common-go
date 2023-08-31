@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
-	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 )
 
@@ -25,8 +24,7 @@ func TestBackendSimple(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.PushTester(t)
-			defer assert.PopTester()
-			defer err2.Catch(func(err error) { assert.NoError(err) })
+			defer assert.PopTester() // caches err2 errors
 
 			err := tt.args.m.Initialize()
 			assert.NoError(err)
@@ -66,7 +64,6 @@ func TestBackendTestLuaTrigger(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.PushTester(t)
 			defer assert.PopTester()
-			defer err2.Catch(func(err error) { assert.NoError(err) })
 
 			err := tt.args.m.Initialize()
 			assert.NoError(err)

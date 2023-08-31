@@ -47,10 +47,10 @@ func TestMain(m *testing.M) {
 
 func setUp() {
 	err2.SetTracers(os.Stderr)
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
-	})
+	}))
 
 	runServer()
 	conn = try.To1(newClient("findy-root", "localhost:50051")) // just dump error info out, we are inside a test
@@ -140,9 +140,9 @@ func runServer() {
 		pki.Server.CertFile, pki.Server.KeyFile, pki.Client.CertFile)
 
 	go func() {
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			log.Fatal(err)
-		})
+		}))
 		s, lis := try.To2(rpc.PrepareServe(&rpc.ServerCfg{
 			Port:    50051,
 			PKI:     pki,
@@ -160,9 +160,9 @@ func runServer() {
 
 func runInsecureServer() {
 	go func() {
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			log.Fatal(err)
-		})
+		}))
 		s, serverLis := try.To2(rpc.PrepareServe(&rpc.ServerCfg{
 			Port:    50052,
 			TestLis: insecureLis,

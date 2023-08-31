@@ -32,6 +32,8 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1 h1:shLQSRRSCCPj3f2gpwzGw
 github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfCI6z80xFu9LTZmf1ZRjMHUOPmWr69U=
 github.com/lainio/err2 v0.8.14 h1:B6pN8cBlo2Itwrb/aVS5Mbu/CyFxqNFfxjYsU1bko34=
 github.com/lainio/err2 v0.8.14/go.mod h1:5d/fy7+ytZJEybxIPN/LGEfvnU4y+JWE1tZAWRECJqY=
+github.com/lainio/err2 v0.9.41 h1:aTJOSUvq7WIZJjVkDvefLakW734buyLhM2Bkj8K4AVM=
+github.com/lainio/err2 v0.9.41/go.mod h1:glTVV2qNFbBy6WzZFDP2G5BqMiZI58cudp588cEgCuM=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
