@@ -22,9 +22,9 @@ type Cipher struct {
 func NewCipher(k []byte) *Cipher {
 	assert.SLen(k, 32)
 
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		glog.Error(err)
-	})
+	}))
 
 	newBlock := try.To1(aes.NewCipher(k))
 

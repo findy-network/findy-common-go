@@ -89,9 +89,9 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 // gracefully stop the gRPC server you should call PrepareServe which builds
 // everything ready but leaves calling the grpcServer.Serve for you.
 func Serve(cfg *ServerCfg) {
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		glog.Error(err)
-	})
+	}))
 
 	s, lis := try.To2(PrepareServe(cfg))
 

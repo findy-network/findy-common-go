@@ -26,9 +26,9 @@ var (
 func main() {
 	err2.SetTracers(os.Stderr)
 
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		glog.Error(err)
-	})
+	}))
 	flag.Parse()
 
 	// we want this for glog, this is just a tester, not a real world service

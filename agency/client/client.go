@@ -492,9 +492,9 @@ func (conn Conn) ListenStatusAndRetry(
 	sch = make(chan *agency.AgentStatus)
 	go func() {
 		// catch all because worker
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			glog.Warning(err)
-		})
+		}))
 
 		sleeper := sleeper.New(sleeperFloor)
 		var statusCh chan *agency.AgentStatus
@@ -574,9 +574,9 @@ func (conn Conn) WaitAndRetry( //nolint:dupl
 	ch = make(chan *agency.Question)
 	go func() {
 		// Catch all, panics as well because this is worker
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			glog.Warning(err)
-		})
+		}))
 
 		sleeper := sleeper.New(sleeperFloor)
 		var questionCh chan *agency.Question
@@ -669,14 +669,14 @@ func transportStatus(
 	statusCh chan<- *agency.AgentStatus,
 	errCh chan<- error,
 ) {
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		glog.V(1).Infoln("WARNING: error when reading response:", err)
 		if errCh != nil {
 			errCh <- err
 		} else {
 			close(statusCh)
 		}
-	})
+	}))
 	for {
 		status, err := stream.Recv()
 		if try.IsEOF(err) {
@@ -697,14 +697,14 @@ func transportWait(
 	statusCh chan<- *agency.Question,
 	errCh chan<- error,
 ) {
-	defer err2.Catch(func(err error) {
+	defer err2.Catch(err2.Err(func(err error) {
 		glog.V(1).Infoln("WARNING: error when reading response:", err)
 		if errCh != nil {
 			errCh <- err
 		} else {
 			close(statusCh)
 		}
-	})
+	}))
 	for {
 		status, err := stream.Recv()
 		if try.IsEOF(err) {
@@ -729,10 +729,10 @@ func (conn Conn) PSMHook(ctx context.Context, cOpts ...grpc.CallOption) (ch chan
 	stream := try.To1(opsClient.PSMHook(ctx, &ops.DataHook{ID: utils.UUID()}, cOpts...))
 	glog.V(3).Infoln("successful start of listen PSM hook id:")
 	go func() {
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			glog.V(1).Infoln("WARNING: error when reading response:", err)
 			close(statusCh)
-		})
+		}))
 		for {
 			status, err := stream.Recv()
 			if try.IsEOF(err) {
@@ -755,10 +755,10 @@ func (conn Conn) doRun(ctx context.Context, protocol *agency.Protocol) (ch chan 
 	stream := try.To1(c.Run(ctx, protocol))
 	glog.V(3).Infoln("successful start of:", protocol.TypeID)
 	go func() {
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			glog.V(3).Infoln("err when reading response", err)
 			close(statusCh)
-		})
+		}))
 		for {
 			status, err := stream.Recv()
 			if try.IsEOF(err) {

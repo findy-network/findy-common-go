@@ -34,9 +34,9 @@ func Run(s *nethttp.Server, a ...string) <-chan os.Signal {
 	startHTTPS := len(a) == 2
 	glog.V(3).Infof("startHTTPS: %v, length a: %v", startHTTPS, len(a))
 	go func() {
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			glog.Error(err)
-		})
+		}))
 
 		if startHTTPS {
 			glog.V(3).Infof("starting https server w/ cert: %s, key: %s",

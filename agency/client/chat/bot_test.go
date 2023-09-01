@@ -5,7 +5,6 @@ import (
 
 	"github.com/findy-network/findy-common-go/agency/fsm"
 	"github.com/golang/glog"
-	"github.com/lainio/err2"
 	"github.com/lainio/err2/assert"
 )
 
@@ -385,11 +384,7 @@ func Test_loadFSMData(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.PushTester(t)
-			defer assert.PopTester()
-
-			defer err2.Catch(func(err error) {
-				assert.NoError(err)
-			})
+			defer assert.PopTester() // has catch since 0.9.3
 
 			gotFsm := loadFSMData(tt.args.fName, tt.args.data)
 			assert.Equal(gotFsm.Type, tt.wantFsm.Type)

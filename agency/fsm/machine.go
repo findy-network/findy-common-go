@@ -67,9 +67,9 @@ func (m *Machine) register(name string) map[string]string {
 
 func (m *Machine) registerMemFuncs() {
 	m.luaState.Register("getRegValue", func(l *lua.State) (status int) {
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			status = 0
-		})
+		}))
 		r, ok := l.ToString(1)
 		assert.That(ok)
 		glog.V(6).Infoln("r:", r)
@@ -83,9 +83,9 @@ func (m *Machine) registerMemFuncs() {
 	})
 
 	m.luaState.Register("setRegValue", func(l *lua.State) (nResults int) {
-		defer err2.Catch(func(err error) {
+		defer err2.Catch(err2.Err(func(err error) {
 			nResults = 0
-		})
+		}))
 		r, ok := l.ToString(1)
 		assert.That(ok)
 		glog.V(6).Infoln("r:", r)
