@@ -2,6 +2,8 @@ module github.com/findy-network/findy-common-go
 
 go 1.21
 
+toolchain go1.21.0
+
 require (
 	github.com/Shopify/go-lua v0.0.0-20221004153744-91867de107cf
 	github.com/auth0/go-jwt-middleware v1.0.1
