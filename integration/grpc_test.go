@@ -66,12 +66,10 @@ func setUp() {
 }
 
 func tearDown() {
-	err := conn.Close()
-	try.To(err) // just dump information out, we are inside a test
+	try.To(conn.Close())
 	server.GracefulStop()
 
-	err = insecureConn.Close()
-	try.To(err) // just dump information out, we are inside a test
+	try.To(insecureConn.Close())
 	insecureServer.GracefulStop()
 }
 
@@ -134,6 +132,7 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	return
 }
 
+// runServer starts a gRPC server in own goroutine.
 func runServer() {
 	pki := rpc.LoadPKI("../cert")
 	glog.V(1).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",

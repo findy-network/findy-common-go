@@ -99,6 +99,9 @@ func Serve(cfg *ServerCfg) {
 	try.To(s.Serve(lis))
 }
 
+// PrepareServe builds gRPC server that allows graceful shutdown. You must start
+// it by yourself with Serve() that blocks which typically means that you need a
+// goroutine for that.
 func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
 	defer err2.Handle(&err)
 
