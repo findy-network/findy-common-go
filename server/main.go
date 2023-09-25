@@ -11,6 +11,7 @@ import (
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	_ "github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 )
