@@ -13,7 +13,7 @@ require (
 	github.com/google/uuid v1.3.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/hyperledger/aries-framework-go v0.3.2
-	github.com/lainio/err2 v0.9.41
+	github.com/lainio/err2 v0.9.51
 	github.com/mr-tron/base58 v1.2.0
 	go.etcd.io/bbolt v1.3.8
 	golang.org/x/oauth2 v0.13.0
