@@ -5,14 +5,14 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"os"
 
 	ops "github.com/findy-network/findy-common-go/grpc/ops/v1"
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
-	_ "github.com/lainio/err2/assert"
-	"github.com/lainio/err2/try"
+	_ "github.com/lainio/err2/assert" // we want an --asserter flag
 	"google.golang.org/grpc"
 )
 
@@ -20,25 +20,28 @@ var (
 	user       = flag.String("user", "findy-root", "test user name")
 	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
 	port       = flag.Int("port", 50051, "agency host gRPC port")
-	tls        = flag.Bool("tls", true, "use TLS and cert files")
+	noTLS      = flag.Bool("no-tls", false, "do NOT use TLS and cert files (hard coded)")
 )
 
 func main() {
+	os.Args = append(os.Args,
+		"-logtostderr",
+	)
+	glog.CopyStandardLogTo("ERROR") // for err2 binging
+
+	//defer err2.Catch(err2.ToStderr) // TODO: nex err2 version will have
 	defer err2.Catch()
 
 	flag.Parse()
 
-	// whe want this for glog, this is just a tester, not a real world service
-	try.To(flag.Set("logtostderr", "true"))
-
 	var pki *rpc.PKI
-	if *tls {
+	if !*noTLS {
 		pki = rpc.LoadPKI("./cert")
 		glog.V(3).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",
 			pki.Server.CertFile, pki.Server.KeyFile, pki.Client.CertFile)
 	}
 	rpc.Serve(&rpc.ServerCfg{
-		NoAuthorization: !*tls,
+		NoAuthorization: *noTLS,
 
 		Port: *port,
 		PKI:  pki,
@@ -59,7 +62,7 @@ func (d devOpsServer) Enter(ctx context.Context, cmd *ops.Cmd) (cr *ops.CmdRetur
 	defer err2.Handle(&err)
 
 	glog.V(1).Info("enter Enter()")
-	if *tls {
+	if !*noTLS {
 		user := jwt.User(ctx)
 
 		if user != d.Root {
