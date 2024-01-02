@@ -57,7 +57,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	}
 
 	if cfg.NoAuthorization {
-		glog.V(1).Infoln("no jwt authorization")
+		glog.V(1).Infoln("no authorization")
 		opts = append(opts,
 			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 				grpc_recovery.UnaryServerInterceptor(),
@@ -68,6 +68,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 			)),
 		)
 	} else {
+		glog.V(1).Infoln("jwt token validity checked")
 		opts = append(opts,
 			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 				grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
