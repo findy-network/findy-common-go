@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"fmt"
 	nethttp "net/http"
 	"os"
 	"os/signal"
@@ -33,9 +34,11 @@ func Run(s *nethttp.Server, a ...string) <-chan os.Signal {
 	}
 	startHTTPS := len(a) == 2
 	glog.V(3).Infof("startHTTPS: %v, length a: %v", startHTTPS, len(a))
+	shutdownCh := make(chan os.Signal, 1)
 	go func() {
 		defer err2.Catch(err2.Err(func(err error) {
-			glog.Error(err)
+			fmt.Fprintln(os.Stderr, err)
+			shutdownCh <- syscall.SIGALRM
 		}))
 
 		if startHTTPS {
@@ -51,7 +54,6 @@ func Run(s *nethttp.Server, a ...string) <-chan os.Signal {
 		}
 	}()
 
-	shutdownCh := make(chan os.Signal, 1)
 	signal.Notify(shutdownCh, os.Interrupt, syscall.SIGTERM)
 
 	return shutdownCh
