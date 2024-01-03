@@ -57,7 +57,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	}
 
 	if cfg.NoAuthorization {
-		glog.V(1).Infoln("no jwt authorization")
+		glog.V(1).Infoln("no authorization")
 		opts = append(opts,
 			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 				grpc_recovery.UnaryServerInterceptor(),
@@ -68,6 +68,7 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 			)),
 		)
 	} else {
+		glog.V(1).Infoln("jwt token validity checked")
 		opts = append(opts,
 			grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 				grpc_auth.UnaryServerInterceptor(jwt.CheckTokenValidity),
@@ -99,6 +100,9 @@ func Serve(cfg *ServerCfg) {
 	try.To(s.Serve(lis))
 }
 
+// PrepareServe builds gRPC server that allows graceful shutdown. You must start
+// it by yourself with Serve() that blocks which typically means that you need a
+// goroutine for that.
 func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) {
 	defer err2.Handle(&err)
 

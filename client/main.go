@@ -12,6 +12,7 @@ import (
 	"github.com/findy-network/findy-common-go/rpc"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	_ "github.com/lainio/err2/assert" // we want an --asserter flag
 	"github.com/lainio/err2/try"
 	"google.golang.org/grpc"
 )
@@ -20,19 +21,19 @@ var (
 	user       = flag.String("user", "", "test user name")
 	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
 	port       = flag.Int("port", 50051, "agency host gRPC port")
-	tls        = flag.Bool("tls", true, "use TLS and cert files")
+	noTLS      = flag.Bool("no-tls", false, "do NOT use TLS and cert files (hard coded)")
 )
 
 func main() {
-	err2.SetTracers(os.Stderr)
+	os.Args = append(os.Args,
+		"-logtostderr",
+	)
+	glog.CopyStandardLogTo("ERROR") // for err2 binging
 
-	defer err2.Catch(err2.Err(func(err error) {
-		glog.Error(err)
-	}))
+	//defer err2.Catch(err2.ToStderr) // TODO: nex err2 version will have
+	defer err2.Catch()
+
 	flag.Parse()
-
-	// we want this for glog, this is just a tester, not a real world service
-	try.To(flag.Set("logtostderr", "true"))
 
 	conn := try.To1(newClient(*user, fmt.Sprintf("%s:%d", *serverAddr, *port)))
 	defer conn.Close()
@@ -54,7 +55,7 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 
 	var pki *rpc.PKI
 	jwtStr := ""
-	if *tls {
+	if !*noTLS {
 		pki = rpc.LoadPKIWithServerName("./cert", addr)
 		jwtStr = jwt.BuildJWT(user)
 	}
@@ -64,7 +65,7 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 		JWT:  jwtStr,
 		Addr: addr,
 
-		Insecure: !*tls,
+		Insecure: *noTLS,
 	}))
 	return
 }
