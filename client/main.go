@@ -30,8 +30,7 @@ func main() {
 	)
 	glog.CopyStandardLogTo("ERROR") // for err2 binging
 
-	//defer err2.Catch(err2.ToStderr) // TODO: nex err2 version will have
-	defer err2.Catch()
+	defer err2.Catch(err2.Stderr)
 
 	flag.Parse()
 
