@@ -186,9 +186,10 @@ func (m *Machine) CurrentState() *State {
 // it returns nil.
 func (m *Machine) Triggers(status *agency.ProtocolStatus) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
-		if transition.Trigger.ProtocolType == status.State.ProtocolID.TypeID &&
-			transition.Trigger.Triggers(status) {
-			return transition
+		if transition.Trigger.ProtocolType == status.State.ProtocolID.TypeID {
+			if ok, tgt := transition.Trigger.Triggers(status); ok {
+				return transition.withNewTarget(tgt)
+			}
 		}
 	}
 	return nil
@@ -262,7 +263,7 @@ func (m *Machine) checkTerm() {
 func (m *Machine) Start(termChan TerminateOutChan) []*Event {
 	t := m.Initial
 	m.termChan = termChan
-	if (t.Trigger == nil || t.Trigger.Triggers(nil)) && t.Sends != nil {
+	if t.Sends != nil {
 		return t.BuildSendEvents(nil)
 	}
 	return nil

@@ -92,6 +92,7 @@ const (
 	// register names for communication thru machine's memory map.
 	LUA_INPUT  = "INPUT"  // current incoming data like basic_message.content
 	LUA_OUTPUT = "OUTPUT" // lua scripts output register name
+	LUA_TARGET = "TARGET" // lua scripts target register name
 	LUA_OK     = "OK"     // lua scripts OK return value
 	LUA_ALL_OK = ""       // lua scripts return values are OK
 	LUA_ERROR  = "ERR"    // lua scripts key for error message
@@ -124,6 +125,15 @@ type State struct {
 
 	// TODO: transient state (empedding Lua is tested) + new rules
 	// - we should find proper use case to develop these
+	// - chat room could be a good case
+	//   + use credential to get in. Email credential is need. Or callsign
+	//     cred.
+	//   + login happens by presenting proof of callsign
+	//   + PW-chatbot keeps track of callsigns and the room user is connected
+	//   + backend-chatbot uses room when forwarding msgs
+	//   + end user sends only message. callsign is only added by PW-chatbot
+	//   + pairwise FSM sends room and callsign to backend with msg
+	//   + backend FSM forwards msgs per room and and keeps: callsign
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -206,7 +216,7 @@ const (
 )
 
 func filterFilelink(in string) (o string) {
-	return filterLink(in, "@", func(k string) string {
+	return filterLink(in, "$", func(k string) string {
 		defer err2.Catch()
 		d := try.To1(os.ReadFile(k))
 		s := string(d)

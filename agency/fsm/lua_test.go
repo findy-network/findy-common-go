@@ -5,6 +5,7 @@ import (
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/lainio/err2/assert"
+	"github.com/lainio/err2/try"
 )
 
 func TestLuaTestLuaTrigger(t *testing.T) {
@@ -12,23 +13,33 @@ func TestLuaTestLuaTrigger(t *testing.T) {
 		m *Machine
 		c string
 	}
+	type wants struct {
+		want bool
+		tgt  string
+	}
 	tests := []struct {
 		name string
 		args args
-		want bool
+		wants
 	}{
-		{"simple", args{&luaMachine, "TEST"}, true},
-		{"simple_not", args{&luaMachine, "not"}, false},
+		{"simple_not", args{&luaMachineDynamicTargetState, "yes"}, wants{true, "YES"}},
+
+		{"simple", args{&luaMachine, "TEST"}, wants{true, ""}},
+		{"simple_not", args{&luaMachine, "not"}, wants{false, ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.PushTester(t)
-			defer assert.PopTester()
-			assert.NoError(tt.args.m.Initialize())
+			defer assert.PushTester(t)()
+
+			try.To(tt.args.m.Initialize())
 			tt.args.m.InitLua()
 			if tt.want {
-				assert.NotNil(tt.args.m.Triggers(
-					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c)))
+				transition := tt.args.m.Triggers(
+					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c))
+				assert.NotNil(transition)
+				if tt.tgt != "" {
+					assert.Equal(transition.Target, tt.tgt)
+				}
 			} else {
 				assert.Nil(tt.args.m.Triggers(
 					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c)))
@@ -76,9 +87,11 @@ func TestLuaTestLuaSend(t *testing.T) {
 var (
 	luaScript1 = `
 local i=getRegValue("MEM", "INPUT")
-if i == "TEST" then
+if i == "yes" then
+	setRegValue("MEM", "TARGET", "YES")
 	setRegValue("MEM", "OUTPUT", "OK")
 else
+	setRegValue("MEM", "TARGET", "TERMINATE")
 	setRegValue("MEM", "OUTPUT", "NO")
 end
  `
@@ -106,7 +119,41 @@ setRegValue("MEM", "OUTPUT", retval)
 						Trigger: &Event{
 							Protocol: "basic_message",
 							Rule:     "LUA",
-							Data:     `@{script1.lua}`,
+							Data:     `${script1.lua}`,
+						},
+						Sends: []*Event{{
+							Protocol: "basic_message",
+							Rule:     "LUA",
+							Data:     `${script2.lua}`,
+						}},
+						Target: "TERMINATE",
+					},
+				},
+			},
+			"TERMINATE": {
+				Terminate: true,
+			},
+		},
+	}
+
+	luaMachineDynamicTargetState = Machine{
+		Name: "lua_machine",
+		Type: MachineTypeConversation,
+		Initial: &Transition{
+			Sends: []*Event{{
+				Protocol: "basic_message",
+				Data:     "Hello!",
+			}},
+			Target: "IDLE",
+		},
+		States: map[string]*State{
+			"IDLE": {
+				Transitions: []*Transition{
+					{
+						Trigger: &Event{
+							Protocol: "basic_message",
+							Rule:     "LUA",
+							Data:     luaScript1,
 						},
 						Sends: []*Event{{
 							Protocol: "basic_message",

@@ -125,7 +125,7 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 	switch send.Rule {
 	case TriggerTypeLua:
 		content := input.Data
-		out, ok := send.ExecLua(content, LUA_ALL_OK)
+		out, _, ok := send.ExecLua(content, LUA_ALL_OK)
 		if ok {
 			send.EventData = &EventData{Backend: &BackendData{
 				Content: out,
@@ -221,7 +221,7 @@ func (t *Transition) buildBMSend(input *Event, send *Event) {
 		}}
 	case TriggerTypeLua:
 		content := input.Data
-		out, ok := send.ExecLua(content, LUA_ALL_OK)
+		out, _, ok := send.ExecLua(content, LUA_ALL_OK)
 		if ok {
 			send.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: out,
@@ -292,6 +292,16 @@ func (t *Transition) FmtFromMem(send *Event) string {
 	var buf bytes.Buffer
 	try.To(tmpl.Execute(&buf, t.Machine.Memory))
 	return buf.String()
+}
+
+func (t *Transition) withNewTarget(tgt string) (nt *Transition) {
+	if tgt == "" {
+		return t
+	}
+	nt = new(Transition)
+	*nt = *t
+	nt.Target = tgt
+	return nt
 }
 
 func pin(digit int) int {

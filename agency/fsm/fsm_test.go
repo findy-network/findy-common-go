@@ -6,6 +6,7 @@ import (
 
 	agency "github.com/findy-network/findy-common-go/grpc/agency/v1"
 	"github.com/lainio/err2/assert"
+	"github.com/lainio/err2/try"
 )
 
 var (
@@ -201,25 +202,25 @@ func protocolStatus(typeID agency.Protocol_Type, a ...string) *agency.ProtocolSt
 }
 
 func TestMachine_Step(t *testing.T) {
-	assert.PushTester(t)
-	defer assert.PopTester()
-	assert.NoError(machine.Initialize())
+	defer assert.PushTester(t)()
+
+	try.To(machine.Initialize())
 	transition := machine.Triggers(protocolStatus(agency.Protocol_PRESENT_PROOF))
-	assert.That(nil == transition)
+	assert.Nil(transition)
 	transition = machine.Triggers(protocolStatus(agency.Protocol_BASIC_MESSAGE))
-	assert.INotNil(transition)
+	assert.NotNil(transition)
 	machine.Step(transition)
 	assert.Equal("WAITING_STATUS", machine.Current)
 }
 
 func TestMachine_StepTerminate(t *testing.T) {
-	assert.PushTester(t)
-	defer assert.PopTester()
-	assert.NoError(machineTerminates.Initialize())
+	defer assert.PushTester(t)()
+
+	try.To(machineTerminates.Initialize())
 	termChan := make(TerminateChan)
 	go func() {
-		assert.PushTester(t)
-		defer assert.PopTester()
+		defer assert.PushTester(t)()
+
 		termSignaled, ok := <-termChan
 		assert.That(ok)
 		if ok {
@@ -237,9 +238,9 @@ func TestMachine_StepTerminate(t *testing.T) {
 }
 
 func TestMachine_Step2(t *testing.T) {
-	assert.PushTester(t)
-	defer assert.PopTester()
-	assert.NoError(showProofMachine.Initialize())
+	defer assert.PushTester(t)()
+
+	try.To(showProofMachine.Initialize())
 	status := protocolStatus(agency.Protocol_DIDEXCHANGE)
 	transition := showProofMachine.Triggers(status)
 	assert.INotNil(transition)
