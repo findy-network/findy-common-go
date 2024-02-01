@@ -57,6 +57,9 @@ const (
 	TriggerTypeAcceptAndInputValues = "ACCEPT_AND_INPUT_VALUES"
 	// not accept present proof protocol
 	TriggerTypeNotAcceptValues = "NOT_ACCEPT_VALUES"
+
+	// transient state, just executes without any triggering checks
+	TriggerTypeTransient = "TRANSIENT"
 )
 
 const (
@@ -76,6 +79,8 @@ const (
 	// these are internal messages send between Backend (service) FSM and
 	// conversation (pairwise connection) FSM
 	MessageBackend = "backend"
+
+	MessageTransient = "transient"
 )
 
 const (
@@ -83,7 +88,8 @@ const (
 	QAProtocol    = 101
 	HookProtocol  = 102
 
-	BackendProtocol = 103 // see MessageBackend
+	BackendProtocol   = 103 // see MessageBackend
+	TransientProtocol = 104 // see MessageTransient
 )
 
 const (
@@ -274,6 +280,7 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageAnswer:       QAProtocol,
 	MessageHook:         HookProtocol,
 	MessageBackend:      BackendProtocol,
+	MessageTransient:    TransientProtocol,
 }
 
 var toFileProtocolType = map[agency.Protocol_Type]string{
@@ -287,6 +294,7 @@ var toFileProtocolType = map[agency.Protocol_Type]string{
 	QAProtocol:                       MessageAnswer,
 	HookProtocol:                     MessageHook,
 	BackendProtocol:                  MessageBackend,
+	TransientProtocol:                MessageTransient,
 }
 
 func NotificationTypeID(typeName string) NotificationType {

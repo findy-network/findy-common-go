@@ -105,7 +105,8 @@ func (e Event) Triggers(status *agency.ProtocolStatus) (ok bool, tgt string) {
 			return e.Machine.Memory[e.Data] == content, ""
 		case TriggerTypeInputEqual:
 			return content == e.Data, ""
-		case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
+		case TriggerTypeData, TriggerTypeUseInput,
+			TriggerTypeUseInputSave, TriggerTypeTransient:
 			return true, ""
 		case TriggerTypeLua:
 			_, target, ok := e.ExecLua(content)

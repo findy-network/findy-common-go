@@ -207,6 +207,15 @@ func (m *Machine) TriggersByHook() *Transition {
 	return nil
 }
 
+func (m *Machine) TriggersByStep() *Transition {
+	for _, transition := range m.CurrentState().Transitions {
+		if transition.Trigger.ProtocolType == TransientProtocol {
+			return transition
+		}
+	}
+	return nil
+}
+
 func (m *Machine) TriggersByBackendData(data *BackendData) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
 		if transition.Trigger.ProtocolType == BackendProtocol &&
@@ -240,6 +249,10 @@ func (m *Machine) Answers(q *agency.Question) *Transition {
 	}
 	return nil
 }
+
+type TransientChan = chan string
+type TransientInChan = <-chan string
+type TransientOutChan = chan<- string
 
 type TerminateChan = chan bool
 type TerminateInChan = <-chan bool

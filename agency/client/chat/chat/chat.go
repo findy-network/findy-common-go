@@ -41,6 +41,7 @@ type Conversation struct {
 	HookChan
 	fsm.TerminateChan // FSM tells us if machine has reached the end.
 	fsm.BackendChan
+	TransientChan fsm.TransientChan
 
 	id string
 	client.Conn
@@ -179,6 +180,7 @@ func newConversation(
 		QuestionChan:  make(QuestionChan),
 		HookChan:      make(HookChan),
 		BackendChan:   make(fsm.BackendChan, 1),
+		TransientChan: make(fsm.TransientChan, 1),
 		TerminateChan: termChan,
 	}
 	conversations[connID] = c
@@ -228,7 +230,17 @@ func (c *Conversation) Run(data fsm.MachineData) {
 			c.hookReceived(hookData)
 		case backendData := <-c.BackendChan:
 			c.backendReceived(backendData)
+		case stepData := <-c.TransientChan:
+			c.stepReceived(stepData)
 		}
+	}
+}
+
+func (c *Conversation) stepReceived(data string) {
+	glog.V(3).Infoln("conversation: step w/ str:", data)
+	if transition := c.machine.TriggersByStep(); transition != nil {
+		c.send(transition.BuildSendEventsFromStep(data), nil)
+		c.machine.Step(transition)
 	}
 }
 
@@ -366,6 +378,10 @@ func (c *Conversation) sendHook(hookData *fsm.Hook, _ bool) {
 	callHook(hookData.Data)
 }
 
+func (c *Conversation) sendTransient(msg string, _ bool) {
+	c.TransientChan <- msg
+}
+
 func callHook(hookData map[string]string) {
 	if Hook != nil {
 		glog.V(3).Infoln("calling hook")
@@ -428,6 +444,8 @@ func (c *Conversation) send(outputs []*fsm.Event, status ConnStatus) {
 			c.reply(status, ack)
 		case fsm.HookProtocol:
 			c.sendHook(output.Hook, false)
+		case fsm.TransientProtocol:
+			c.sendTransient(output.BasicMessage.Content, false)
 		}
 	}
 }

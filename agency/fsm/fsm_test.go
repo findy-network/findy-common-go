@@ -9,7 +9,38 @@ import (
 	"github.com/lainio/err2/try"
 )
 
+const transientTestMsg = "test-msg"
+
 var (
+	machineTransientState = Machine{
+		Name: "machine",
+		Initial: &Transition{
+			Sends: []*Event{{
+				Protocol: "basic_message",
+				Data:     "Hello!",
+			}},
+			Target: "OUTPUT_MESSAGE",
+		},
+		States: map[string]*State{
+			"OUTPUT_MESSAGE": {
+				Transitions: []*Transition{
+					{
+						Trigger: &Event{Protocol: "transient"},
+						Sends: []*Event{{
+							Protocol: "transient",
+							Rule:     "TRANSIENT",
+							Data:     transientTestMsg,
+						}},
+						Target: "TERMINATE",
+					},
+				},
+			},
+			"TERMINATE": {
+				Terminate: true,
+			},
+		},
+	}
+
 	machineTerminates = Machine{
 		Name: "machine",
 		Initial: &Transition{
@@ -232,7 +263,7 @@ func TestMachine_StepTerminate(t *testing.T) {
 	transition := machineTerminates.Triggers(protocolStatus(agency.Protocol_PRESENT_PROOF))
 	assert.That(nil == transition)
 	transition = machineTerminates.Triggers(protocolStatus(agency.Protocol_BASIC_MESSAGE))
-	assert.INotNil(transition)
+	assert.NotNil(transition)
 	assert.Equal("IDLE", machineTerminates.Current)
 	go machineTerminates.Step(transition)
 }
@@ -243,13 +274,30 @@ func TestMachine_Step2(t *testing.T) {
 	try.To(showProofMachine.Initialize())
 	status := protocolStatus(agency.Protocol_DIDEXCHANGE)
 	transition := showProofMachine.Triggers(status)
-	assert.INotNil(transition)
+	assert.NotNil(transition)
 	e := transition.buildInputEvent(status)
-	assert.INotNil(e)
+	assert.NotNil(e)
 	o := transition.BuildSendEvents(status)
-	assert.INotNil(o)
+	assert.SNotNil(o)
 	showProofMachine.Step(transition)
 	assert.Equal("WAITING_STATUS", showProofMachine.Current)
+}
+
+func TestMachine_StepByTransient(t *testing.T) {
+	defer assert.PushTester(t)()
+
+	try.To(machineTransientState.Initialize())
+	transition := machineTransientState.TriggersByStep()
+	assert.NotNil(transition)
+	stepData := "transient_msg"
+	e := transition.BuildSendEventsFromStep(stepData)
+	assert.SNotNil(e)
+	assert.SNotEmpty(e)
+	event := e[0]
+	assert.Equal(TransientProtocol, int(event.ProtocolType))
+	assert.Equal(event.BasicMessage.Content, transientTestMsg)
+	machineTransientState.Step(transition)
+	assert.Equal("TERMINATE", machineTransientState.Current)
 }
 
 func TestMachine_StepByHook(t *testing.T) {
@@ -257,10 +305,10 @@ func TestMachine_StepByHook(t *testing.T) {
 	defer assert.PopTester()
 	assert.NoError(showProofMachine.Initialize())
 	transition := showProofMachine.TriggersByHook()
-	assert.INotNil(transition)
+	assert.NotNil(transition)
 	hookData := map[string]string{"key": "value"}
 	e := transition.BuildSendEventsFromHook(hookData)
-	assert.INotNil(e)
+	assert.SNotNil(e)
 	assert.SNotEmpty(e)
 	event := e[0]
 	assert.Equal(HookProtocol, int(event.ProtocolType))
@@ -274,10 +322,10 @@ func TestMachine_Start(t *testing.T) {
 	defer assert.PopTester()
 	assert.NoError(machine.Initialize())
 	sends := machine.Start(nil)
-	assert.INotNil(sends)
+	assert.SNotNil(sends)
 	assert.SLen(sends, 1)
-	assert.INotNil(sends[0].Transition)
-	assert.INotNil(sends[0].Transition.Machine)
+	assert.NotNil(sends[0].Transition)
+	assert.NotNil(sends[0].Transition.Machine)
 }
 
 func TestMachine_Start_ProofMachine(t *testing.T) {

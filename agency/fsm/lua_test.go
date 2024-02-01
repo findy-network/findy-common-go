@@ -64,8 +64,8 @@ func TestLuaTestLuaSend(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.PushTester(t)
-			defer assert.PopTester()
+			defer assert.PushTester(t)()
+
 			assert.NoError(tt.args.m.Initialize())
 			tt.args.m.InitLua()
 			if tt.want {
@@ -75,7 +75,7 @@ func TestLuaTestLuaSend(t *testing.T) {
 				o := transition.BuildSendEvents(status)
 				assert.SLen(o, 1)
 				assert.Equal(o[0].EventData.BasicMessage.Content, tt.wantStr)
-				assert.INotNil(o)
+				assert.SNotNil(o)
 			} else {
 				assert.Nil(tt.args.m.Triggers(
 					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c)))

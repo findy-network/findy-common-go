@@ -50,6 +50,15 @@ func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event 
 	return t.doBuildSendEvents(input)
 }
 
+func (t *Transition) BuildSendEventsFromStep(data string) []*Event {
+	input := &Event{
+		Protocol:     toFileProtocolType[TransientProtocol],
+		ProtocolType: TransientProtocol,
+		EventData:    &EventData{BasicMessage: &BasicMessage{Content: data}},
+	}
+	return t.doBuildSendEvents(input)
+}
+
 func (t *Transition) BuildSendEventsFromHook(hookData map[string]string) []*Event {
 	input := &Event{
 		Protocol:     toFileProtocolType[HookProtocol],
@@ -106,6 +115,8 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 			t.buildHookSend(input, send)
 		case MessageBackend:
 			t.buildBackendSend(input, send)
+		case MessageTransient:
+			t.buildTransientSend(input, send)
 		default:
 			glog.Warningln("didn't find protocol handler", send.Protocol)
 			return nil
@@ -159,6 +170,16 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 		send.EventData = &EventData{Backend: &BackendData{
 			Content: t.FmtFromMem(send),
 		}}
+	}
+}
+func (t *Transition) buildTransientSend(_ *Event, send *Event) {
+	switch send.Rule {
+	case TriggerTypeTransient:
+		send.EventData = &EventData{BasicMessage: &BasicMessage{
+			Content: send.Data,
+		}}
+	default:
+		assert.Equal(send.Rule, TriggerTypeTransient, "only Transients are supported")
 	}
 }
 
@@ -256,7 +277,7 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 		content := status.GetBasicMessage().Content
 		switch t.Trigger.Rule {
 		case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual,
-			TriggerTypeLua, TriggerTypeUseInput:
+			TriggerTypeLua, TriggerTypeUseInput, TriggerTypeTransient:
 			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
