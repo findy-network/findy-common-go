@@ -57,6 +57,9 @@ const (
 	TriggerTypeAcceptAndInputValues = "ACCEPT_AND_INPUT_VALUES"
 	// not accept present proof protocol
 	TriggerTypeNotAcceptValues = "NOT_ACCEPT_VALUES"
+
+	// transient state, just executes without any triggering checks
+	TriggerTypeTransient = "TRANSIENT"
 )
 
 const (
@@ -76,6 +79,8 @@ const (
 	// these are internal messages send between Backend (service) FSM and
 	// conversation (pairwise connection) FSM
 	MessageBackend = "backend"
+
+	MessageTransient = "transient"
 )
 
 const (
@@ -83,7 +88,8 @@ const (
 	QAProtocol    = 101
 	HookProtocol  = 102
 
-	BackendProtocol = 103 // see MessageBackend
+	BackendProtocol   = 103 // see MessageBackend
+	TransientProtocol = 104 // see MessageTransient
 )
 
 const (
@@ -92,6 +98,7 @@ const (
 	// register names for communication thru machine's memory map.
 	LUA_INPUT  = "INPUT"  // current incoming data like basic_message.content
 	LUA_OUTPUT = "OUTPUT" // lua scripts output register name
+	LUA_TARGET = "TARGET" // lua scripts target register name
 	LUA_OK     = "OK"     // lua scripts OK return value
 	LUA_ALL_OK = ""       // lua scripts return values are OK
 	LUA_ERROR  = "ERR"    // lua scripts key for error message
@@ -124,6 +131,15 @@ type State struct {
 
 	// TODO: transient state (empedding Lua is tested) + new rules
 	// - we should find proper use case to develop these
+	// - chat room could be a good case
+	//   + use credential to get in. Email credential is need. Or callsign
+	//     cred.
+	//   + login happens by presenting proof of callsign
+	//   + PW-chatbot keeps track of callsigns and the room user is connected
+	//   + backend-chatbot uses room when forwarding msgs
+	//   + end user sends only message. callsign is only added by PW-chatbot
+	//   + pairwise FSM sends room and callsign to backend with msg
+	//   + backend FSM forwards msgs per room and and keeps: callsign
 
 	// we could have onEntry and OnExit ? If that would help, we shall see
 }
@@ -206,7 +222,7 @@ const (
 )
 
 func filterFilelink(in string) (o string) {
-	return filterLink(in, "@", func(k string) string {
+	return filterLink(in, "$", func(k string) string {
 		defer err2.Catch()
 		d := try.To1(os.ReadFile(k))
 		s := string(d)
@@ -264,6 +280,7 @@ var ProtocolType = map[string]agency.Protocol_Type{
 	MessageAnswer:       QAProtocol,
 	MessageHook:         HookProtocol,
 	MessageBackend:      BackendProtocol,
+	MessageTransient:    TransientProtocol,
 }
 
 var toFileProtocolType = map[agency.Protocol_Type]string{
@@ -277,6 +294,7 @@ var toFileProtocolType = map[agency.Protocol_Type]string{
 	QAProtocol:                       MessageAnswer,
 	HookProtocol:                     MessageHook,
 	BackendProtocol:                  MessageBackend,
+	TransientProtocol:                MessageTransient,
 }
 
 func NotificationTypeID(typeName string) NotificationType {
