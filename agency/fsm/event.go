@@ -79,7 +79,7 @@ func (e Event) TriggersByBackendData(data *BackendData) bool {
 	case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
 		return true
 	case TriggerTypeLua:
-		_, ok := e.ExecLua(content)
+		_, _, ok := e.ExecLua(content)
 		return ok
 	}
 	return false
@@ -89,33 +89,34 @@ func (e Event) TriggersByHook() bool {
 	return true
 }
 
-func (e Event) Triggers(status *agency.ProtocolStatus) bool {
+func (e Event) Triggers(status *agency.ProtocolStatus) (ok bool, tgt string) {
 	if status == nil {
-		return true
+		return true, ""
 	}
 	switch status.GetState().ProtocolID.TypeID {
 	case agency.Protocol_ISSUE_CREDENTIAL, agency.Protocol_DIDEXCHANGE, agency.Protocol_PRESENT_PROOF:
-		return true
+		return true, ""
 	case agency.Protocol_BASIC_MESSAGE:
 		content := status.GetBasicMessage().Content
 		switch e.Rule {
 		case TriggerTypeValidateInputNotEqual:
-			return e.Machine.Memory[e.Data] != content
+			return e.Machine.Memory[e.Data] != content, ""
 		case TriggerTypeValidateInputEqual:
-			return e.Machine.Memory[e.Data] == content
+			return e.Machine.Memory[e.Data] == content, ""
 		case TriggerTypeInputEqual:
-			return content == e.Data
-		case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
-			return true
+			return content == e.Data, ""
+		case TriggerTypeData, TriggerTypeUseInput,
+			TriggerTypeUseInputSave, TriggerTypeTransient:
+			return true, ""
 		case TriggerTypeLua:
-			_, ok := e.ExecLua(content)
-			return ok
+			_, target, ok := e.ExecLua(content)
+			return ok, target
 		}
 	}
-	return false
+	return false, ""
 }
 
-func (e Event) ExecLua(content string, a ...string) (out string, ok bool) {
+func (e Event) ExecLua(content string, a ...string) (out, tgt string, ok bool) {
 	defer err2.Catch(err2.Err(func(err error) {
 		ok = false
 	}))
@@ -133,11 +134,12 @@ func (e Event) ExecLua(content string, a ...string) (out string, ok bool) {
 		errMsg := assert.MKeyExists(e.Machine.Memory, LUA_ERROR)
 		glog.Errorln("lua error:", errMsg)
 	}
+	tgt = e.Machine.Memory[LUA_TARGET]
 	if okStr == LUA_ALL_OK {
-		return out, true
+		return out, tgt, true
 	}
 	ok = ok && out == okStr
-	return out, ok
+	return out, tgt, ok
 }
 
 func (e Event) Answers(status *agency.Question) bool {

@@ -34,7 +34,7 @@ func TestBackendSimple(t *testing.T) {
 			transition := tt.args.m.TriggersByBackendData(beData)
 			assert.NotNil(transition)
 			o := transition.BuildSendEventsFromBackendData(beData)
-			assert.INotNil(o)
+			assert.SNotNil(o)
 			assert.SLen(o, 1)
 			assert.NotNil(o[0].EventData.Backend)
 			if tt.want {
@@ -77,7 +77,7 @@ func TestBackendTestLuaTrigger(t *testing.T) {
 				assert.SLen(o, 1)
 				assert.NotNil(o[0].EventData.Backend)
 				assert.Equal(o[0].EventData.Backend.Content, tt.wantStr)
-				assert.INotNil(o)
+				assert.SNotNil(o)
 			} else {
 				assert.Nil(tt.args.m.Triggers(
 					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.content)))

@@ -186,9 +186,10 @@ func (m *Machine) CurrentState() *State {
 // it returns nil.
 func (m *Machine) Triggers(status *agency.ProtocolStatus) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
-		if transition.Trigger.ProtocolType == status.State.ProtocolID.TypeID &&
-			transition.Trigger.Triggers(status) {
-			return transition
+		if transition.Trigger.ProtocolType == status.State.ProtocolID.TypeID {
+			if ok, tgt := transition.Trigger.Triggers(status); ok {
+				return transition.withNewTarget(tgt)
+			}
 		}
 	}
 	return nil
@@ -200,6 +201,15 @@ func (m *Machine) TriggersByHook() *Transition {
 	for _, transition := range m.CurrentState().Transitions {
 		if transition.Trigger.ProtocolType == HookProtocol &&
 			transition.Trigger.TriggersByHook() {
+			return transition
+		}
+	}
+	return nil
+}
+
+func (m *Machine) TriggersByStep() *Transition {
+	for _, transition := range m.CurrentState().Transitions {
+		if transition.Trigger.ProtocolType == TransientProtocol {
 			return transition
 		}
 	}
@@ -240,6 +250,10 @@ func (m *Machine) Answers(q *agency.Question) *Transition {
 	return nil
 }
 
+type TransientChan = chan string
+type TransientInChan = <-chan string
+type TransientOutChan = chan<- string
+
 type TerminateChan = chan bool
 type TerminateInChan = <-chan bool
 type TerminateOutChan = chan<- bool
@@ -262,7 +276,7 @@ func (m *Machine) checkTerm() {
 func (m *Machine) Start(termChan TerminateOutChan) []*Event {
 	t := m.Initial
 	m.termChan = termChan
-	if (t.Trigger == nil || t.Trigger.Triggers(nil)) && t.Sends != nil {
+	if t.Sends != nil {
 		return t.BuildSendEvents(nil)
 	}
 	return nil
