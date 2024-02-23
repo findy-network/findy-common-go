@@ -2,7 +2,7 @@ package fsm
 
 type BackendData struct {
 	// these two are the header part
-	ToConnID string // backend/service FSM, should it have a UUID? maybe?
+	ConnID   string // same as conversation FSM connID
 	Protocol string
 
 	FromConnID string // this is something that might not exist

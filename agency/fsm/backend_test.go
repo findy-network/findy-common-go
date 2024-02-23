@@ -93,7 +93,7 @@ func TestBackendTestLuaTrigger(t *testing.T) {
 
 func newBackend(c, s string) *BackendData {
 	return &BackendData{
-		ToConnID:   "",
+		ConnID:     "",
 		Protocol:   MessageBackend,
 		FromConnID: "123456", // uuid, this is for testing only
 		Subject:    s,
@@ -120,7 +120,6 @@ else
 	setRegValue("MEM", "OUTPUT", "NO")
 end
  `
-
 
 	luaBackendScript2 = `
 local i=getRegValue("MEM", "INPUT")

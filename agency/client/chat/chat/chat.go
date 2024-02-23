@@ -130,7 +130,7 @@ func Multiplexer(info MultiplexerInfo) {
 			backendMachine.backendReceived(bd)
 
 		case d := <-ConversationBackendChan:
-			c, ok := conversations[d.ToConnID]
+			c, ok := conversations[d.ConnID]
 			assert.That(ok, "backend msgs to existing conversations only")
 			c.BackendChan <- d
 		case t := <-Status:
@@ -394,7 +394,7 @@ func callHook(hookData map[string]string) {
 func (c *Conversation) sendBackend(data *fsm.BackendData, wantStatus bool) {
 	glog.V(0).Infoln("sending backend, wantStatus:", wantStatus)
 	if backendMachine != nil {
-		glog.V(0).Infoln("sending backend to", data.ToConnID, data.Content)
+		glog.V(0).Infoln("sending backend to", data.ConnID, data.Content, data.Subject)
 		backendMachine.BackendChan <- data
 	} else {
 		glog.V(0).Infoln("!!! cannot send message to Service FSM")
