@@ -67,22 +67,26 @@ func (e *Event) filterEnvs() {
 	}
 }
 
-func (e Event) TriggersByBackendData(data *BackendData) bool {
+func (e Event) TriggersByBackendData(data *BackendData) (ok bool, tgt string) {
+	if data == nil {
+		return true, ""
+	}
+	e.Machine.Memory[TriggerTypeUseInput] = data.Subject
 	content := data.Content
 	switch e.Rule {
 	case TriggerTypeValidateInputNotEqual:
-		return e.Machine.Memory[e.Data] != content
+		return e.Machine.Memory[e.Data] != content, ""
 	case TriggerTypeValidateInputEqual:
-		return e.Machine.Memory[e.Data] == content
+		return e.Machine.Memory[e.Data] == content, ""
 	case TriggerTypeInputEqual:
-		return content == e.Data
+		return content == e.Data, ""
 	case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
-		return true
+		return true, ""
 	case TriggerTypeLua:
-		_, _, ok := e.ExecLua(content)
-		return ok
+		_, target, ok := e.ExecLua(content)
+		return ok, target
 	}
-	return false
+	return false, ""
 }
 
 func (e Event) TriggersByHook() bool {

@@ -218,9 +218,10 @@ func (m *Machine) TriggersByStep() *Transition {
 
 func (m *Machine) TriggersByBackendData(data *BackendData) *Transition {
 	for _, transition := range m.CurrentState().Transitions {
-		if transition.Trigger.ProtocolType == BackendProtocol &&
-			transition.Trigger.TriggersByBackendData(data) {
-			return transition
+		if transition.Trigger.ProtocolType == BackendProtocol {
+			if ok, tgt := transition.Trigger.TriggersByBackendData(data); ok {
+				return transition.withNewTarget(tgt)
+			}
 		}
 	}
 	return nil
