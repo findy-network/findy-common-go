@@ -5,11 +5,12 @@ type BackendData struct {
 	ToConnID string // backend/service FSM, should it have a UUID? maybe?
 	Protocol string
 
-	FromConnID string // this is something that might not be exist
+	FromConnID string // this is something that might not exist
 
 	// for the start we have only string content, but maybe later..
 	// see the EventData
 	Subject string // this could be used for the chat room,
+
 	// todo: but who should know it, i.e. keep track of the room
 	Content string
 }
