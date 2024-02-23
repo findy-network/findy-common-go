@@ -71,7 +71,7 @@ func (e Event) TriggersByBackendData(data *BackendData) (ok bool, tgt string) {
 	if data == nil {
 		return true, ""
 	}
-	e.Machine.Memory[TriggerTypeUseInput] = data.Subject
+	e.Machine.Memory[LUA_CONN_ID] = data.ConnID
 	content := data.Content
 	switch e.Rule {
 	case TriggerTypeValidateInputNotEqual:

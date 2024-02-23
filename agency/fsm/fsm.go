@@ -96,6 +96,8 @@ const (
 	digitsInPIN = 6
 
 	// register names for communication thru machine's memory map.
+	LUA_CONN_ID = "CONN_ID" // pairwise ID
+
 	LUA_INPUT  = "INPUT"  // current incoming data like basic_message.content
 	LUA_OUTPUT = "OUTPUT" // lua scripts output register name
 	LUA_TARGET = "TARGET" // lua scripts target register name
