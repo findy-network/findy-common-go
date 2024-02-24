@@ -5,8 +5,6 @@ type BackendData struct {
 	ConnID   string // same as conversation FSM connID
 	Protocol string
 
-	FromConnID string // this is something that might not exist
-
 	// for the start we have only string content, but maybe later..
 	// see the EventData
 	Subject string // this could be used for the chat room,
