@@ -25,6 +25,17 @@ func (md *MachineData) IsValid() bool {
 	return md != nil && md.FType != "" && md.Data != nil
 }
 
+func NewBackendMachine(data MachineData) *Machine {
+	var machine Machine
+	if filepath.Ext(data.FType) == ".json" {
+		try.To(json.Unmarshal(data.Data, &machine))
+	} else {
+		try.To(yaml.Unmarshal(data.Data, &machine))
+	}
+	machine.Type = MachineTypeBackend
+	return &machine
+}
+
 func NewMachine(data MachineData) *Machine {
 	var machine Machine
 	if filepath.Ext(data.FType) == ".json" {
@@ -217,6 +228,7 @@ func (m *Machine) TriggersByStep() *Transition {
 }
 
 func (m *Machine) TriggersByBackendData(data *BackendData) *Transition {
+	glog.V(3).Infof("MachineType: %v", m.Type)
 	for _, transition := range m.CurrentState().Transitions {
 		if transition.Trigger.ProtocolType == BackendProtocol {
 			if ok, tgt := transition.Trigger.TriggersByBackendData(data); ok {

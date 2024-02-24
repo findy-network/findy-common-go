@@ -113,7 +113,7 @@ func Multiplexer(info MultiplexerInfo) {
 	if info.BackendMachine.IsValid() {
 		b := newBackendService()
 		backendChan = b.BackendChan
-		b.machine = fsm.NewMachine(*info.BackendMachine)
+		b.machine = fsm.NewBackendMachine(*info.BackendMachine)
 		try.To(b.machine.Initialize())
 		b.machine.InitLua()
 
@@ -189,7 +189,8 @@ func newConversation(
 }
 
 func (b *Backend) backendReceived(data *fsm.BackendData) {
-	glog.V(1).Infoln("+++ backend data arrived:", data)
+	glog.V(3).Infoln("+++ backend data arrived:", b.machine.Type, ":", data)
+	assert.Equal(b.machine.Type, fsm.MachineTypeBackend)
 	if transition := b.machine.TriggersByBackendData(data); transition != nil {
 		b.send(transition.BuildSendEventsFromBackendData(data))
 		b.machine.Step(transition)
@@ -245,7 +246,8 @@ func (c *Conversation) stepReceived(data string) {
 }
 
 func (c *Conversation) backendReceived(data *fsm.BackendData) {
-	glog.V(3).Infoln("conversation: backend w/ content:", data.Content)
+	glog.V(3).Infoln("conversation: backend w/ content:", data.Content, c.machine.Type)
+	assert.Equal(c.machine.Type, fsm.MachineTypeConversation)
 	if transition := c.machine.TriggersByBackendData(data); transition != nil {
 		c.send(transition.BuildSendEventsFromBackendData(data), nil)
 		c.machine.Step(transition)
@@ -393,6 +395,11 @@ func callHook(hookData map[string]string) {
 
 func (c *Conversation) sendBackend(data *fsm.BackendData, wantStatus bool) {
 	glog.V(0).Infoln("sending backend, wantStatus:", wantStatus)
+	if data.ConnID == "" {
+		// TODO: maybe this is only place to se it? First opportunity?
+		glog.Warningln("!!! ConnID is empty, fixing !!!")
+		data.ConnID = c.id
+	}
 	if backendMachine != nil {
 		glog.V(0).Infoln("sending backend to", data.ConnID, data.Content, data.Subject)
 		backendMachine.BackendChan <- data

@@ -29,25 +29,53 @@ type Transition struct {
 	Machine *Machine `json:"-"`
 }
 
+// BuildSendEventsFromBackendData is called from b-fsm and it's combined method
+// to execute two phases. Build input events and then build send event list. The
+// second phase is shared with pw-fsm.
+// TODO: Note that the input RULE handling is minimal and many methods are
+// missing!
 func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event {
 	var (
 		usedProtocol agency.Protocol_Type = BackendProtocol
 		eData                             = &EventData{Backend: data}
 	)
+	glog.Infof("Data: '%v', machine: %v", t.Trigger.Data, t.Machine.Type)
 	if t.Machine.Type == MachineTypeConversation {
 		glog.V(2).Infoln("+++ conversation machines send Backend msgs as BM")
 		usedProtocol = agency.Protocol_BASIC_MESSAGE
 		eData = &EventData{BasicMessage: &BasicMessage{
 			Content: data.Content,
 		}}
+		e := &Event{
+			Protocol:     toFileProtocolType[usedProtocol],
+			ProtocolType: usedProtocol,
+			EventData:    eData,
+			Data:         data.Content,
+		}
+		return t.doBuildSendEvents(e)
+	} else if t.Machine.Type == MachineTypeBackend {
+		e := &Event{
+			Protocol:     toFileProtocolType[usedProtocol],
+			ProtocolType: usedProtocol,
+			EventData:    eData,
+			Data:         data.Content,
+		}
+		glog.Infoln("RULE:", t.Trigger.Rule)
+		switch t.Trigger.Rule {
+		case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual,
+			TriggerTypeLua, TriggerTypeUseInput, TriggerTypeTransient:
+			// for future use
+		case TriggerTypeUseInputSave:
+			t.Machine.Memory[t.Trigger.Data] = data.Content
+			glog.V(1).Infoln("=== save to machine memory", t.Trigger.Data, "->", data.Content)
+		case TriggerTypeData, TriggerTypeInputEqual:
+			// for future use
+		}
+		return t.doBuildSendEvents(e)
+	} else {
+		assert.That(false, "unknown machine type")
 	}
-	input := &Event{
-		Protocol:     toFileProtocolType[usedProtocol],
-		ProtocolType: usedProtocol,
-		EventData:    eData,
-		Data:         data.Content,
-	}
-	return t.doBuildSendEvents(input)
+	return nil
 }
 
 func (t *Transition) BuildSendEventsFromStep(data string) []*Event {
@@ -133,6 +161,7 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 		glog.V(2).Infoln("send", send.Backend.Content)
 	}
 	glog.V(3).Infoln("send.Rule:", send.Rule)
+	glog.V(3).Infof("Data: '%v'", t.Trigger.Data)
 	switch send.Rule {
 	case TriggerTypeLua:
 		content := input.Data
@@ -172,6 +201,7 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 		}}
 	}
 }
+
 func (t *Transition) buildTransientSend(_ *Event, send *Event) {
 	switch send.Rule {
 	case TriggerTypeTransient:

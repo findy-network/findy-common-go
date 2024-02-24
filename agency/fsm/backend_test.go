@@ -19,16 +19,16 @@ func TestBackendSimple(t *testing.T) {
 		wantStr string
 		want    bool
 	}{
+		{"mem save and format", args{&saveMemBackendMachine, "TEST"}, "she says, TEST", true},
+
 		{"simple", args{&simpleBackendMachine, "TEST"}, "she says: TEST", true},
 		{"simple_not", args{&simpleBackendMachine, "not"}, "not", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.PushTester(t)
-			defer assert.PopTester() // caches err2 errors
+			defer assert.PushTester(t)()
 
-			err := tt.args.m.Initialize()
-			assert.NoError(err)
+			try.To(tt.args.m.Initialize())
 			tt.args.m.InitLua()
 			assert.Equal(tt.args.m.Type, MachineTypeBackend)
 			beData := newBackend(tt.args.content, tt.args.content)
@@ -93,11 +93,10 @@ func TestBackendTestLuaTrigger(t *testing.T) {
 
 func newBackend(c, s string) *BackendData {
 	return &BackendData{
-		ConnID:     "",
-		Protocol:   MessageBackend,
-		FromConnID: "123456", // uuid, this is for testing only
-		Subject:    s,
-		Content:    c,
+		ConnID:   "",
+		Protocol: MessageBackend,
+		Subject:  s,
+		Content:  c,
 	}
 }
 
@@ -206,6 +205,36 @@ setRegValue("MEM", "OUTPUT", retval)
 							Data:     luaBackendScript2,
 						}},
 						Target: "TERMINATE",
+					},
+				},
+			},
+			"TERMINATE": {
+				Terminate: true,
+			},
+		},
+	}
+
+	saveMemBackendMachine = Machine{
+		Name: "save mem backend machine",
+		Type: MachineTypeBackend,
+		Initial: &Transition{
+			Target: "IDLE",
+		},
+		States: map[string]*State{
+			"IDLE": {
+				Transitions: []*Transition{
+					{
+						Trigger: &Event{
+							Data:     "LINE",
+							Protocol: "backend",
+							Rule:     "INPUT_SAVE",
+						},
+						Sends: []*Event{{
+							Protocol: "backend",
+							Rule:     "FORMAT_MEM",
+							Data:     "she says, {{.LINE}}",
+						}},
+						Target: "IDLE",
 					},
 				},
 			},
