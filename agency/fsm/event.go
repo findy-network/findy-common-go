@@ -71,7 +71,9 @@ func (e Event) TriggersByBackendData(data *BackendData) (ok bool, tgt string) {
 	if data == nil {
 		return true, ""
 	}
+	glog.V(3).Infof("*** Data: '%v', Type: %v", e.Data, e.Machine.Type)
 	e.Machine.Memory[LUA_CONN_ID] = data.ConnID
+	e.Machine.Memory[LUA_SUBJECT] = data.Subject
 	content := data.Content
 	switch e.Rule {
 	case TriggerTypeValidateInputNotEqual:

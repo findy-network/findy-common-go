@@ -97,6 +97,7 @@ const (
 
 	// register names for communication thru machine's memory map.
 	LUA_CONN_ID = "CONN_ID" // pairwise ID
+	LUA_SUBJECT = "SUBJECT" // reserved
 
 	LUA_INPUT  = "INPUT"  // current incoming data like basic_message.content
 	LUA_OUTPUT = "OUTPUT" // lua scripts output register name
