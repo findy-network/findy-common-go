@@ -62,7 +62,9 @@ type Machine struct {
 	Initialized bool   `json:"-"`
 
 	Memory map[string]string `json:"-"`
-	// f-fsm uses this, b-fsm gets it from the BackendData
+
+	// f-fsm uses these two, b-fsm gets it from the BackendData. Note, the
+	// SessionID is kept in Memory[LUA_SESSION_ID].
 	ConnID string `json:"-"`
 
 	termChan TerminateOutChan `json:"-"`
@@ -246,6 +248,9 @@ func (m *Machine) Step(t *Transition) {
 	m.Current = t.Target
 
 	// coming to Initial state default is to clear the memory map
+	// TODO: when we will come back to initial state the memory is cleared, it
+	// seems that this should be done in a specific transition, which means
+	// that the rule isn't completely right.
 	if m.Current == m.Initial.Target && !m.KeepMemory {
 		m.Memory = make(map[string]string)
 		glog.V(1).Infoln("--- clearing memory map")

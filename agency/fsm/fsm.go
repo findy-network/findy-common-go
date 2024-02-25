@@ -37,6 +37,12 @@ const (
 	// connID+<given-name>
 	TriggerTypeUseInputSaveConnID = "INPUT_SAVE_CONN"
 
+	// saves input data to event as an SESSION_ID that is used solutions that
+	// need chat room algorithm. The date goes from f-fsm -> b-fsm -> f-fsm
+	// where in the last stage it's filtered by the SESSION_ID that must be the
+	// same. Filtering is done in last phase to keep b-fsm simple.
+	TriggerTypeUseInputSaveSessionID = "INPUT_SAVE_SESSION_ID"
+
 	// formates input data with then format string which is in send data
 	TriggerTypeFormat = "FORMAT"
 
@@ -104,6 +110,9 @@ const (
 	LUA_CONN_ID = "CONN_ID" // pairwise ID
 	LUA_SUBJECT = "SUBJECT" // reserved
 
+	// this is in use generally, not only in lua
+	LUA_SESSION_ID = "SESSION_ID"
+
 	LUA_INPUT  = "INPUT"  // current incoming data like basic_message.content
 	LUA_OUTPUT = "OUTPUT" // lua scripts output register name
 	LUA_TARGET = "TARGET" // lua scripts target register name
@@ -153,14 +162,17 @@ type State struct {
 }
 
 var ruleMap = map[string]string{
-	TriggerTypeOurMessage:         "STATUS",
-	TriggerTypeUseInput:           "<-",
-	TriggerTypeUseInputSave:       ":=",
-	TriggerTypeUseInputSaveConnID: ":=",
-	TriggerTypeFormat:             "",
-	TriggerTypeFormatFromMem:      "%s",
-	TriggerTypePIN:                "new PIN",
-	TriggerTypeData:               "",
+	TriggerTypeOurMessage: "STATUS",
+	TriggerTypeUseInput:   "<-",
+
+	TriggerTypeUseInputSave:          ":=",
+	TriggerTypeUseInputSaveConnID:    ":=",
+	TriggerTypeUseInputSaveSessionID: ":=",
+
+	TriggerTypeFormat:        "",
+	TriggerTypeFormatFromMem: "%s",
+	TriggerTypePIN:           "new PIN",
+	TriggerTypeData:          "",
 
 	TriggerTypeValidateInputEqual:    "==",
 	TriggerTypeValidateInputNotEqual: "!=",

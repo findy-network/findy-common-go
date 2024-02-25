@@ -65,12 +65,20 @@ func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event 
 		case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual,
 			TriggerTypeLua, TriggerTypeUseInput, TriggerTypeTransient:
 			// for future use
+
+		case TriggerTypeUseInputSaveSessionID:
+			key := data.ConnID + LUA_SESSION_ID
+			sessionID := data.Content
+			t.Machine.Memory[key] = sessionID
+			eData.Backend.SessionID = sessionID
+			glog.V(3).Infoln("=== save to machine memory", key, "->", sessionID)
 		case TriggerTypeUseInputSaveConnID:
 			t.Machine.Memory[data.ConnID+t.Trigger.Data] = data.Content
-			glog.V(1).Infoln("=== save to machine memory", data.ConnID+t.Trigger.Data, "->", data.Content)
+			glog.V(3).Infoln("=== save to machine memory", data.ConnID+t.Trigger.Data, "->", data.Content)
 		case TriggerTypeUseInputSave:
 			t.Machine.Memory[t.Trigger.Data] = data.Content
-			glog.V(1).Infoln("=== save to machine memory", t.Trigger.Data, "->", data.Content)
+			glog.V(3).Infoln("=== save to machine memory", t.Trigger.Data, "->", data.Content)
+
 		case TriggerTypeData, TriggerTypeInputEqual:
 			// for future use
 		}
@@ -157,32 +165,38 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 }
 
 func (t *Transition) buildBackendSend(input *Event, send *Event) {
+	var inputEventSID, sendEventSID, sessionID string
+
 	if input.Backend != nil {
-		glog.V(2).Infoln("input", input.Backend.Content)
+		inputEventSID = input.Backend.SessionID
+		glog.V(3).Infoln("input", input.Backend.Content, inputEventSID)
 	}
 	if send != nil && send.EventData != nil && send.Backend != nil {
-		glog.V(2).Infoln("send", send.Backend.Content)
+		sendEventSID = send.Backend.SessionID
+		glog.V(3).Infoln("send", send.Backend.Content, sendEventSID)
 	}
-	glog.V(3).Infoln("send.Rule:", send.Rule)
-	glog.V(3).Infof("Data: '%v'", t.Trigger.Data)
+	if inputEventSID == "" {
+		sessionID = sendEventSID
+	}
+	glog.V(5).Infoln("send.Rule:", send.Rule)
+	glog.V(5).Infof("Data: '%v'", t.Trigger.Data)
+	if sessionID == "" {
+		sessionID = t.Machine.Memory[LUA_SESSION_ID]
+		glog.V(1).Infoln("trying to get SessionID from memory", sessionID)
+	}
+	glog.V(5).Infof("sessionID: '%v'", sessionID)
+	content := ""
+	connID := t.Machine.ConnID
 	switch send.Rule {
 	case TriggerTypeLua:
-		content := input.Data
-		out, _, ok := send.ExecLua(content, LUA_ALL_OK)
+		out, _, ok := send.ExecLua(input.Data, LUA_ALL_OK)
 		if ok {
-			send.EventData = &EventData{Backend: &BackendData{
-				Content: out,
-			}}
+			content = out
 		} else {
-			send.EventData = &EventData{Backend: &BackendData{
-				Content: content,
-			}}
+			content = input.Data
 		}
-
 	case TriggerTypeData:
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: send.Data,
-		}}
+		content = send.Data
 	case TriggerTypeUseInput:
 		dataStr := ""
 		if input.ProtocolType == agency.Protocol_BASIC_MESSAGE {
@@ -191,18 +205,18 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 			glog.V(2).Infoln("+++ build backend send: not BM")
 		}
 		glog.V(2).Infoln("+++ dataStr:", dataStr)
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: dataStr,
-		}}
+		content = dataStr
 	case TriggerTypeFormat:
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: fmt.Sprintf(send.Data, input.Data),
-		}}
+		content = fmt.Sprintf(send.Data, input.Data)
 	case TriggerTypeFormatFromMem:
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: t.FmtFromMem(send),
-		}}
+		content = t.FmtFromMem(send)
 	}
+
+	send.EventData = &EventData{Backend: &BackendData{
+		Content:   content,
+		SessionID: sessionID,
+		ConnID:    connID,
+	}}
 }
 
 func (t *Transition) buildTransientSend(_ *Event, send *Event) {
@@ -322,6 +336,15 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
+			}}
+
+		case TriggerTypeUseInputSaveSessionID:
+			sessionID := content
+			glog.V(2).Infoln("-- save session id:", sessionID)
+			t.Machine.Memory[LUA_SESSION_ID] = sessionID
+			e.Data = sessionID
+			e.EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: sessionID,
 			}}
 
 		case TriggerTypeUseInputSave:

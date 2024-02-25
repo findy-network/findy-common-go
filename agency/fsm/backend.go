@@ -1,9 +1,15 @@
 package fsm
 
+// BackendData is important value object to transoprt data between f-fsm and
+// b-fsm. If these values are added remember implement their handling and
+// copying to f-fsm's Memory.
+// See Event.copyBackendDataValuesToMemory(), and event building
 type BackendData struct {
 	// these two are the header part
 	ConnID   string // same as conversation FSM connID
 	Protocol string
+
+	SessionID string // this is filtering part when available
 
 	// for the start we have only string content, but maybe later..
 	// see the EventData

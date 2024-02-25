@@ -117,9 +117,9 @@ func Multiplexer(info MultiplexerInfo) {
 		try.To(b.machine.Initialize())
 		b.machine.InitLua()
 
-		glog.V(1).Infoln("starting and send first step:", info.BackendMachine.FType)
+		glog.V(2).Infoln("starting and send first step:", info.BackendMachine.FType)
 		b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
-		glog.V(1).Infoln("going to for loop:", info.BackendMachine.FType)
+		glog.V(2).Infoln("going to for loop:", info.BackendMachine.FType)
 	}
 
 	for {
@@ -247,7 +247,14 @@ func (c *Conversation) stepReceived(data string) {
 }
 
 func (c *Conversation) backendReceived(data *fsm.BackendData) {
-	glog.V(3).Infoln("conversation: backend w/ content:", data.Content, c.machine.Type)
+	sessionID, weHaveSessionID := c.machine.Memory[fsm.LUA_SESSION_ID]
+	glog.V(3).Infof("conversation: backend w/ content: %v, type:%v, SID:%v",
+		data.Content, c.machine.Type, sessionID)
+	if weHaveSessionID && sessionID != data.SessionID {
+		glog.V(2).Infof("--- (f/my:%v != b-fsm:%v) sessionID",
+			sessionID, data.SessionID)
+		return
+	}
 	assert.Equal(c.machine.Type, fsm.MachineTypeConversation)
 	if transition := c.machine.TriggersByBackendData(data); transition != nil {
 		c.send(transition.BuildSendEventsFromBackendData(data), nil)
@@ -307,7 +314,7 @@ func (c *Conversation) statusReceived(as *agency.AgentStatus) {
 			c.send(transition.BuildSendEvents(status), as)
 			c.machine.Step(transition)
 		} else {
-			glog.V(1).Infoln("machine don't have transition for:",
+			glog.V(1).Infoln("machine doesn't have transition for:",
 				as.Notification.ProtocolType)
 		}
 	}

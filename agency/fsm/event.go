@@ -71,9 +71,7 @@ func (e Event) TriggersByBackendData(data *BackendData) (ok bool, tgt string) {
 	if data == nil {
 		return true, ""
 	}
-	glog.V(3).Infof("*** Data: '%v', Type: %v", e.Data, e.Machine.Type)
-	e.Machine.Memory[LUA_CONN_ID] = data.ConnID
-	e.Machine.Memory[LUA_SUBJECT] = data.Subject
+	e.copyBackendDataValuesToMemory(data)
 	content := data.Content
 	switch e.Rule {
 	case TriggerTypeValidateInputNotEqual:
@@ -82,13 +80,28 @@ func (e Event) TriggersByBackendData(data *BackendData) (ok bool, tgt string) {
 		return e.Machine.Memory[e.Data] == content, ""
 	case TriggerTypeInputEqual:
 		return content == e.Data, ""
-	case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
+	case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave,
+		TriggerTypeUseInputSaveConnID, TriggerTypeUseInputSaveSessionID:
 		return true, ""
 	case TriggerTypeLua:
 		_, target, ok := e.ExecLua(content)
 		return ok, target
 	}
 	return false, ""
+}
+
+func (e *Event) copyBackendDataValuesToMemory(data *BackendData) {
+	assert.NotNil(e.Transition)
+	glog.V(3).Infof("*** Data: '%v', Type: %v, SID:%v", e.Data, e.Machine.Type, data.SessionID)
+	if data.ConnID != "" {
+		e.Machine.Memory[LUA_CONN_ID] = data.ConnID
+	}
+	if data.Subject != "" {
+		e.Machine.Memory[LUA_SUBJECT] = data.Subject
+	}
+	if data.SessionID != "" {
+		e.Machine.Memory[LUA_SESSION_ID] = data.SessionID
+	}
 }
 
 func (e Event) TriggersByHook() bool {
@@ -112,7 +125,8 @@ func (e Event) Triggers(status *agency.ProtocolStatus) (ok bool, tgt string) {
 		case TriggerTypeInputEqual:
 			return content == e.Data, ""
 		case TriggerTypeData, TriggerTypeUseInput,
-			TriggerTypeUseInputSave, TriggerTypeTransient:
+			TriggerTypeUseInputSave, TriggerTypeTransient,
+			TriggerTypeUseInputSaveConnID, TriggerTypeUseInputSaveSessionID:
 			return true, ""
 		case TriggerTypeLua:
 			_, target, ok := e.ExecLua(content)
