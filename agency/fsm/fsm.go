@@ -32,6 +32,11 @@ const (
 	// memory slot
 	TriggerTypeUseInputSave = "INPUT_SAVE"
 
+	// saves input data to event that we can use it, data tells the end of the
+	// name of memory slot. Name is callculated with concat:
+	// connID+<given-name>
+	TriggerTypeUseInputSaveConnID = "INPUT_SAVE_CONN"
+
 	// formates input data with then format string which is in send data
 	TriggerTypeFormat = "FORMAT"
 
@@ -148,13 +153,14 @@ type State struct {
 }
 
 var ruleMap = map[string]string{
-	TriggerTypeOurMessage:    "STATUS",
-	TriggerTypeUseInput:      "<-",
-	TriggerTypeUseInputSave:  ":=",
-	TriggerTypeFormat:        "",
-	TriggerTypeFormatFromMem: "%s",
-	TriggerTypePIN:           "new PIN",
-	TriggerTypeData:          "",
+	TriggerTypeOurMessage:         "STATUS",
+	TriggerTypeUseInput:           "<-",
+	TriggerTypeUseInputSave:       ":=",
+	TriggerTypeUseInputSaveConnID: ":=",
+	TriggerTypeFormat:             "",
+	TriggerTypeFormatFromMem:      "%s",
+	TriggerTypePIN:                "new PIN",
+	TriggerTypeData:               "",
 
 	TriggerTypeValidateInputEqual:    "==",
 	TriggerTypeValidateInputNotEqual: "!=",

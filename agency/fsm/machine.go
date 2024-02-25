@@ -62,6 +62,8 @@ type Machine struct {
 	Initialized bool   `json:"-"`
 
 	Memory map[string]string `json:"-"`
+	// f-fsm uses this, b-fsm gets it from the BackendData
+	ConnID string `json:"-"`
 
 	termChan TerminateOutChan `json:"-"`
 	luaState *lua.State       `json:"-"`

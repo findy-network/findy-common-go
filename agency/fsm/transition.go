@@ -65,6 +65,9 @@ func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event 
 		case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual,
 			TriggerTypeLua, TriggerTypeUseInput, TriggerTypeTransient:
 			// for future use
+		case TriggerTypeUseInputSaveConnID:
+			t.Machine.Memory[data.ConnID+t.Trigger.Data] = data.Content
+			glog.V(1).Infoln("=== save to machine memory", data.ConnID+t.Trigger.Data, "->", data.Content)
 		case TriggerTypeUseInputSave:
 			t.Machine.Memory[t.Trigger.Data] = data.Content
 			glog.V(1).Infoln("=== save to machine memory", t.Trigger.Data, "->", data.Content)
@@ -312,6 +315,15 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
 			}}
+
+			// this isn't so important for f-fsm, or useful yet
+		case TriggerTypeUseInputSaveConnID:
+			t.Machine.Memory[t.Machine.ConnID+t.Trigger.Data] = content
+			e.Data = content
+			e.EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: content,
+			}}
+
 		case TriggerTypeUseInputSave:
 			t.Machine.Memory[t.Trigger.Data] = content
 			e.Data = content

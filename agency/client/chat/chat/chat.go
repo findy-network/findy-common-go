@@ -218,6 +218,7 @@ func (b *Backend) sendBackendData(data *fsm.BackendData, _ bool) {
 func (c *Conversation) Run(data fsm.MachineData) {
 	c.machine = fsm.NewMachine(data)
 	try.To(c.machine.Initialize())
+	c.machine.ConnID = c.id // conversation machines need ConnectionID
 	c.machine.InitLua()
 	c.send(c.machine.Start(fsm.TerminateOutChan(c.TerminateChan)), nil)
 
