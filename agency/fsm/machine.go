@@ -255,13 +255,13 @@ func (m *Machine) Step(t *Transition) {
 	// seems that this should be done in a specific transition, which means
 	// that the rule isn't completely right, but maybe it's good enough.
 	if m.Current == m.Initial.Target {
-		if !m.KeepMemory {
+		if !m.KeepMemory && !m.KeepMemoryReported {
 			m.Memory = make(map[string]string)
 			glog.V(1).Infoln("--- clearing memory map")
 		} else if !m.KeepMemoryReported {
-			m.KeepMemoryReported = true
 			glog.V(1).Infoln("--- NOT clearing memory map 'cause 'keep_memory'")
 		}
+		m.KeepMemoryReported = true
 	}
 	m.checkTerm()
 }
