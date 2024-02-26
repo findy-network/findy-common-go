@@ -1,5 +1,7 @@
 package fsm
 
+import "github.com/findy-network/findy-common-go/x"
+
 // BackendData is important value object to transoprt data between f-fsm and
 // b-fsm. If these values are added remember implement their handling and
 // copying to f-fsm's Memory.
@@ -9,14 +11,20 @@ type BackendData struct {
 	ConnID   string // same as conversation FSM connID
 	Protocol string
 
+	NoEcho bool
+
 	SessionID string // this is filtering part when available
 
 	// for the start we have only string content, but maybe later..
 	// see the EventData
 	Subject string // this could be used for the chat room,
 
-	// todo: but who should know it, i.e. keep track of the room
 	Content string
+}
+
+func (bd *BackendData) String() string {
+	noEcho := x.Whom(bd.NoEcho, "yes", "no")
+	return "ConnID:" + bd.ConnID + ", NoEcho:" + noEcho + ", SessionID:" + bd.SessionID
 }
 
 type BackendChan = chan *BackendData
