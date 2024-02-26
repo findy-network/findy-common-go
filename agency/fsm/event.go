@@ -35,13 +35,14 @@ type Event struct {
 
 	*EventData `json:"event_data,omitempty"`
 
+	NoEcho bool `json:"no_echo,omitempty"`
+
 	ProtocolType     agency.Protocol_Type `json:"-"`
 	NotificationType NotificationType     `json:"-"`
 	// NotificationType agency.Notification_Type `json:"-"`
 
 	*agency.ProtocolStatus `json:"-"`
 	*Transition            `json:"-"`
-	*BackendData           `json:"-"`
 }
 
 func (e *Event) filterEnvs() {
