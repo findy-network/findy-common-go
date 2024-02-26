@@ -189,7 +189,7 @@ func newConversation(
 }
 
 func (b *Backend) backendReceived(data *fsm.BackendData) {
-	glog.V(3).Infoln("+++ backend data arrived:", b.machine.Type, ":", data)
+	glog.V(1).Infof("+++ b-fsm data(%v):%v", data, b.machine.Type)
 	assert.Equal(b.machine.Type, fsm.MachineTypeBackend)
 	if transition := b.machine.TriggersByBackendData(data); transition != nil {
 		b.send(transition.BuildSendEventsFromBackendData(data))
@@ -211,6 +211,7 @@ func (b *Backend) send(outputs []*fsm.Event) {
 
 func (b *Backend) sendBackendData(data *fsm.BackendData, _ bool) {
 	for _, conversation := range conversations {
+		glog.V(2).Infof("b-fsm-> BackendData:%v", data)
 		conversation.BackendChan <- data
 	}
 }
@@ -247,14 +248,26 @@ func (c *Conversation) stepReceived(data string) {
 }
 
 func (c *Conversation) backendReceived(data *fsm.BackendData) {
+	glog.V(1).Infof("+++ b-fsm data(%v):%v", data, c.machine.Type)
+	if data.ConnID == "" {
+		// TODO: maybe this is only place to se it? First opportunity? It
+		// seems that sender cannot get ConnID at b-fsm because the
+		// `keep_memory` isn't `true` in all machines. Maybe rm Warning.
+		glog.Warningln("!!! ConnID is empty, fixing !!!")
+		data.ConnID = c.id
+	}
 	sessionID, weHaveSessionID := c.machine.Memory[fsm.LUA_SESSION_ID]
 	glog.V(3).Infof("conversation: backend w/ content: %v, type:%v, SID:%v",
 		data.Content, c.machine.Type, sessionID)
 	if weHaveSessionID && sessionID != data.SessionID {
-		glog.V(2).Infof("--- (f/my:%v != b-fsm:%v) sessionID",
+		glog.V(1).Infof("--- (f/my:%v != b-fsm:%v)",
 			sessionID, data.SessionID)
 		return
+	} else if data.NoEcho && c.id == data.ConnID {
+		glog.V(1).Infoln("--- no echo")
+		return
 	}
+
 	assert.Equal(c.machine.Type, fsm.MachineTypeConversation)
 	if transition := c.machine.TriggersByBackendData(data); transition != nil {
 		c.send(transition.BuildSendEventsFromBackendData(data), nil)
@@ -401,15 +414,14 @@ func callHook(hookData map[string]string) {
 	}
 }
 
-func (c *Conversation) sendBackend(data *fsm.BackendData, wantStatus bool) {
-	glog.V(0).Infoln("sending backend, wantStatus:", wantStatus)
+func (c *Conversation) sendBackend(data *fsm.BackendData, _ bool) {
+	glog.V(1).Infof("+++ f-fsm-> sending backend:%v", data)
 	if data.ConnID == "" {
 		// TODO: maybe this is only place to se it? First opportunity?
 		glog.Warningln("!!! ConnID is empty, fixing !!!")
 		data.ConnID = c.id
 	}
 	if backendMachine != nil {
-		glog.V(0).Infoln("sending backend to", data.ConnID, data.Content, data.Subject)
 		backendMachine.BackendChan <- data
 	} else {
 		glog.V(0).Infoln("!!! cannot send message to Service FSM")
