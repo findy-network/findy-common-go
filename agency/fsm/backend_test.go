@@ -93,7 +93,7 @@ func TestBackendTestLuaTrigger(t *testing.T) {
 
 func newBackend(c, s string) *BackendData {
 	return &BackendData{
-		ConnID:   "",
+		ConnID:   "TEST_CONN_ID_SET_IN_UNIT_TEST",
 		Protocol: MessageBackend,
 		Subject:  s,
 		Content:  c,
