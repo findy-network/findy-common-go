@@ -69,6 +69,9 @@ type Machine struct {
 
 	termChan TerminateOutChan `json:"-"`
 	luaState *lua.State       `json:"-"`
+
+	// log only once, otherwise annoying
+	KeepMemoryReported bool `json:"-"`
 }
 
 func (m *Machine) register(name string) map[string]string {
@@ -244,18 +247,21 @@ func (m *Machine) TriggersByBackendData(data *BackendData) *Transition {
 }
 
 func (m *Machine) Step(t *Transition) {
-	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
+	glog.V(1).Infoln(m.Current, "->", t.Target)
 	m.Current = t.Target
 
 	// coming to Initial state default is to clear the memory map
 	// TODO: when we will come back to initial state the memory is cleared, it
 	// seems that this should be done in a specific transition, which means
-	// that the rule isn't completely right.
-	if m.Current == m.Initial.Target && !m.KeepMemory {
-		m.Memory = make(map[string]string)
-		glog.V(1).Infoln("--- clearing memory map")
-	} else if m.KeepMemory {
-		glog.V(1).Infoln("--- NOT clearing memory map 'cause 'keep_memory'")
+	// that the rule isn't completely right, but maybe it's good enough.
+	if m.Current == m.Initial.Target {
+		if !m.KeepMemory {
+			m.Memory = make(map[string]string)
+			glog.V(1).Infoln("--- clearing memory map")
+		} else if !m.KeepMemoryReported {
+			m.KeepMemoryReported = true
+			glog.V(1).Infoln("--- NOT clearing memory map 'cause 'keep_memory'")
+		}
 	}
 	m.checkTerm()
 }
