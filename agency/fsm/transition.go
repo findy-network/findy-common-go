@@ -214,15 +214,26 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 	}
 	glog.V(5).Infoln("send.Rule:", send.Rule)
 	glog.V(5).Infof("Data: '%v'", t.Trigger.Data)
-	if sessionID == "" {
+
+	// backend machine type is a broker so it MUST NOT overwrite SessionID, but
+	// f-fsm is olways to source of backend events, i.e. it MUST. As it, we
+	// allow backend machines to try get SessionID from memory only if there
+	// isn't any other way.
+	// NOTE: The situation when this seems to happen is when TransientProtocol
+	// is used with backend messages.
+	mustGetSessionIDFromMachineMemory :=
+		t.Machine.Type == MachineTypeConversation || // overwrite
+			(t.Machine.Type == MachineTypeBackend && sessionID == "") // try
+	if mustGetSessionIDFromMachineMemory {
 		sessionID = t.Machine.Memory[LUA_SESSION_ID]
-		glog.V(5).Infoln("trying to get SessionID from memory", sessionID)
+		glog.V(3).Infoln("=== get SessionID from memory", sessionID)
 	}
-	glog.V(5).Infof("sessionID: '%v'", sessionID)
+	glog.V(3).Infof("sessionID: '%v'", sessionID)
+
 	content := ""
 	if connID == "" {
 		connID = t.Machine.ConnID
-		glog.V(5).Infoln("connID from machine.ConnID", connID)
+		glog.V(3).Infoln("connID from machine.ConnID", connID)
 	}
 	assert.NotEmpty(connID)
 	switch send.Rule {
@@ -385,12 +396,14 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 
 		case TriggerTypeUseInputSaveSessionID:
 			sessionID := content
-			glog.V(2).Infoln("-- save session id:", sessionID)
+			//eData.Backend.SessionID = sessionID
 			t.Machine.Memory[LUA_SESSION_ID] = sessionID
 			e.Data = sessionID
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: sessionID,
 			}}
+			glog.V(3).Infoln("=== save to machine memory", LUA_SESSION_ID,
+				"->", sessionID)
 
 		case TriggerTypeUseInputSave:
 			t.Machine.Memory[t.Trigger.Data] = content
