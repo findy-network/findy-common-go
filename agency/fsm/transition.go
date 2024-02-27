@@ -40,11 +40,11 @@ func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event 
 		eData                             = &EventData{Backend: data}
 		sendEvent    *Event
 	)
-	glog.V(1).Infof("Data: '%v', machine: %v", t.Trigger.Data, t.Machine.Type)
-	glog.V(1).Infof("BackendData: '%v'", data)
+	glog.V(3).Infof("Data: '%v', machine: %v", t.Trigger.Data, t.Machine.Type)
+	glog.V(3).Infof("BackendData: '%v'", data)
 	switch t.Machine.Type {
 	case MachineTypeConversation:
-		glog.V(3).Infoln("!!! conversation machines send Backend msgs as BM")
+		glog.V(5).Infoln("!!! conversation machines send Backend msgs as BM")
 		// TODO: this might be true, f-fsm should not reply to b-fsm directly.
 
 		usedProtocol = agency.Protocol_BASIC_MESSAGE
@@ -69,7 +69,7 @@ func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event 
 	default:
 		assert.That(false, "unknown machine type")
 	}
-	glog.V(1).Infoln("RULE:", t.Trigger.Rule)
+	glog.V(5).Infoln("RULE:", t.Trigger.Rule)
 	switch t.Trigger.Rule {
 	case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual,
 		TriggerTypeLua, TriggerTypeUseInput, TriggerTypeTransient:
@@ -80,21 +80,21 @@ func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event 
 		sessionID := data.Content
 		t.Machine.Memory[key] = sessionID
 		eData.Backend.SessionID = sessionID
-		glog.V(1).Infoln("=== save to machine memory", key, "->", sessionID)
+		glog.V(3).Infoln("=== save to machine memory", key, "->", sessionID)
 	case TriggerTypeUseInputSaveConnID:
 		t.Machine.Memory[data.ConnID+t.Trigger.Data] = data.Content
-		glog.V(1).Infoln("=== save to machine memory", data.ConnID+t.Trigger.Data, "->", data.Content)
+		glog.V(3).Infoln("=== save to machine memory", data.ConnID+t.Trigger.Data, "->", data.Content)
 	case TriggerTypeUseInputSave:
 		t.Machine.Memory[t.Trigger.Data] = data.Content
-		glog.V(1).Infoln("=== save to machine memory", t.Trigger.Data, "->", data.Content)
+		glog.V(3).Infoln("=== save to machine memory", t.Trigger.Data, "->", data.Content)
 
 	case TriggerTypeData, TriggerTypeInputEqual:
 		// for future use
 	}
 	if sendEvent.EventData.Backend != nil {
-		glog.V(1).Infoln("connID:", sendEvent.Backend.ConnID)
+		glog.V(3).Infoln("connID:", sendEvent.Backend.ConnID)
 	} else {
-		glog.V(1).Infoln("--- sending BM when receiving Backend")
+		glog.V(3).Infoln("--- sending BM when receiving Backend")
 	}
 	return t.doBuildSendEvents(sendEvent)
 }
@@ -203,7 +203,7 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 			connID = send.Backend.ConnID
 			glog.V(1).Infoln("connID from send Event", connID)
 		}
-		glog.V(1).Infoln("send", send.Backend)
+		glog.V(3).Infoln("send", send.Backend)
 	} else {
 		eventData = &EventData{Backend: &BackendData{
 			SessionID: sessionID,
@@ -216,13 +216,13 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 	glog.V(5).Infof("Data: '%v'", t.Trigger.Data)
 	if sessionID == "" {
 		sessionID = t.Machine.Memory[LUA_SESSION_ID]
-		glog.V(1).Infoln("trying to get SessionID from memory", sessionID)
+		glog.V(5).Infoln("trying to get SessionID from memory", sessionID)
 	}
 	glog.V(5).Infof("sessionID: '%v'", sessionID)
 	content := ""
 	if connID == "" {
 		connID = t.Machine.ConnID
-		glog.V(1).Infoln("connID from machine.ConnID", connID)
+		glog.V(5).Infoln("connID from machine.ConnID", connID)
 	}
 	assert.NotEmpty(connID)
 	switch send.Rule {
@@ -259,7 +259,7 @@ func (t *Transition) buildBackendSend(input *Event, send *Event) {
 	eventData.Backend.SessionID = sessionID
 	eventData.Backend.NoEcho = noEcho
 
-	glog.V(1).Infoln("+++ no_echo:", noEcho)
+	glog.V(5).Infoln("--- no_echo:", noEcho)
 
 	send.EventData = eventData
 }
