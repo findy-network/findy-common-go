@@ -1,6 +1,8 @@
 package fsm
 
-import "github.com/findy-network/findy-common-go/x"
+import (
+	"github.com/findy-network/findy-common-go/x"
+)
 
 // BackendData is important value object to transoprt data between f-fsm and
 // b-fsm. If these values are added remember implement their handling and
@@ -24,7 +26,8 @@ type BackendData struct {
 
 func (bd *BackendData) String() string {
 	noEcho := x.Whom(bd.NoEcho, "yes", "no")
-	return "ConnID:" + bd.ConnID + ", NoEcho:" + noEcho + ", SessionID:" + bd.SessionID
+	connID := bd.ConnID[:8]
+	return bd.Content + "|ConnID:" + connID + ", NoEcho:" + noEcho + ", SID:" + bd.SessionID
 }
 
 type BackendChan = chan *BackendData
