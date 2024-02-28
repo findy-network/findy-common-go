@@ -10,8 +10,8 @@ import (
 
 func TestLuaTestLuaTrigger(t *testing.T) {
 	type args struct {
-		m *Machine
-		c string
+		m       *Machine
+		content string
 	}
 	type wants struct {
 		want bool
@@ -22,7 +22,7 @@ func TestLuaTestLuaTrigger(t *testing.T) {
 		args args
 		wants
 	}{
-		{"simple_not", args{&luaMachineDynamicTargetState, "yes"}, wants{true, "YES"}},
+		{"dynamic target", args{&luaMachineDynamicTargetState, "yes"}, wants{true, "YES"}},
 
 		{"simple", args{&luaMachine, "TEST"}, wants{true, ""}},
 		{"simple_not", args{&luaMachine, "not"}, wants{false, ""}},
@@ -35,14 +35,14 @@ func TestLuaTestLuaTrigger(t *testing.T) {
 			tt.args.m.InitLua()
 			if tt.want {
 				transition := tt.args.m.Triggers(
-					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c))
+					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.content))
 				assert.NotNil(transition)
 				if tt.tgt != "" {
 					assert.Equal(transition.Target, tt.tgt)
 				}
 			} else {
 				assert.Nil(tt.args.m.Triggers(
-					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.c)))
+					protocolStatus(agency.Protocol_BASIC_MESSAGE, tt.args.content)))
 			}
 		})
 	}
@@ -158,7 +158,7 @@ setRegValue("MEM", "OUTPUT", retval)
 						Sends: []*Event{{
 							Protocol: "basic_message",
 							Rule:     "LUA",
-							Data:     `@{script2.lua}`,
+							Data:     `${script2.lua}`,
 						}},
 						Target: "TERMINATE",
 					},

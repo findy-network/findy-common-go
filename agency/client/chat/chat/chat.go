@@ -113,13 +113,13 @@ func Multiplexer(info MultiplexerInfo) {
 	if info.BackendMachine.IsValid() {
 		b := newBackendService()
 		backendChan = b.BackendChan
-		b.machine = fsm.NewMachine(*info.BackendMachine)
+		b.machine = fsm.NewBackendMachine(*info.BackendMachine)
 		try.To(b.machine.Initialize())
 		b.machine.InitLua()
 
-		glog.V(1).Infoln("starting and send first step:", info.BackendMachine.FType)
+		glog.V(2).Infoln("starting and send first step:", info.BackendMachine.FType)
 		b.send(b.machine.Start(fsm.TerminateOutChan(b.TerminateChan)))
-		glog.V(1).Infoln("going to for loop:", info.BackendMachine.FType)
+		glog.V(2).Infoln("going to for loop:", info.BackendMachine.FType)
 	}
 
 	for {
@@ -130,7 +130,7 @@ func Multiplexer(info MultiplexerInfo) {
 			backendMachine.backendReceived(bd)
 
 		case d := <-ConversationBackendChan:
-			c, ok := conversations[d.ToConnID]
+			c, ok := conversations[d.ConnID]
 			assert.That(ok, "backend msgs to existing conversations only")
 			c.BackendChan <- d
 		case t := <-Status:
@@ -189,7 +189,8 @@ func newConversation(
 }
 
 func (b *Backend) backendReceived(data *fsm.BackendData) {
-	glog.V(1).Infoln("+++ backend data arrived:", data)
+	glog.V(2).Infof("+++ b-fsm data(%v):%v", data, b.machine.Type)
+	assert.Equal(b.machine.Type, fsm.MachineTypeBackend)
 	if transition := b.machine.TriggersByBackendData(data); transition != nil {
 		b.send(transition.BuildSendEventsFromBackendData(data))
 		b.machine.Step(transition)
@@ -210,6 +211,7 @@ func (b *Backend) send(outputs []*fsm.Event) {
 
 func (b *Backend) sendBackendData(data *fsm.BackendData, _ bool) {
 	for _, conversation := range conversations {
+		glog.V(2).Infof("b-fsm-> BackendData:%v", data)
 		conversation.BackendChan <- data
 	}
 }
@@ -217,6 +219,7 @@ func (b *Backend) sendBackendData(data *fsm.BackendData, _ bool) {
 func (c *Conversation) Run(data fsm.MachineData) {
 	c.machine = fsm.NewMachine(data)
 	try.To(c.machine.Initialize())
+	c.machine.ConnID = c.id // conversation machines need ConnectionID
 	c.machine.InitLua()
 	c.send(c.machine.Start(fsm.TerminateOutChan(c.TerminateChan)), nil)
 
@@ -245,7 +248,27 @@ func (c *Conversation) stepReceived(data string) {
 }
 
 func (c *Conversation) backendReceived(data *fsm.BackendData) {
-	glog.V(3).Infoln("conversation: backend w/ content:", data.Content)
+	glog.V(2).Infof("+++ b-fsm data(%v):%v", data, c.machine.Type)
+	if data.ConnID == "" {
+		// TODO: maybe this is only place to se it? First opportunity? It
+		// seems that sender cannot get ConnID at b-fsm because the
+		// `keep_memory` isn't `true` in all machines. Maybe rm Warning.
+		glog.Warningln("!!! ConnID is empty, fixing !!!")
+		data.ConnID = c.id
+	}
+	sessionID, weHaveSessionID := c.machine.Memory[fsm.LUA_SESSION_ID]
+	glog.V(3).Infof("conversation: backend w/ content: %v, type:%v, SID:%v",
+		data.Content, c.machine.Type, sessionID)
+	if weHaveSessionID && sessionID != data.SessionID {
+		glog.V(1).Infof("--- (f/my: %v != b-fsm: %v)",
+			sessionID, data.SessionID)
+		return
+	} else if data.NoEcho && c.id == data.ConnID {
+		glog.V(1).Infoln("--- no echo")
+		return
+	}
+
+	assert.Equal(c.machine.Type, fsm.MachineTypeConversation)
 	if transition := c.machine.TriggersByBackendData(data); transition != nil {
 		c.send(transition.BuildSendEventsFromBackendData(data), nil)
 		c.machine.Step(transition)
@@ -296,7 +319,7 @@ func (c *Conversation) statusReceived(as *agency.AgentStatus) {
 				return
 			}
 			if glog.V(3) {
-				glog.Infof("machine: %s, ptr(%p)", c.machine.Name, c.machine)
+				glog.Infof("machine: %s, ptr(%p)", c.id[:8], c.machine)
 				glog.Infoln("role:", status.GetState().ProtocolID.Role)
 				glog.Infoln("TRiGGERiNG", transition.Trigger.ProtocolType)
 			}
@@ -304,7 +327,7 @@ func (c *Conversation) statusReceived(as *agency.AgentStatus) {
 			c.send(transition.BuildSendEvents(status), as)
 			c.machine.Step(transition)
 		} else {
-			glog.V(1).Infoln("machine don't have transition for:",
+			glog.V(1).Infoln("machine doesn't have transition for:",
 				as.Notification.ProtocolType)
 		}
 	}
@@ -391,10 +414,14 @@ func callHook(hookData map[string]string) {
 	}
 }
 
-func (c *Conversation) sendBackend(data *fsm.BackendData, wantStatus bool) {
-	glog.V(0).Infoln("sending backend, wantStatus:", wantStatus)
+func (c *Conversation) sendBackend(data *fsm.BackendData, _ bool) {
+	glog.V(2).Infof("+++ f-fsm-> sending backend:%v", data)
+	if data.ConnID == "" {
+		// TODO: maybe this is only place to se it? First opportunity?
+		glog.Warningln("!!! ConnID is empty, fixing !!!")
+		data.ConnID = c.id
+	}
 	if backendMachine != nil {
-		glog.V(0).Infoln("sending backend to", data.ToConnID, data.Content)
 		backendMachine.BackendChan <- data
 	} else {
 		glog.V(0).Infoln("!!! cannot send message to Service FSM")

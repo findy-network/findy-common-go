@@ -25,6 +25,17 @@ func (md *MachineData) IsValid() bool {
 	return md != nil && md.FType != "" && md.Data != nil
 }
 
+func NewBackendMachine(data MachineData) *Machine {
+	var machine Machine
+	if filepath.Ext(data.FType) == ".json" {
+		try.To(json.Unmarshal(data.Data, &machine))
+	} else {
+		try.To(yaml.Unmarshal(data.Data, &machine))
+	}
+	machine.Type = MachineTypeBackend
+	return &machine
+}
+
 func NewMachine(data MachineData) *Machine {
 	var machine Machine
 	if filepath.Ext(data.FType) == ".json" {
@@ -52,8 +63,15 @@ type Machine struct {
 
 	Memory map[string]string `json:"-"`
 
+	// f-fsm uses these two, b-fsm gets it from the BackendData. Note, the
+	// SessionID is kept in Memory[LUA_SESSION_ID].
+	ConnID string `json:"-"`
+
 	termChan TerminateOutChan `json:"-"`
 	luaState *lua.State       `json:"-"`
+
+	// log only once, otherwise annoying
+	KeepMemoryReported bool `json:"-"`
 }
 
 func (m *Machine) register(name string) map[string]string {
@@ -217,25 +235,33 @@ func (m *Machine) TriggersByStep() *Transition {
 }
 
 func (m *Machine) TriggersByBackendData(data *BackendData) *Transition {
+	glog.V(3).Infof("MachineType: %v", m.Type)
 	for _, transition := range m.CurrentState().Transitions {
-		if transition.Trigger.ProtocolType == BackendProtocol &&
-			transition.Trigger.TriggersByBackendData(data) {
-			return transition
+		if transition.Trigger.ProtocolType == BackendProtocol {
+			if ok, tgt := transition.Trigger.TriggersByBackendData(data); ok {
+				return transition.withNewTarget(tgt)
+			}
 		}
 	}
 	return nil
 }
 
 func (m *Machine) Step(t *Transition) {
-	glog.V(1).Infoln("--- Transition from", m.Current, "to", t.Target)
+	glog.V(1).Infoln(m.Current, "->", t.Target)
 	m.Current = t.Target
 
 	// coming to Initial state default is to clear the memory map
-	if m.Current == m.Initial.Target && !m.KeepMemory {
-		m.Memory = make(map[string]string)
-		glog.V(1).Infoln("--- clearing memory map")
-	} else if m.KeepMemory {
-		glog.V(1).Infoln("--- NOT clearing memory map 'cause 'keep_memory'")
+	// TODO: when we will come back to initial state the memory is cleared, it
+	// seems that this should be done in a specific transition, which means
+	// that the rule isn't completely right, but maybe it's good enough.
+	if m.Current == m.Initial.Target {
+		if !m.KeepMemory && !m.KeepMemoryReported {
+			m.Memory = make(map[string]string)
+			glog.V(1).Infoln("--- clearing memory map")
+		} else if !m.KeepMemoryReported {
+			glog.V(1).Infoln("--- NOT clearing memory map 'cause 'keep_memory'")
+		}
+		m.KeepMemoryReported = true
 	}
 	m.checkTerm()
 }

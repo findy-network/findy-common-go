@@ -35,13 +35,14 @@ type Event struct {
 
 	*EventData `json:"event_data,omitempty"`
 
+	NoEcho bool `json:"no_echo,omitempty"`
+
 	ProtocolType     agency.Protocol_Type `json:"-"`
 	NotificationType NotificationType     `json:"-"`
 	// NotificationType agency.Notification_Type `json:"-"`
 
 	*agency.ProtocolStatus `json:"-"`
 	*Transition            `json:"-"`
-	*BackendData           `json:"-"`
 }
 
 func (e *Event) filterEnvs() {
@@ -67,22 +68,41 @@ func (e *Event) filterEnvs() {
 	}
 }
 
-func (e Event) TriggersByBackendData(data *BackendData) bool {
+func (e Event) TriggersByBackendData(data *BackendData) (ok bool, tgt string) {
+	if data == nil {
+		return true, ""
+	}
+	e.copyBackendDataValuesToMemory(data)
 	content := data.Content
 	switch e.Rule {
 	case TriggerTypeValidateInputNotEqual:
-		return e.Machine.Memory[e.Data] != content
+		return e.Machine.Memory[e.Data] != content, ""
 	case TriggerTypeValidateInputEqual:
-		return e.Machine.Memory[e.Data] == content
+		return e.Machine.Memory[e.Data] == content, ""
 	case TriggerTypeInputEqual:
-		return content == e.Data
-	case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave:
-		return true
+		return content == e.Data, ""
+	case TriggerTypeData, TriggerTypeUseInput, TriggerTypeUseInputSave,
+		TriggerTypeUseInputSaveConnID, TriggerTypeUseInputSaveSessionID:
+		return true, ""
 	case TriggerTypeLua:
-		_, _, ok := e.ExecLua(content)
-		return ok
+		_, target, ok := e.ExecLua(content)
+		return ok, target
 	}
-	return false
+	return false, ""
+}
+
+func (e *Event) copyBackendDataValuesToMemory(data *BackendData) {
+	assert.NotNil(e.Transition)
+	glog.V(3).Infof("*** Data: '%v', Type: %v, SID:%v", e.Data, e.Machine.Type, data.SessionID)
+	if data.ConnID != "" {
+		e.Machine.Memory[LUA_CONN_ID] = data.ConnID
+	}
+	if data.Subject != "" {
+		e.Machine.Memory[LUA_SUBJECT] = data.Subject
+	}
+	if data.SessionID != "" {
+		e.Machine.Memory[LUA_SESSION_ID] = data.SessionID
+	}
 }
 
 func (e Event) TriggersByHook() bool {
@@ -106,7 +126,8 @@ func (e Event) Triggers(status *agency.ProtocolStatus) (ok bool, tgt string) {
 		case TriggerTypeInputEqual:
 			return content == e.Data, ""
 		case TriggerTypeData, TriggerTypeUseInput,
-			TriggerTypeUseInputSave, TriggerTypeTransient:
+			TriggerTypeUseInputSave, TriggerTypeTransient,
+			TriggerTypeUseInputSaveConnID, TriggerTypeUseInputSaveSessionID:
 			return true, ""
 		case TriggerTypeLua:
 			_, target, ok := e.ExecLua(content)
