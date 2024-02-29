@@ -29,25 +29,74 @@ type Transition struct {
 	Machine *Machine `json:"-"`
 }
 
+// BuildSendEventsFromBackendData is called from b-fsm and it's combined method
+// to execute two phases. Build input events and then build send event list. The
+// second phase is shared with pw-fsm.
+// TODO: Note that the input RULE handling is minimal and many methods are
+// missing!
 func (t *Transition) BuildSendEventsFromBackendData(data *BackendData) []*Event {
 	var (
 		usedProtocol agency.Protocol_Type = BackendProtocol
 		eData                             = &EventData{Backend: data}
+		sendEvent    *Event
 	)
-	if t.Machine.Type == MachineTypeConversation {
-		glog.V(2).Infoln("+++ conversation machines send Backend msgs as BM")
+	glog.V(3).Infof("Data: '%v', machine: %v", t.Trigger.Data, t.Machine.Type)
+	glog.V(3).Infof("BackendData: '%v'", data)
+	switch t.Machine.Type {
+	case MachineTypeConversation:
+		glog.V(5).Infoln("!!! conversation machines send Backend msgs as BM")
+		// TODO: this might be true, f-fsm should not reply to b-fsm directly.
+
 		usedProtocol = agency.Protocol_BASIC_MESSAGE
 		eData = &EventData{BasicMessage: &BasicMessage{
 			Content: data.Content,
 		}}
+		sendEvent = &Event{
+			Protocol:     toFileProtocolType[usedProtocol],
+			ProtocolType: usedProtocol,
+			EventData:    eData,
+			Data:         data.Content,
+		}
+
+	case MachineTypeBackend:
+		sendEvent = &Event{
+			Protocol:     toFileProtocolType[usedProtocol],
+			ProtocolType: usedProtocol,
+			EventData:    eData,
+			Data:         data.Content,
+		}
+
+	default:
+		assert.That(false, "unknown machine type")
 	}
-	input := &Event{
-		Protocol:     toFileProtocolType[usedProtocol],
-		ProtocolType: usedProtocol,
-		EventData:    eData,
-		Data:         data.Content,
+	glog.V(5).Infoln("RULE:", t.Trigger.Rule)
+	switch t.Trigger.Rule {
+	case TriggerTypeValidateInputNotEqual, TriggerTypeValidateInputEqual,
+		TriggerTypeLua, TriggerTypeUseInput, TriggerTypeTransient:
+		// for future use
+
+	case TriggerTypeUseInputSaveSessionID:
+		key := data.ConnID + LUA_SESSION_ID
+		sessionID := data.Content
+		t.Machine.Memory[key] = sessionID
+		eData.Backend.SessionID = sessionID
+		glog.V(3).Infoln("=== save to machine memory", key, "->", sessionID)
+	case TriggerTypeUseInputSaveConnID:
+		t.Machine.Memory[data.ConnID+t.Trigger.Data] = data.Content
+		glog.V(3).Infoln("=== save to machine memory", data.ConnID+t.Trigger.Data, "->", data.Content)
+	case TriggerTypeUseInputSave:
+		t.Machine.Memory[t.Trigger.Data] = data.Content
+		glog.V(3).Infoln("=== save to machine memory", t.Trigger.Data, "->", data.Content)
+
+	case TriggerTypeData, TriggerTypeInputEqual:
+		// for future use
 	}
-	return t.doBuildSendEvents(input)
+	if sendEvent.EventData.Backend != nil {
+		glog.V(3).Infoln("connID:", sendEvent.Backend.ConnID)
+	} else {
+		glog.V(3).Infoln("--- sending BM when receiving Backend")
+	}
+	return t.doBuildSendEvents(sendEvent)
 }
 
 func (t *Transition) BuildSendEventsFromStep(data string) []*Event {
@@ -126,52 +175,106 @@ func (t *Transition) doBuildSendEvents(input *Event) []*Event {
 }
 
 func (t *Transition) buildBackendSend(input *Event, send *Event) {
+	var (
+		inputEventSID, sendEventSID, sessionID string
+		eventData                              *EventData
+		noEcho                                 bool
+		connID                                 string
+	)
+
+	// NOTE: NoEcho we prefer 1) input Event 2) send Event
 	if input.Backend != nil {
-		glog.V(2).Infoln("input", input.Backend.Content)
+		inputEventSID = input.Backend.SessionID
+		connID = input.Backend.ConnID
+		noEcho = input.Backend.NoEcho // get 1) from incoming
+		glog.V(3).Infof("input Content:%v SID:%v noEcho:%v",
+			input.Backend.Content, inputEventSID, noEcho)
 	}
+	if send != nil {
+		if !noEcho {
+			noEcho = send.NoEcho // 2) get what is in YAML
+		}
+	}
+
 	if send != nil && send.EventData != nil && send.Backend != nil {
-		glog.V(2).Infoln("send", send.Backend.Content)
+		eventData = send.EventData
+		sendEventSID = send.Backend.SessionID
+		if connID == "" && send.Backend.ConnID != "" {
+			connID = send.Backend.ConnID
+			glog.V(1).Infoln("connID from send Event", connID)
+		}
+		glog.V(3).Infoln("send", send.Backend)
+	} else {
+		eventData = &EventData{Backend: &BackendData{
+			SessionID: sessionID,
+		}}
 	}
-	glog.V(3).Infoln("send.Rule:", send.Rule)
+	if inputEventSID == "" {
+		sessionID = sendEventSID
+	}
+	glog.V(5).Infoln("send.Rule:", send.Rule)
+	glog.V(5).Infof("Data: '%v'", t.Trigger.Data)
+
+	// backend machine type is a broker so it MUST NOT overwrite SessionID, but
+	// f-fsm is olways to source of backend events, i.e. it MUST. As it, we
+	// allow backend machines to try get SessionID from memory only if there
+	// isn't any other way.
+	// NOTE: The situation when this seems to happen is when TransientProtocol
+	// is used with backend messages.
+	mustGetSessionIDFromMachineMemory :=
+		t.Machine.Type == MachineTypeConversation || // overwrite
+			(t.Machine.Type == MachineTypeBackend && sessionID == "") // try
+	if mustGetSessionIDFromMachineMemory {
+		sessionID = t.Machine.Memory[LUA_SESSION_ID]
+		glog.V(3).Infoln("=== get SessionID from memory", sessionID)
+	}
+	glog.V(3).Infof("sessionID: '%v'", sessionID)
+
+	content := ""
+	if connID == "" {
+		connID = t.Machine.ConnID
+		glog.V(3).Infoln("connID from machine.ConnID", connID)
+	}
+	assert.NotEmpty(connID)
 	switch send.Rule {
 	case TriggerTypeLua:
-		content := input.Data
-		out, _, ok := send.ExecLua(content, LUA_ALL_OK)
+		out, _, ok := send.ExecLua(input.Data, LUA_ALL_OK)
 		if ok {
-			send.EventData = &EventData{Backend: &BackendData{
-				Content: out,
-			}}
+			content = out
 		} else {
-			send.EventData = &EventData{Backend: &BackendData{
-				Content: content,
-			}}
+			content = input.Data
 		}
-
 	case TriggerTypeData:
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: send.Data,
-		}}
+		content = send.Data
 	case TriggerTypeUseInput:
 		dataStr := ""
 		if input.ProtocolType == agency.Protocol_BASIC_MESSAGE {
 			dataStr = input.EventData.BasicMessage.Content
+		} else if input.ProtocolType == BackendProtocol {
+			dataStr = input.EventData.Backend.Content
 		} else {
-			glog.V(2).Infoln("+++ build backend send: not BM")
+			glog.Warningln("+++ build backend send: not BM")
 		}
 		glog.V(2).Infoln("+++ dataStr:", dataStr)
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: dataStr,
-		}}
+		content = dataStr
 	case TriggerTypeFormat:
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: fmt.Sprintf(send.Data, input.Data),
-		}}
+		content = fmt.Sprintf(send.Data, input.Data)
 	case TriggerTypeFormatFromMem:
-		send.EventData = &EventData{Backend: &BackendData{
-			Content: t.FmtFromMem(send),
-		}}
+		content = t.FmtFromMem(send)
+	default:
+		glog.Warningln("!!! Not implemented event rule in 'backend' msg:", send.Rule)
 	}
+
+	eventData.Backend.ConnID = connID
+	eventData.Backend.Content = content
+	eventData.Backend.SessionID = sessionID
+	eventData.Backend.NoEcho = noEcho
+
+	glog.V(5).Infoln("--- no_echo:", noEcho)
+
+	send.EventData = eventData
 }
+
 func (t *Transition) buildTransientSend(_ *Event, send *Event) {
 	switch send.Rule {
 	case TriggerTypeTransient:
@@ -282,12 +385,33 @@ func (t *Transition) buildInputEvent(status *agency.ProtocolStatus) (e *Event) {
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
 			}}
+
+			// this isn't so important for f-fsm, or useful yet
+		case TriggerTypeUseInputSaveConnID:
+			t.Machine.Memory[t.Machine.ConnID+t.Trigger.Data] = content
+			e.Data = content
+			e.EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: content,
+			}}
+
+		case TriggerTypeUseInputSaveSessionID:
+			sessionID := content
+			//eData.Backend.SessionID = sessionID
+			t.Machine.Memory[LUA_SESSION_ID] = sessionID
+			e.Data = sessionID
+			e.EventData = &EventData{BasicMessage: &BasicMessage{
+				Content: sessionID,
+			}}
+			glog.V(3).Infoln("=== save to machine memory", LUA_SESSION_ID,
+				"->", sessionID)
+
 		case TriggerTypeUseInputSave:
 			t.Machine.Memory[t.Trigger.Data] = content
 			e.Data = content
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: content,
 			}}
+			glog.V(1).Infoln(t.Trigger.Rule, t.Trigger.Data, "->", content)
 		case TriggerTypeData, TriggerTypeInputEqual:
 			e.EventData = &EventData{BasicMessage: &BasicMessage{
 				Content: t.Trigger.Data,
@@ -306,9 +430,9 @@ func (t *Transition) buildInputAnswers(status *agency.AgentStatus) (e *Event) {
 }
 
 func (t *Transition) FmtFromMem(send *Event) string {
-	defer err2.Catch(err2.Err(func(err error) {
-		glog.Error(err)
-	}))
+	defer err2.Catch()
+
+	// TODO: maybe templates should store that we load them only once? pref.
 	tmpl := template.Must(template.New("template").Parse(send.Data))
 	var buf bytes.Buffer
 	try.To(tmpl.Execute(&buf, t.Machine.Memory))
