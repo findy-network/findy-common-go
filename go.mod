@@ -16,11 +16,7 @@ require (
 	github.com/lainio/err2 v0.9.52
 	github.com/mr-tron/base58 v1.2.0
 	go.etcd.io/bbolt v1.3.8
-<<<<<<< HEAD
-	golang.org/x/oauth2 v0.16.0
-=======
 	golang.org/x/oauth2 v0.17.0
->>>>>>> 6067a88447828ce56d98f1792b84dd80b31a1a4c
 	google.golang.org/grpc v1.62.0
 	google.golang.org/protobuf v1.32.0
 )
