@@ -17,7 +17,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/oauth2 v0.17.0
-	google.golang.org/grpc v1.62.0
+	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.32.0
 )
 
