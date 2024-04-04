@@ -9,7 +9,7 @@ require (
 	github.com/auth0/go-jwt-middleware v1.0.1
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 	github.com/ghodss/yaml v1.0.0
-	github.com/golang/glog v1.2.0
+	github.com/golang/glog v1.2.1
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/hyperledger/aries-framework-go v0.3.2
