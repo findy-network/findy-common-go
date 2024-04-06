@@ -47,7 +47,14 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 		opts = append(opts, grpc.Creds(creds))
 	}
 
-	errHandler := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	errHandler := func(ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (
+		interface{},
+		error,
+	) {
 		glog.V(1).Infoln("-agent gRPC call:", info.FullMethod)
 		resp, err := handler(ctx, req)
 		if err != nil {
