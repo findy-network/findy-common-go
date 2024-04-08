@@ -4,6 +4,8 @@ API_BRANCH=$(shell ./scripts/branch.sh ../findy-agent-api/)
 SRC_ROOT=$(PWD)/../../..
 IDL_PATH=../findy-agent-api/idl/v1
 
+check: lint test
+
 protoc:	protoc_protocol protoc_agency protoc_agent protoc_authn
 
 protoc_protocol:
@@ -80,8 +82,6 @@ test_cov_out:
 
 test_cov: test_cov_out
 	go tool cover -html=coverage.txt
-
-check: check_fmt vet shadow
 
 release:
 	gh workflow run do-release.yml

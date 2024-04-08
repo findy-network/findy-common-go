@@ -43,11 +43,18 @@ func Server(cfg *ServerCfg) (s *grpc.Server, err error) {
 	glog.V(2).Infof("cfg.PKI: %v", cfg.PKI)
 	opts := make([]grpc.ServerOption, 0, 4)
 	if cfg.PKI != nil {
-		creds := try.To1(loadTLSCredentials(cfg.PKI))
+		creds := try.To1(mTLSCredentials(cfg.PKI))
 		opts = append(opts, grpc.Creds(creds))
 	}
 
-	errHandler := func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	errHandler := func(ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (
+		interface{},
+		error,
+	) {
 		glog.V(1).Infoln("-agent gRPC call:", info.FullMethod)
 		resp, err := handler(ctx, req)
 		if err != nil {
@@ -119,7 +126,7 @@ func PrepareServe(cfg *ServerCfg) (s *grpc.Server, lis net.Listener, err error) 
 	return s, lis, nil
 }
 
-func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
+func mTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err error) {
 	defer err2.Handle(&err)
 
 	caCert := try.To1(os.ReadFile(pw.Client.CertFile))
@@ -129,13 +136,13 @@ func loadTLSCredentials(pw *PKI) (creds credentials.TransportCredentials, err er
 	// Load server's certificate and private key
 	serverCert := try.To1(tls.LoadX509KeyPair(pw.Server.CertFile, pw.Server.KeyFile))
 
-	// Create the credentials and return it
+	// Create the mTLS credentials and return it
 	config := &tls.Config{
 		Certificates: []tls.Certificate{serverCert},
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    rootCAs,
 	}
 
-	glog.V(3).Infoln("cert files loaded")
+	glog.V(1).Infoln("mTLS cert files loaded")
 	return credentials.NewTLS(config), nil
 }

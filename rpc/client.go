@@ -9,6 +9,7 @@ import (
 	"github.com/findy-network/findy-common-go/jwt"
 	"github.com/golang/glog"
 	"github.com/lainio/err2"
+	"github.com/lainio/err2/assert"
 	"github.com/lainio/err2/try"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc"
@@ -72,6 +73,7 @@ func ClientConn(cfg ClientCfg) (conn *grpc.ClientConn, err error) {
 		glog.V(3).Infoln("insecure gRPC call")
 	default:
 		glog.Warning("PKI nor Insecure not set")
+		assert.NotImplemented()
 	}
 
 	if cfg.Opts != nil {

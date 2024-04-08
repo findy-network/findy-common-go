@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	cert       = flag.String("cert", "../cert", "pki cert path")
 	user       = flag.String("user", "findy-root", "test user name")
 	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
 	port       = flag.Int("port", 50051, "agency host gRPC port")
@@ -35,7 +36,7 @@ func main() {
 
 	var pki *rpc.PKI
 	if !*noTLS {
-		pki = rpc.LoadPKI("./cert")
+		pki = rpc.LoadPKI(*cert)
 		glog.V(3).Infof("starting gRPC server with\ncrt:\t%s\nkey:\t%s\nclient:\t%s",
 			pki.Server.CertFile, pki.Server.KeyFile, pki.Client.CertFile)
 	}
@@ -55,6 +56,17 @@ func main() {
 type devOpsServer struct {
 	ops.UnimplementedDevOpsServiceServer
 	Root string
+}
+
+func (d devOpsServer) AuthFuncOverride(
+	ctx context.Context,
+	fullMethodName string,
+) (
+	context.Context,
+	error, //nolint: unparam
+) {
+	glog.V(1).Infoln("======== AuthFuncOverride", fullMethodName)
+	return jwt.NewContextWithUser(ctx, d.Root), nil
 }
 
 func (d devOpsServer) Enter(ctx context.Context, cmd *ops.Cmd) (cr *ops.CmdReturn, err error) {

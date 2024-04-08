@@ -18,6 +18,7 @@ import (
 )
 
 var (
+	cert       = flag.String("cert", "../cert", "pki cert path")
 	user       = flag.String("user", "", "test user name")
 	serverAddr = flag.String("addr", "localhost", "agency host gRPC address")
 	port       = flag.Int("port", 50051, "agency host gRPC port")
@@ -55,7 +56,7 @@ func newClient(user, addr string) (conn *grpc.ClientConn, err error) {
 	var pki *rpc.PKI
 	jwtStr := ""
 	if !*noTLS {
-		pki = rpc.LoadPKIWithServerName("./cert", addr)
+		pki = rpc.LoadPKIWithServerName(*cert, addr)
 		jwtStr = jwt.BuildJWT(user)
 	}
 	glog.V(5).Infoln("client with user:", user)

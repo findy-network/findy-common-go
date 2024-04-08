@@ -32,7 +32,11 @@ var (
 
 // UserCtxKey is type for key to access user value from context. It's currently
 // exported for possible outside use.
+// NOTE: Must be own type and cannot be type alias because linter warnings with
+// context!
 type UserCtxKey string
+
+const userKey = "UserKey"
 
 type customClaims struct {
 	Username string `json:"un"`
@@ -48,7 +52,11 @@ func SetJWTSecret(jwtSecret string) {
 
 // User is a helper function to get user from the current ctx as a string.
 func User(ctx context.Context) string {
-	return ctx.Value(UserCtxKey("UserKey")).(string)
+	return ctx.Value(UserCtxKey(userKey)).(string)
+}
+
+func NewContextWithUser(ctx context.Context, user string) context.Context {
+	return context.WithValue(ctx, UserCtxKey(userKey), user)
 }
 
 // BuildJWT builds a signed JWT token from user string. User string can be user
@@ -93,7 +101,7 @@ func check(ctx context.Context, ts string) (context.Context, bool) {
 		return ctx, false
 	}
 	if claims, ok := token.Claims.(*customClaims); ok && token.Valid {
-		ctx = context.WithValue(ctx, UserCtxKey("UserKey"), claims.Username)
+		ctx = context.WithValue(ctx, UserCtxKey(userKey), claims.Username)
 	} else {
 		glog.Error("no claims in token")
 		return ctx, false
