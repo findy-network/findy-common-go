@@ -46,6 +46,8 @@ func BuildConnBase(tlsPath, fullAddr string, opts []grpc.DialOption) *rpc.Client
 	return cfg
 }
 
+// BuildClientConnBase builds the rpc.ClientCfg from tls path, address, port and
+// opts.g. localhost:50051.
 func BuildClientConnBase(
 	tlsPath, addr string,
 	port int,
@@ -61,6 +63,7 @@ func BuildClientConnBase(
 	return cfg
 }
 
+// BuildInsecureClientConnBase is helper to create rpc.ClientCfg easily.
 func BuildInsecureClientConnBase(
 	addr string,
 	port int,
