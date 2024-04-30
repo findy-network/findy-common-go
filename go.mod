@@ -18,7 +18,7 @@ require (
 	go.etcd.io/bbolt v1.3.9
 	golang.org/x/oauth2 v0.19.0
 	google.golang.org/grpc v1.62.1
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.0
 )
 
 require (
