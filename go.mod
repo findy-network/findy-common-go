@@ -15,7 +15,7 @@ require (
 	github.com/hyperledger/aries-framework-go v0.3.2
 	github.com/lainio/err2 v1.0.0
 	github.com/mr-tron/base58 v1.2.0
-	go.etcd.io/bbolt v1.3.9
+	go.etcd.io/bbolt v1.3.10
 	golang.org/x/oauth2 v0.19.0
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
